@@ -6,12 +6,12 @@ import { EventDetailComponent } from './features/public/event-detail/event-detai
 import { RegisterComponent } from './features/auth/register/register.component';
 import { LoginComponent } from './features/auth/login/login.component';
 import { OrganizerLayoutComponent } from './layouts/organizer/organizer-layout/organizer-layout.component';
-import { DashboardComponent } from './features/organizer/dashboard/dashboard.component';
-import { EvenementsComponent } from './features/organizer/evenements/evenements.component';
-import { ParticipantsComponent } from './features/organizer/participants/participants.component';
-import { TicketsComponent } from './features/organizer/tickets/tickets.component';
-import { StatistiquesComponent } from './features/organizer/statistiques/statistiques.component';
-import { NotificationsComponent } from './features/organizer/notifications/notifications.component';
+import { OrganizerDashboardComponent } from './features/organizer/dashboard/dashboard.component';
+import { OrganizerEvenementsComponent } from './features/organizer/evenements/evenements.component';
+import { OrganizerParticipantsComponent } from './features/organizer/participants/participants.component';
+import { OrganizerTicketsComponent } from './features/organizer/tickets/tickets.component';
+import { OrganizerStatistiquesComponent } from './features/organizer/statistiques/statistiques.component';
+import { OrganizerNotificationsComponent } from './features/organizer/notifications/notifications.component';
 import { ParticipantLayoutComponent } from './layouts/participant/participant-layout/participant-layout.component';
 import { ParticipantDashboardComponent } from './features/participant/dashboard/dashboard.component';
 import { ParticipantRegistrationsComponent } from './features/participant/inscriptions/inscriptions.component';
@@ -47,12 +47,12 @@ export const routes: Routes = [
       component: OrganizerLayoutComponent,
       children: [
         { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
-        { path: 'dashboard', component: DashboardComponent },
-        { path: 'evenements', component: EvenementsComponent },
-        { path: 'participants', component: ParticipantsComponent },
-        { path: 'tickets', component: TicketsComponent },
-        { path: 'statistiques', component: StatistiquesComponent },
-        { path: 'notifications', component: NotificationsComponent },
+        { path: 'dashboard', component: OrganizerDashboardComponent },
+        { path: 'evenements', component: OrganizerEvenementsComponent },
+        { path: 'participants', component: OrganizerParticipantsComponent },
+        { path: 'tickets', component: OrganizerTicketsComponent },
+        { path: 'statistiques', component: OrganizerStatistiquesComponent },
+        { path: 'notifications', component: OrganizerNotificationsComponent },
       //   { path: 'parametres', component: OrganizerSettingsComponent },
       //   { path: 'messages', component: OrganizerMessagesComponent },
       ],
