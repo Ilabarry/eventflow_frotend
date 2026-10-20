@@ -1,0 +1,28 @@
+<aside id="org-sidebar" class="org-sidebar" [class.org-sidebar--open]="open()" aria-label="Navigation organisateur">
+  <nav class="org-sidebar__nav">
+    <ul class="org-sidebar__list">
+      @for (item of items; track item.path) {
+        <li>
+          <a
+            [routerLink]="['/organisateur', item.path]"
+            routerLinkActive="org-sidebar__link--active"
+            class="org-sidebar__link"
+            (click)="closed.emit()"
+          >
+            <svg class="org-sidebar__icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              @for (d of item.icon; track d) {
+                <path [attr.d]="d"></path>
+              }
+            </svg>
+            <span>{{ item.label }}</span>
+          </a>
+        </li>
+      }
+    </ul>
+  </nav>
+
+  <div class="org-sidebar__footer">
+    <p class="org-sidebar__tagline">Organisez, animez et faites vivre vos événements.</p>
+    <span class="org-sidebar__brand">EVENTFLOW</span>
+  </div>
+</aside>

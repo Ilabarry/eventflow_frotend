@@ -1,0 +1,123 @@
+:host {
+  display: block;
+}
+
+.org-sidebar {
+  position: fixed;
+  top: var(--org-navbar-h);
+  bottom: 0;
+  left: 0;
+  z-index: 90;
+  width: var(--org-sidebar-w);
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem 1rem 1.25rem;
+  background: var(--evf-surface);
+  border-right: 1px solid var(--evf-border);
+  font-family: var(--evf-font-body);
+  overflow-y: auto;
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  /* Drawer mobile / tablette */
+  @media (max-width: 1023.98px) {
+    width: min(280px, 85vw);
+    transform: translateX(-100%);
+    visibility: hidden;
+    box-shadow: none;
+    transition: transform 0.3s ease, visibility 0s linear 0.3s;
+
+    &--open {
+      transform: translateX(0);
+      visibility: visible;
+      box-shadow: 8px 0 32px rgba(10, 10, 18, 0.18);
+      transition: transform 0.3s ease, visibility 0s;
+    }
+  }
+
+  &__nav {
+    flex: 1;
+  }
+
+  &__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  &__link {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    min-height: 46px;
+    padding: 0.625rem 0.875rem;
+    border-radius: var(--evf-radius-lg);
+    color: var(--evf-text);
+    font-size: 0.95rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background 0.2s ease, color 0.2s ease;
+
+    &:hover {
+      background: rgba(108, 92, 231, 0.06);
+      color: var(--evf-violet);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 4px rgba(108, 92, 231, 0.12);
+    }
+
+    &--active {
+      background: linear-gradient(135deg, rgba(108, 92, 231, 0.06) 0%, rgba(34, 199, 214, 0.06) 100%);
+      color: var(--evf-violet);
+      font-weight: 700;
+      box-shadow: inset 3px 0 0 var(--evf-violet);
+
+      .org-sidebar__icon {
+        color: var(--evf-violet);
+      }
+    }
+  }
+
+  &__icon {
+    flex-shrink: 0;
+    color: var(--evf-text-muted);
+    transition: color 0.2s ease;
+  }
+
+  /* ---------- Bas de sidebar ---------- */
+  &__footer {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    border-radius: var(--evf-radius-lg);
+    background: var(--evf-bg);
+    border: 1px solid var(--evf-border);
+    text-align: center;
+  }
+
+  &__tagline {
+    margin: 0 0 0.5rem;
+    font-size: 0.78rem;
+    line-height: 1.5;
+    color: var(--evf-text-muted);
+  }
+
+  &__brand {
+    font-family: var(--evf-font-heading);
+    font-size: 1.1rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, #8B7CF6 0%, #22C7D6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+}

@@ -1,0 +1,21 @@
+<div class="part-layout">
+  <app-participant-navbar
+    [sidebarOpen]="sidebarOpen()"
+    [userName]="userName()"
+    [avatarUrl]="avatarUrl()"
+    [notificationCount]="notificationCount()"
+    [messageCount]="messageCount()"
+    (menuToggle)="toggleSidebar()"
+    (logout)="onLogout()"
+  />
+
+  <app-participant-sidebar [open]="sidebarOpen()" (closed)="closeSidebar()" />
+
+  @if (sidebarOpen()) {
+    <div class="part-layout__backdrop" (click)="closeSidebar()" aria-hidden="true"></div>
+  }
+
+  <main class="part-layout__content">
+    <router-outlet />
+  </main>
+</div>

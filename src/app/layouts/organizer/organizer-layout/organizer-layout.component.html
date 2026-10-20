@@ -1,0 +1,21 @@
+<div class="org-layout">
+  <app-organizer-navbar
+    [sidebarOpen]="sidebarOpen()"
+    [userName]="userName()"
+    [avatarUrl]="avatarUrl()"
+    [notificationCount]="notificationCount()"
+    [messageCount]="messageCount()"
+    (menuToggle)="toggleSidebar()"
+    (logout)="onLogout()"
+  />
+
+  <app-organizer-sidebar [open]="sidebarOpen()" (closed)="closeSidebar()" />
+
+  @if (sidebarOpen()) {
+    <div class="org-layout__backdrop" (click)="closeSidebar()" aria-hidden="true"></div>
+  }
+
+  <main class="org-layout__content">
+    <router-outlet />
+  </main>
+</div>
