@@ -1,0 +1,25 @@
+<div class="adm-layout">
+  <app-admin-navbar
+    [sidebarOpen]="sidebarOpen()"
+    [userName]="userName()"
+    [avatarUrl]="avatarUrl()"
+    [notificationCount]="notificationCount()"
+    [messageCount]="messageCount()"
+    (menuToggle)="toggleSidebar()"
+    (logout)="onLogout()"
+  />
+
+  <app-admin-sidebar
+    [open]="sidebarOpen()"
+    (closed)="closeSidebar()"
+    (logout)="onLogout()"
+  />
+
+  @if (sidebarOpen()) {
+    <div class="adm-layout__backdrop" (click)="closeSidebar()" aria-hidden="true"></div>
+  }
+
+  <main class="adm-layout__content">
+    <router-outlet />
+  </main>
+</div>

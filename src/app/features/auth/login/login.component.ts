@@ -116,7 +116,7 @@ export class LoginComponent {
     if (roles.includes('administrateur')) {
       this.router.navigate(['/admin/dashboard']);
     } else if (roles.includes('organisateur')) {
-      this.router.navigate(['/organizer/dashboard']);
+      this.router.navigate(['/organisateur/dashboard']);
     } else {
       this.router.navigate(['/participant/dashboard']);
     }

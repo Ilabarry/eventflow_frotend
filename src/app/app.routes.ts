@@ -19,6 +19,14 @@ import { ParticipantTicketsComponent } from './features/participant/tickets/tick
 import { ParticipantCertificatesComponent } from './features/participant/attestations/attestations.component';
 import { ParticipantProfileComponent } from './features/participant/profil/profil.component';
 import { ParticipantNotificationsComponent } from './features/participant/notifications/notifications.component';
+import { AdminLayoutComponent } from './layouts/admin/admin-layout/admin-layout.component';
+import { AdminDashboardComponent } from './features/admin/dashboard/dashboard.component';
+import { AdminOrganizersComponent } from './features/admin/organisateurs/organisateurs.component';
+import { AdminUsersComponent } from './features/admin/utilisateurs/utilisateurs.component';
+import { AdminEventsComponent } from './features/admin/evenements/evenements.component';
+import { AdminCategoriesComponent } from './features/admin/categories/categories.component';
+import { AdminSupervisionComponent } from './features/admin/supervision/supervision.component';
+import { AdminNotificationsComponent } from './features/admin/notifications/notifications.component';
 
 export const routes: Routes = [
 
@@ -35,35 +43,52 @@ export const routes: Routes = [
     },
 
     {
-    path: 'organisateur',
-    component: OrganizerLayoutComponent,
-    children: [
-      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
-      { path: 'dashboard', component: DashboardComponent },
-      { path: 'evenements', component: EvenementsComponent },
-      { path: 'participants', component: ParticipantsComponent },
-      { path: 'tickets', component: TicketsComponent },
-      { path: 'statistiques', component: StatistiquesComponent },
-      { path: 'notifications', component: NotificationsComponent },
-    //   { path: 'parametres', component: OrganizerSettingsComponent },
-    //   { path: 'messages', component: OrganizerMessagesComponent },
-    ],
-  },
+      path: 'organisateur',
+      component: OrganizerLayoutComponent,
+      children: [
+        { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+        { path: 'dashboard', component: DashboardComponent },
+        { path: 'evenements', component: EvenementsComponent },
+        { path: 'participants', component: ParticipantsComponent },
+        { path: 'tickets', component: TicketsComponent },
+        { path: 'statistiques', component: StatistiquesComponent },
+        { path: 'notifications', component: NotificationsComponent },
+      //   { path: 'parametres', component: OrganizerSettingsComponent },
+      //   { path: 'messages', component: OrganizerMessagesComponent },
+      ],
+    },
 
-  {
-  path: 'participant',
-  component: ParticipantLayoutComponent,
-  children: [
-    { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
-    { path: 'dashboard', component: ParticipantDashboardComponent },
-    { path: 'inscriptions', component: ParticipantRegistrationsComponent },
-    { path: 'tickets', component: ParticipantTicketsComponent },
-    { path: 'attestations', component: ParticipantCertificatesComponent },
-    { path: 'profil', component: ParticipantProfileComponent },
-    { path: 'notifications', component: ParticipantNotificationsComponent },
-    // { path: 'parametres', component: ParticipantSettingsComponent },
-    // { path: 'messages', component: ParticipantMessagesComponent },
-  ],
-},
+    {
+      path: 'participant',
+      component: ParticipantLayoutComponent,
+      children: [
+        { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+        { path: 'dashboard', component: ParticipantDashboardComponent },
+        { path: 'inscriptions', component: ParticipantRegistrationsComponent },
+        { path: 'tickets', component: ParticipantTicketsComponent },
+        { path: 'attestations', component: ParticipantCertificatesComponent },
+        { path: 'profil', component: ParticipantProfileComponent },
+        { path: 'notifications', component: ParticipantNotificationsComponent },
+        // { path: 'parametres', component: ParticipantSettingsComponent },
+        // { path: 'messages', component: ParticipantMessagesComponent },
+      ],
+    },
+
+    {
+      path: 'admin',
+      component: AdminLayoutComponent,
+      children: [
+        { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+        { path: 'dashboard', component: AdminDashboardComponent },
+        { path: 'organisateurs', component: AdminOrganizersComponent },
+        { path: 'utilisateurs', component: AdminUsersComponent },
+        { path: 'evenements', component: AdminEventsComponent },
+        { path: 'categories', component: AdminCategoriesComponent },
+        { path: 'supervision', component: AdminSupervisionComponent },
+        { path: 'notifications', component: AdminNotificationsComponent },
+        // { path: 'parametres', component: AdminSettingsComponent },
+        // { path: 'messages', component: AdminMessagesComponent },
+      ],
+    },
 
 ];

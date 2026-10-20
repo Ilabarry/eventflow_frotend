@@ -1,0 +1,46 @@
+:host {
+  display: block;
+  /* Dimensions partagées avec la navbar et la sidebar */
+  --adm-navbar-h: 72px;
+  --adm-sidebar-w: 260px;
+}
+
+.adm-layout {
+  min-height: 100vh;
+  background: var(--evf-bg);
+  font-family: var(--evf-font-body);
+
+  &__content {
+    min-height: 100vh;
+    margin-left: var(--adm-sidebar-w);
+    padding: calc(var(--adm-navbar-h) + 1.5rem) 2rem 2rem;
+    min-width: 0;
+
+    @media (max-width: 1023.98px) {
+      margin-left: 0;
+      padding: calc(var(--adm-navbar-h) + 1.25rem) 1.5rem 1.5rem;
+    }
+
+    @media (max-width: 640px) {
+      padding: calc(var(--adm-navbar-h) + 1rem) 1rem 1.25rem;
+    }
+  }
+
+  &__backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    background: rgba(10, 10, 18, 0.5);
+    backdrop-filter: blur(2px);
+    animation: adm-fade-in 0.2s ease;
+
+    @media (min-width: 1024px) {
+      display: none;
+    }
+  }
+}
+
+@keyframes adm-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

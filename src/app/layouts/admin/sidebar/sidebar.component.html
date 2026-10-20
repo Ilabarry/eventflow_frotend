@@ -1,0 +1,40 @@
+<aside id="adm-sidebar" class="adm-sidebar" [class.adm-sidebar--open]="open()" aria-label="Navigation administrateur">
+  <nav class="adm-sidebar__nav">
+    <ul class="adm-sidebar__list">
+      @for (item of items; track item.path) {
+        <li>
+          <a
+            [routerLink]="['/admin', item.path]"
+            routerLinkActive="adm-sidebar__link--active"
+            class="adm-sidebar__link"
+            (click)="closed.emit()"
+          >
+            <svg class="adm-sidebar__icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              @for (d of item.icon; track d) {
+                <path [attr.d]="d"></path>
+              }
+            </svg>
+            <span>{{ item.label }}</span>
+          </a>
+        </li>
+      }
+    </ul>
+  </nav>
+
+  <div class="adm-sidebar__footer">
+    <!-- Déconnexion -->
+    <button type="button" class="adm-sidebar__logout" (click)="logout.emit()">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+        <path d="M16 17l5-5-5-5"></path>
+        <path d="M21 12H9"></path>
+      </svg>
+      <span>Déconnexion</span>
+    </button>
+
+    <div class="adm-sidebar__signature">
+      <p class="adm-sidebar__tagline">Organisez, sensibilisez, faites vivre vos événements.</p>
+      <span class="adm-sidebar__brand">EVENTFLOW</span>
+    </div>
+  </div>
+</aside>
