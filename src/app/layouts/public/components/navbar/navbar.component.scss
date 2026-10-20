@@ -1,0 +1,200 @@
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--evf-border);
+
+  &__container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0.75rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2rem;
+  }
+
+  // ---------------------------------------------------------------
+  // Logo
+  // ---------------------------------------------------------------
+  &__logo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    flex-shrink: 0;
+  }
+
+  &__logo-icon {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    svg {
+      width: 100%;
+      height: 100%;
+    }
+  }
+
+  &__logo-text {
+    font-family: var(--evf-font-heading);
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--evf-dark);
+    letter-spacing: -0.02em;
+
+    .text-violet {
+      color: var(--evf-violet);
+    }
+  }
+
+  // ---------------------------------------------------------------
+  // Menu desktop
+  // ---------------------------------------------------------------
+  &__menu {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    flex: 1;
+    justify-content: center;
+
+    @media (max-width: 768px) {
+      display: none;
+    }
+  }
+
+  &__link {
+    font-family: var(--evf-font-body);
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--evf-text);
+    text-decoration: none;
+    transition: color 0.2s ease;
+    white-space: nowrap;
+
+    &:hover,
+    &.active {
+      color: var(--evf-violet);
+    }
+  }
+
+  // ---------------------------------------------------------------
+  // Actions (desktop)
+  // ---------------------------------------------------------------
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-shrink: 0;
+
+    @media (max-width: 768px) {
+      display: none;
+    }
+  }
+
+  &__btn {
+    padding: 0.625rem 1.5rem;
+    border-radius: var(--evf-radius-full);
+    font-family: var(--evf-font-body);
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+
+    &--primary {
+      background: var(--evf-gradient-flow);
+      color: white;
+
+      &:hover {
+        transform: translateY(-1px);
+        box-shadow: var(--evf-shadow-md);
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------
+  // Burger (mobile)
+  // ---------------------------------------------------------------
+  &__burger {
+    display: none;
+    background: transparent;
+    border: none;
+    color: var(--evf-dark);
+    cursor: pointer;
+    padding: 0.5rem;
+
+    @media (max-width: 768px) {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+
+  // ---------------------------------------------------------------
+  // Menu mobile
+  // ---------------------------------------------------------------
+  &__mobile-menu {
+    position: fixed;
+    inset: 60px 0 0 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 99;
+    animation: fadeIn 0.2s ease;
+  }
+
+  &__mobile-content {
+    background: white;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    box-shadow: var(--evf-shadow-lg);
+    animation: slideDown 0.25s ease;
+  }
+
+  &__mobile-link {
+    font-family: var(--evf-font-body);
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--evf-text);
+    text-decoration: none;
+    padding: 0.75rem 1rem;
+    border-radius: var(--evf-radius-md);
+    transition: background 0.15s ease;
+
+    &:hover,
+    &.active {
+      background: var(--evf-bg);
+      color: var(--evf-violet);
+    }
+  }
+
+  &__mobile-btn {
+    padding: 0.875rem 1.5rem;
+    border-radius: var(--evf-radius-md);
+    font-family: var(--evf-font-body);
+    font-size: 1rem;
+    font-weight: 600;
+    text-align: center;
+    text-decoration: none;
+
+    &--primary {
+      background: var(--evf-gradient-flow);
+      color: white;
+    }
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}

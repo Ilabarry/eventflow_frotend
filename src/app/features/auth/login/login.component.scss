@@ -1,0 +1,475 @@
+/* ================================================================
+   LAYOUT GLOBAL : carte centrée à 2 colonnes
+   ================================================================ */
+:host {
+  display: block;
+}
+
+.login {
+  display: grid;
+  grid-template-columns: minmax(360px, 440px) 1fr;
+  width: calc(100% - 2rem);
+  max-width: 1100px;
+  min-height: calc(100vh - 4rem);
+  margin: 2rem auto;
+  background: var(--evf-surface);
+  font-family: var(--evf-font-body);
+  border-radius: 28px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(10, 10, 18, 0.12);
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  @media (max-width: 1100px) {
+    grid-template-columns: 1fr;
+    max-width: 640px;
+    min-height: auto;
+  }
+
+  @media (max-width: 640px) {
+    width: 100%;
+    margin: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+}
+
+/* ================================================================
+   PARTIE GAUCHE : Aside (visuel)
+   ================================================================ */
+.login__aside {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 2.5rem 2.25rem;
+  background: #0A0A12;
+  overflow: hidden;
+  color: white;
+
+  @media (max-width: 1100px) {
+    display: none;
+  }
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url('https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=1200&q=80');
+    background-size: cover;
+    background-position: center;
+    opacity: 0.35;
+    z-index: 0;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      180deg,
+      rgba(10, 10, 18, 0.95) 0%,
+      rgba(10, 10, 18, 0.4) 40%,
+      rgba(10, 10, 18, 0.95) 100%
+    );
+    z-index: 0;
+  }
+}
+
+.login__logo {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 3rem;
+}
+
+.login__logo-img {
+  display: block;
+  height: 44px;
+  width: auto;
+}
+
+.login__aside-header {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 2.25rem;
+}
+
+.login__aside-tag {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--evf-cyan);
+  margin-bottom: 0.875rem;
+  text-transform: uppercase;
+}
+
+.login__aside-title {
+  font-family: var(--evf-font-heading);
+  font-size: clamp(2rem, 3vw, 2.5rem);
+  font-weight: 800;
+  line-height: 1.1;
+  color: white;
+  margin: 0;
+  letter-spacing: -0.03em;
+}
+
+.login__aside-title-gradient {
+  background: linear-gradient(135deg, #8B7CF6 0%, #22C7D6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ================================================================
+   ÉTAPES
+   ================================================================ */
+.login__steps {
+  position: relative;
+  z-index: 1;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 auto 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.login__step {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.login__step-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: rgba(108, 92, 231, 0.2);
+  color: var(--evf-cyan);
+  border: 1px solid rgba(108, 92, 231, 0.4);
+  flex-shrink: 0;
+  backdrop-filter: blur(10px);
+}
+
+.login__quote {
+  position: relative;
+  z-index: 1;
+  margin: 2.5rem 0 0 0;
+  font-style: italic;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.5);
+  border-left: 2px solid var(--evf-cyan);
+  padding-left: 1rem;
+  line-height: 1.5;
+}
+
+/* ================================================================
+   PARTIE DROITE : Formulaire
+   ================================================================ */
+.login__main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem clamp(1.5rem, 4vw, 3.5rem) 2.5rem;
+  min-width: 0;
+  position: relative;
+
+  @media (max-width: 640px) {
+    padding: 1.5rem 1.25rem 2rem;
+  }
+}
+
+.login__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--evf-violet);
+  text-decoration: none;
+  margin-bottom: 1.5rem;
+  align-self: flex-end;
+  padding: 0.5rem 1rem;
+  border-radius: var(--evf-radius-full);
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(108, 92, 231, 0.08);
+    color: var(--evf-violet-dark);
+  }
+}
+
+/* ================================================================
+   BANNIÈRE D'INFO
+   ================================================================ */
+.login__info-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 400px;
+  padding: 0.875rem 1rem;
+  background: rgba(22, 163, 74, 0.08);
+  border: 1px solid rgba(22, 163, 74, 0.2);
+  border-radius: var(--evf-radius-md);
+  color: var(--evf-success);
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-bottom: 1.5rem;
+
+  svg {
+    flex-shrink: 0;
+  }
+}
+
+.login__header {
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto 2.5rem;
+  text-align: center;
+}
+
+.login__title {
+  font-family: var(--evf-font-heading);
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
+  font-weight: 800;
+  color: var(--evf-dark);
+  margin: 0 0 0.5rem 0;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.login__subtitle {
+  font-size: 1rem;
+  color: var(--evf-text-muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ================================================================
+   FORMULAIRE
+   ================================================================ */
+.login__form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.125rem;
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.login__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  position: relative;
+}
+
+.login__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--evf-text);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-left: 0.25rem;
+}
+
+.login__input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+
+  &:focus-within .login__icon {
+    color: var(--evf-violet);
+  }
+}
+
+.login__icon {
+  position: absolute;
+  left: 1rem;
+  color: var(--evf-text-muted);
+  pointer-events: none;
+  transition: color 0.2s ease;
+  z-index: 1;
+}
+
+.login__input {
+  width: 100%;
+  height: 52px;
+  padding: 0 3rem 0 3rem;
+  border: 2px solid var(--evf-border);
+  border-radius: var(--evf-radius-lg);
+  font-family: var(--evf-font-body);
+  font-size: 0.95rem;
+  color: var(--evf-text);
+  background: var(--evf-surface);
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: #CBD5E1;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: var(--evf-violet);
+    box-shadow: 0 0 0 4px rgba(108, 92, 231, 0.12);
+  }
+
+  &::placeholder {
+    color: #94A3B8;
+    font-weight: 400;
+  }
+
+  &--error {
+    border-color: var(--evf-error);
+    background: rgba(239, 68, 68, 0.02);
+
+    &:focus {
+      box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.12);
+    }
+  }
+}
+
+.login__toggle-password {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: var(--evf-text-muted);
+  cursor: pointer;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: color 0.2s ease;
+
+  &:hover {
+    color: var(--evf-violet);
+  }
+}
+
+.login__error {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8rem;
+  color: var(--evf-error);
+  margin-left: 0.25rem;
+  font-weight: 500;
+
+  &::before {
+    content: '⚠';
+    font-size: 0.9rem;
+  }
+}
+
+/* ================================================================
+   MOT DE PASSE OUBLIÉ
+   ================================================================ */
+.login__forgot {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -0.25rem;
+}
+
+.login__forgot-link {
+  font-size: 0.85rem;
+  color: var(--evf-violet);
+  font-weight: 500;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+/* ================================================================
+   BOUTON SOUMETTRE
+   ================================================================ */
+.login__submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  height: 54px;
+  padding: 0 1.5rem;
+  border: none;
+  border-radius: var(--evf-radius-full);
+  background: var(--evf-gradient-flow);
+  color: white;
+  font-family: var(--evf-font-body);
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  margin-top: 0.5rem;
+  box-shadow: 0 4px 14px rgba(108, 92, 231, 0.3);
+
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(108, 92, 231, 0.4);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+}
+
+.login__spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ================================================================
+   LIEN INSCRIPTION
+   ================================================================ */
+.login__register-link {
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--evf-text-muted);
+  margin: 0.5rem 0 0 0;
+}
+
+.login__link {
+  color: var(--evf-violet);
+  font-weight: 600;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.2s ease;
+
+  &:hover {
+    border-bottom-color: var(--evf-violet);
+  }
+
+  &--bold {
+    font-weight: 700;
+  }
+}

@@ -1,0 +1,192 @@
+<div class="login">
+  <!-- ================================================================
+       PARTIE GAUCHE : Visuel (Zone visuelle)
+       ================================================================ -->
+  <aside class="login__aside">
+    <!-- Logo -->
+    <div class="login__logo">
+      <img src="assets/logo-eventflow.png" alt="EVENTFLOW" class="login__logo-img" />
+    </div>
+
+    <!-- Titre -->
+    <div class="login__aside-header">
+      <span class="login__aside-tag">ZONE VISUELLE</span>
+      <h2 class="login__aside-title">
+        <span class="login__aside-title-gradient">FLOW EVENTFLOW</span>
+      </h2>
+    </div>
+
+    <!-- Étapes -->
+    <ul class="login__steps">
+      <li class="login__step">
+        <span class="login__step-icon">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+        </span>
+        <span>Créer</span>
+      </li>
+      <li class="login__step">
+        <span class="login__step-icon">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+        </span>
+        <span>Découvrir</span>
+      </li>
+      <li class="login__step">
+        <span class="login__step-icon">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="8.5" cy="7" r="4"></circle>
+            <line x1="20" y1="8" x2="20" y2="14"></line>
+            <line x1="23" y1="11" x2="17" y2="11"></line>
+          </svg>
+        </span>
+        <span>S'inscrire</span>
+      </li>
+      <li class="login__step">
+        <span class="login__step-icon">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+          </svg>
+        </span>
+        <span>Participer</span>
+      </li>
+    </ul>
+
+    <!-- Citation -->
+    <blockquote class="login__quote">
+      « Vos événements commencent ici. »
+    </blockquote>
+  </aside>
+
+  <!-- ================================================================
+       PARTIE DROITE : Formulaire
+       ================================================================ -->
+  <main class="login__main">
+    <!-- Lien retour -->
+    <a routerLink="/" class="login__back">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="19" y1="12" x2="5" y2="12"></line>
+        <polyline points="12 19 5 12 12 5"></polyline>
+      </svg>
+      Retour
+    </a>
+
+    <!-- Message d'inscription réussie -->
+    @if (registeredMessage()) {
+      <div class="login__info-banner">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+          <polyline points="22 4 12 14.01 9 11.01"></polyline>
+        </svg>
+        <span>{{ registeredMessage() }}</span>
+      </div>
+    }
+
+    <!-- Titre -->
+    <div class="login__header">
+      <h1 class="login__title">BIENVENUE</h1>
+      <p class="login__subtitle">Connectez-vous à votre compte.</p>
+    </div>
+
+    <!-- Formulaire -->
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login__form" novalidate>
+      <!-- Email -->
+      <div class="login__field">
+        <label for="email" class="login__label">Email</label>
+        <div class="login__input-wrapper">
+          <svg class="login__icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+            <polyline points="22,6 12,13 2,6"></polyline>
+          </svg>
+          <input
+            id="email"
+            type="email"
+            formControlName="email"
+            placeholder="votre@email.com"
+            class="login__input"
+            [class.login__input--error]="isFieldInvalid('email')"
+            autocomplete="email"
+          />
+        </div>
+        @if (isFieldInvalid('email')) {
+          <span class="login__error">{{ getFieldError('email') }}</span>
+        }
+      </div>
+
+      <!-- Mot de passe -->
+      <div class="login__field">
+        <label for="password" class="login__label">Mot de passe</label>
+        <div class="login__input-wrapper">
+          <svg class="login__icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+          <input
+            id="password"
+            [type]="showPassword() ? 'text' : 'password'"
+            formControlName="password"
+            placeholder="Mot de passe"
+            class="login__input"
+            [class.login__input--error]="isFieldInvalid('password')"
+            autocomplete="current-password"
+          />
+          <!-- Bouton voir/masquer -->
+          <button
+            type="button"
+            class="login__toggle-password"
+            (click)="togglePassword()"
+            [attr.aria-label]="showPassword() ? 'Masquer le mot de passe' : 'Afficher le mot de passe'"
+          >
+            @if (showPassword()) {
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+              </svg>
+            } @else {
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            }
+          </button>
+        </div>
+        @if (isFieldInvalid('password')) {
+          <span class="login__error">{{ getFieldError('password') }}</span>
+        }
+      </div>
+
+      <!-- Mot de passe oublié -->
+      <div class="login__forgot">
+        <a routerLink="/forgot-password" class="login__forgot-link">
+          Mot de passe oublié ?
+        </a>
+      </div>
+
+      <!-- Bouton soumettre -->
+      <button
+        type="submit"
+        class="login__submit"
+        [disabled]="isSubmitting()"
+      >
+        @if (isSubmitting()) {
+          <span class="login__spinner"></span>
+          Connexion en cours...
+        } @else {
+          Se connecter
+        }
+      </button>
+
+      <!-- Lien inscription -->
+      <p class="login__register-link">
+        Pas encore de compte ?
+        <a routerLink="/register" class="login__link login__link--bold">Créer un compte</a>
+      </p>
+    </form>
+  </main>
+</div>

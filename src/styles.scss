@@ -1,1 +1,212 @@
-/* You can add global styles to this file, and also import other style files */
+/* ================================================================
+   EVENTFLOW — Design System
+   ================================================================ */
+
+/* Import des styles ngx-toastr */
+@import 'ngx-toastr/toastr';
+
+/* Import des polices Google */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Sora:wght@400;500;600;700;800&display=swap');
+
+/* ================================================================
+   VARIABLES CSS (Design Tokens)
+   ================================================================ */
+:root {
+  /* Couleurs principales */
+  --evf-violet: #6C5CE7;
+  --evf-violet-dark: #5145CD;
+  --evf-cyan: #22C7D6;
+  --evf-dark: #111827;
+
+  /* Couleurs sémantiques */
+  --evf-bg: #F8FAFC;
+  --evf-surface: #FFFFFF;
+  --evf-text: #1F2937;
+  --evf-text-muted: #64748B;
+  --evf-border: #E2E8F0;
+
+  --evf-success: #16A34A;
+  --evf-warning: #F59E0B;
+  --evf-error: #EF4444;
+  --evf-info: #3B82F6;
+
+  /* Typographie */
+  --evf-font-heading: 'Sora', -apple-system, BlinkMacSystemFont, sans-serif;
+  --evf-font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* Espacements */
+  --evf-radius-sm: 6px;
+  --evf-radius-md: 10px;
+  --evf-radius-lg: 16px;
+  --evf-radius-full: 9999px;
+
+  /* Ombres */
+  --evf-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --evf-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --evf-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+
+  /* Gradient FLOW */
+  --evf-gradient-flow: linear-gradient(135deg, var(--evf-violet) 0%, var(--evf-cyan) 100%);
+}
+
+/* ================================================================
+   RESET & BASE
+   ================================================================ */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--evf-font-body);
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--evf-text);
+  background-color: var(--evf-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--evf-font-heading);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--evf-dark);
+  margin: 0 0 1rem 0;
+}
+
+h1 { font-size: 2.5rem; }
+h2 { font-size: 2rem; }
+h3 { font-size: 1.5rem; }
+h4 { font-size: 1.25rem; }
+
+p { margin: 0 0 1rem 0; }
+
+a {
+  color: var(--evf-violet);
+  text-decoration: none;
+  transition: color 0.2s ease;
+
+  &:hover {
+    color: var(--evf-violet-dark);
+  }
+}
+
+/* ================================================================
+   UTILITAIRES
+   ================================================================ */
+.container {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+
+  @media (max-width: 768px) {
+    padding: 0 1rem;
+  }
+}
+
+.text-gradient {
+  background: var(--evf-gradient-flow);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: var(--evf-radius-md);
+  font-family: var(--evf-font-body);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  &--primary {
+    background: var(--evf-gradient-flow);
+    color: white;
+    box-shadow: var(--evf-shadow-sm);
+
+    &:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: var(--evf-shadow-md);
+    }
+  }
+
+  &--secondary {
+    background: var(--evf-surface);
+    color: var(--evf-violet);
+    border: 2px solid var(--evf-violet);
+
+    &:hover:not(:disabled) {
+      background: var(--evf-violet);
+      color: white;
+    }
+  }
+
+  &--ghost {
+    background: transparent;
+    color: var(--evf-text);
+
+    &:hover:not(:disabled) {
+      background: var(--evf-border);
+    }
+  }
+
+  &--danger {
+    background: var(--evf-error);
+    color: white;
+  }
+}
+
+/* ================================================================
+   ACCESSIBILITÉ
+   ================================================================ */
+:focus-visible {
+  outline: 2px solid var(--evf-violet);
+  outline-offset: 2px;
+}
+
+/* ================================================================
+   TOASTR — Personnalisation
+   ================================================================ */
+.toast-container .ngx-toastr {
+  border-radius: var(--evf-radius-md);
+  box-shadow: var(--evf-shadow-lg);
+  font-family: var(--evf-font-body);
+}
+
+/* ================================================================
+   SCROLLBAR
+   ================================================================ */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--evf-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--evf-border);
+  border-radius: var(--evf-radius-full);
+
+  &:hover {
+    background: var(--evf-text-muted);
+  }
+}

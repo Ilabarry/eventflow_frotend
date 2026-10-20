@@ -1,0 +1,66 @@
+<header class="navbar">
+  <div class="navbar__container">
+    <!-- Logo -->
+    <a routerLink="/" class="navbar__logo" (click)="closeMenu()">
+      <span class="navbar__logo-icon">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2L2 7l10 5 10-5-10-5z" fill="#6C5CE7"/>
+          <path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="#22C7D6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </span>
+      <span class="navbar__logo-text">
+        EVENT<span class="text-violet">FLOW</span>
+      </span>
+    </a>
+
+    <!-- Menu desktop -->
+    <nav class="navbar__menu" [class.navbar__menu--open]="isMenuOpen()">
+      <a routerLink="/events" routerLinkActive="active" class="navbar__link" (click)="closeMenu()">
+        Événement
+      </a>
+      <a routerLink="/how-it-works" routerLinkActive="active" class="navbar__link" (click)="closeMenu()">
+        Comment ça marche
+      </a>
+      <a routerLink="/about" routerLinkActive="active" class="navbar__link" (click)="closeMenu()">
+        À propos
+      </a>
+    </nav>
+
+    <!-- Actions (desktop) -->
+    <div class="navbar__actions">
+      <a routerLink="/login" class="navbar__btn navbar__btn--primary">
+        Connexion
+      </a>
+    </div>
+
+    <!-- Bouton burger (mobile) -->
+    <button class="navbar__burger" (click)="toggleMenu()" [attr.aria-expanded]="isMenuOpen()" aria-label="Menu">
+      @if (isMenuOpen()) {
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      } @else {
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      }
+    </button>
+  </div>
+
+  <!-- Menu mobile (overlay) -->
+  @if (isMenuOpen()) {
+    <div class="navbar__mobile-menu" (click)="closeMenu()">
+      <div class="navbar__mobile-content" (click)="$event.stopPropagation()">
+        <a routerLink="/events" class="navbar__mobile-link" (click)="closeMenu()">Événement</a>
+        <a routerLink="/how-it-works" class="navbar__mobile-link" (click)="closeMenu()">Comment ça marche</a>
+        <a routerLink="/about" class="navbar__mobile-link" (click)="closeMenu()">À propos</a>
+        <a routerLink="/login" class="navbar__mobile-btn navbar__mobile-btn--primary" (click)="closeMenu()">
+          Connexion
+        </a>
+      </div>
+    </div>
+  }
+</header>

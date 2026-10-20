@@ -60,6 +60,12 @@
           },
           "configurations": {
             "production": {
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.prod.ts"
+                }
+              ],
               "budgets": [
                 {
                   "type": "initial",
@@ -100,6 +106,10 @@
         "test": {
           "builder": "@angular-devkit/build-angular:karma",
           "options": {
+            "styles": [
+                "src/styles.scss"
+              ],
+              "scripts": [],
             "polyfills": [
               "zone.js",
               "zone.js/testing"
@@ -120,5 +130,8 @@
         }
       }
     }
+  },
+  "cli": {
+    "analytics": "bcab87bb-864c-4e1d-85d6-8208061739c1"
   }
 }
