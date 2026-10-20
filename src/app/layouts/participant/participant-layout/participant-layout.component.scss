@@ -1,46 +1,46 @@
-// :host {
-//   display: block;
-//   /* Dimensions partagées avec la navbar et la sidebar */
-//   --part-navbar-h: 72px;
-//   --part-sidebar-w: 260px;
-// }
+:host {
+  display: block;
+  /* Dimensions partagées avec la navbar et la sidebar */
+  --part-navbar-h: 72px;
+  --part-sidebar-w: 260px;
+}
 
-// .part-layout {
-//   min-height: 100vh;
-//   background: var(--evf-bg);
-//   font-family: var(--evf-font-body);
+.part-layout {
+  min-height: 100vh;
+  background: var(--evf-bg);
+  font-family: var(--evf-font-body);
 
-//   &__content {
-//     min-height: 100vh;
-//     margin-left: var(--part-sidebar-w);
-//     padding: calc(var(--part-navbar-h) + 1.5rem) 2rem 2rem;
-//     min-width: 0;
+  &__content {
+    min-height: 100vh;
+    margin-left: var(--part-sidebar-w);
+    padding: calc(var(--part-navbar-h) + 1.5rem) 2rem 2rem;
+    min-width: 0;
 
-//     @media (max-width: 1023.98px) {
-//       margin-left: 0;
-//       padding: calc(var(--part-navbar-h) + 1.25rem) 1.5rem 1.5rem;
-//     }
+    @media (max-width: 1023.98px) {
+      margin-left: 0;
+      padding: calc(var(--part-navbar-h) + 1.25rem) 1.5rem 1.5rem;
+    }
 
-//     @media (max-width: 640px) {
-//       padding: calc(var(--part-navbar-h) + 1rem) 1rem 1.25rem;
-//     }
-//   }
+    @media (max-width: 640px) {
+      padding: calc(var(--part-navbar-h) + 1rem) 1rem 1.25rem;
+    }
+  }
 
-//   &__backdrop {
-//     position: fixed;
-//     inset: 0;
-//     z-index: 80;
-//     background: rgba(10, 10, 18, 0.5);
-//     backdrop-filter: blur(2px);
-//     animation: part-fade-in 0.2s ease;
+  &__backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    background: rgba(10, 10, 18, 0.5);
+    backdrop-filter: blur(2px);
+    animation: part-fade-in 0.2s ease;
 
-//     @media (min-width: 1024px) {
-//       display: none;
-//     }
-//   }
-// }
+    @media (min-width: 1024px) {
+      display: none;
+    }
+  }
+}
 
-// @keyframes part-fade-in {
-//   from { opacity: 0; }
-//   to { opacity: 1; }
-// }
+@keyframes part-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
