@@ -1,1 +1,325 @@
-<p>evenements works!</p>
+<div class="events-page">
+  <!-- ============================ BANNIÈRE ============================ -->
+  <section class="hero">
+    <svg class="hero__wave" viewBox="0 0 400 120" preserveAspectRatio="none" aria-hidden="true">
+      <defs>
+        <linearGradient id="evtHeroWave" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#8B7CF6" />
+          <stop offset="1" stop-color="#22C7D6" />
+        </linearGradient>
+      </defs>
+      <path
+        d="M0 90 C 50 20, 110 110, 180 60 S 300 0, 400 40"
+        fill="none"
+        stroke="url(#evtHeroWave)"
+        stroke-width="2.5"
+        vector-effect="non-scaling-stroke"
+      />
+    </svg>
+
+    <div class="hero__content">
+      <h1 class="hero__title">Mes événements</h1>
+      <p class="hero__text">Gérez tous vos événements depuis un seul endroit.</p>
+      <!-- TODO : ajouter la route 'evenements/nouveau' -->
+      <a routerLink="/organisateur/evenements/nouveau" class="hero__btn">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        Créer un événement
+      </a>
+    </div>
+
+    <svg class="hero__illustration" viewBox="0 0 120 120" fill="none" aria-hidden="true">
+      <defs>
+        <linearGradient id="evtHeroCal" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#8B7CF6" />
+          <stop offset="1" stop-color="#22C7D6" />
+        </linearGradient>
+      </defs>
+      <rect x="14" y="22" width="92" height="84" rx="14" fill="rgba(255,255,255,0.08)" stroke="url(#evtHeroCal)" stroke-width="2.5" />
+      <path d="M14 46h92" stroke="url(#evtHeroCal)" stroke-width="2.5" />
+      <path d="M38 12v20M82 12v20" stroke="url(#evtHeroCal)" stroke-width="4" stroke-linecap="round" />
+      <circle cx="36" cy="64" r="4" fill="rgba(255,255,255,0.75)" />
+      <circle cx="60" cy="64" r="4" fill="rgba(255,255,255,0.75)" />
+      <circle cx="84" cy="64" r="4" fill="rgba(255,255,255,0.75)" />
+      <circle cx="36" cy="86" r="4" fill="rgba(255,255,255,0.75)" />
+      <circle cx="60" cy="86" r="4" fill="rgba(255,255,255,0.75)" />
+      <circle cx="84" cy="86" r="7" fill="url(#evtHeroCal)" />
+    </svg>
+  </section>
+
+  <!-- ============================ BARRE D'OUTILS ============================ -->
+  <section class="toolbar" aria-label="Recherche et filtres">
+    <!-- Recherche -->
+    <div class="search">
+      <svg class="search__icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <circle cx="11" cy="11" r="8"></circle>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+      </svg>
+      <input
+        type="search"
+        class="search__input"
+        placeholder="Rechercher un événement..."
+        aria-label="Rechercher un événement"
+        [value]="query()"
+        (input)="onSearch($event)"
+      />
+    </div>
+
+    <!-- Statuts -->
+    <div class="chips" role="group" aria-label="Filtrer par statut">
+      @for (tab of statusTabs; track tab.value) {
+        <button
+          type="button"
+          class="chip"
+          [class.chip--active]="status() === tab.value"
+          [attr.aria-pressed]="status() === tab.value"
+          (click)="setStatus(tab.value)"
+        >
+          {{ tab.label }}
+        </button>
+      }
+    </div>
+
+    <!-- Menus + vue -->
+    <div class="filters">
+      <select class="select" [class.select--active]="format() !== 'all'" aria-label="Filtrer par format" (change)="onFormat($event)">
+        <option value="all" [selected]="format() === 'all'">Format</option>
+        @for (f of formats; track f) {
+          <option [value]="f" [selected]="format() === f">{{ f }}</option>
+        }
+      </select>
+
+      <select class="select" [class.select--active]="date() !== 'all'" aria-label="Filtrer par date" (change)="onDate($event)">
+        @for (d of dateOptions; track d.value) {
+          <option [value]="d.value" [selected]="date() === d.value">{{ d.label }}</option>
+        }
+      </select>
+
+      <select class="select" [class.select--active]="category() !== 'all'" aria-label="Filtrer par catégorie" (change)="onCategory($event)">
+        <option value="all" [selected]="category() === 'all'">Catégorie</option>
+        @for (c of categories(); track c) {
+          <option [value]="c" [selected]="category() === c">{{ c }}</option>
+        }
+      </select>
+
+      @if (hasActiveFilters()) {
+        <button type="button" class="filters__reset" (click)="resetFilters()">Réinitialiser</button>
+      }
+
+      <div class="view-toggle" role="group" aria-label="Mode d'affichage">
+        <button
+          type="button"
+          class="view-toggle__btn"
+          [class.view-toggle__btn--active]="view() === 'grid'"
+          [attr.aria-pressed]="view() === 'grid'"
+          aria-label="Affichage en grille"
+          (click)="view.set('grid')"
+        >
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 3h7v7H3z"></path><path d="M14 3h7v7h-7z"></path>
+            <path d="M14 14h7v7h-7z"></path><path d="M3 14h7v7H3z"></path>
+          </svg>
+        </button>
+        <button
+          type="button"
+          class="view-toggle__btn"
+          [class.view-toggle__btn--active]="view() === 'list'"
+          [attr.aria-pressed]="view() === 'list'"
+          aria-label="Affichage en liste"
+          (click)="view.set('list')"
+        >
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <path d="M8 6h13"></path><path d="M8 12h13"></path><path d="M8 18h13"></path>
+            <path d="M3 6h.01"></path><path d="M3 12h.01"></path><path d="M3 18h.01"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ RÉSULTATS ============================ -->
+  <p class="results" aria-live="polite">
+    {{ filteredEvents().length }} {{ filteredEvents().length > 1 ? 'événements' : 'événement' }}
+  </p>
+
+  @if (filteredEvents().length > 0) {
+    <div class="list" [class.list--grid]="view() === 'grid'">
+      @for (e of visibleEvents(); track e.id) {
+        <article class="card">
+          <div class="card__media">
+            <img [src]="e.imageUrl" [alt]="e.title" class="card__img" loading="lazy" (error)="onImageError($event)" />
+          </div>
+
+          <div class="card__body">
+            <header class="card__head">
+              <h2 class="card__title">{{ e.title }}</h2>
+
+              <div class="card__head-right">
+                <span class="status" [attr.data-status]="e.status">{{ statusLabel[e.status] }}</span>
+
+                <div class="card__menu-wrap">
+                  <button
+                    type="button"
+                    class="card__kebab"
+                    aria-haspopup="menu"
+                    [attr.aria-expanded]="openMenuId() === e.id"
+                    [attr.aria-label]="'Actions pour ' + e.title"
+                    (click)="toggleMenu(e.id)"
+                  >
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+                      <circle cx="12" cy="5" r="1.7"></circle>
+                      <circle cx="12" cy="12" r="1.7"></circle>
+                      <circle cx="12" cy="19" r="1.7"></circle>
+                    </svg>
+                  </button>
+
+                  @if (openMenuId() === e.id) {
+                    <div class="menu" role="menu">
+                      <a class="menu__item" role="menuitem" [routerLink]="['/organisateur/evenements', e.id]">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                          <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                        Voir les détails
+                      </a>
+                      <a class="menu__item" role="menuitem" [routerLink]="['/organisateur/evenements', e.id, 'modifier']">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                          <path d="M12 20h9"></path>
+                          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                        </svg>
+                        Modifier
+                      </a>
+                      <button type="button" class="menu__item" role="menuitem" (click)="duplicate(e)">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                        Dupliquer
+                      </button>
+                      @if (e.status === 'draft') {
+                        <button type="button" class="menu__item" role="menuitem" (click)="toggleStatus(e)">
+                          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M22 2L11 13"></path>
+                            <path d="M22 2l-7 20-4-9-9-4 20-7z"></path>
+                          </svg>
+                          Publier
+                        </button>
+                      } @else if (e.status === 'published') {
+                        <button type="button" class="menu__item" role="menuitem" (click)="toggleStatus(e)">
+                          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <path d="M14 2v6h6"></path>
+                          </svg>
+                          Repasser en brouillon
+                        </button>
+                      }
+                      <button type="button" class="menu__item menu__item--danger" role="menuitem" (click)="askDelete(e)">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                          <path d="M3 6h18"></path>
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                          <path d="M10 11v6"></path><path d="M14 11v6"></path>
+                        </svg>
+                        Supprimer
+                      </button>
+                    </div>
+                  }
+                </div>
+              </div>
+            </header>
+
+            <ul class="card__meta">
+              <li>
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path>
+                  <path d="M16 2v4"></path><path d="M8 2v4"></path><path d="M3 10h18"></path>
+                </svg>
+                {{ e.dateLabel }}
+              </li>
+              <li>
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                  <path d="M12 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"></path>
+                </svg>
+                {{ e.location }}
+              </li>
+              <li>
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                  <path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"></path>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
+                {{ e.registered }} / {{ e.capacity }} inscrits
+              </li>
+            </ul>
+
+            <div class="card__tags">
+              <span class="tag tag--format" [attr.data-format]="e.format">{{ e.format }}</span>
+              <span class="tag">{{ e.category }}</span>
+            </div>
+          </div>
+
+          <footer class="card__actions">
+            <a class="btn btn--outline" [routerLink]="['/organisateur/evenements', e.id]">Gérer</a>
+            <a class="btn btn--solid" [routerLink]="['/organisateur/evenements', e.id, 'modifier']">Modifier</a>
+          </footer>
+        </article>
+      }
+    </div>
+
+    @if (remaining() > 0) {
+      <button type="button" class="more" (click)="showMore()">
+        Afficher plus ({{ remaining() }} restant{{ remaining() > 1 ? 's' : '' }})
+      </button>
+    }
+  } @else {
+    <section class="empty">
+      <span class="empty__icon">
+        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+      </span>
+      @if (events().length === 0) {
+        <h2 class="empty__title">Vous n'avez pas encore d'événement</h2>
+        <p class="empty__text">Créez votre premier événement pour commencer à recevoir des inscriptions.</p>
+        <a routerLink="/organisateur/evenements/nouveau" class="btn btn--solid">Créer un événement</a>
+      } @else {
+        <h2 class="empty__title">Aucun événement trouvé</h2>
+        <p class="empty__text">Essayez de modifier votre recherche ou vos filtres.</p>
+        <button type="button" class="btn btn--outline" (click)="resetFilters()">Réinitialiser les filtres</button>
+      }
+    </section>
+  }
+</div>
+
+<!-- ============================ CONFIRMATION DE SUPPRESSION ============================ -->
+@if (deleteTarget(); as target) {
+  <div class="modal" (click)="cancelDelete()">
+    <div
+      class="modal__dialog"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="evt-delete-title"
+      aria-describedby="evt-delete-text"
+      (click)="$event.stopPropagation()"
+    >
+      <span class="modal__icon">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <path d="M12 9v4"></path><path d="M12 17h.01"></path>
+        </svg>
+      </span>
+      <h2 id="evt-delete-title" class="modal__title">Supprimer cet événement ?</h2>
+      <p id="evt-delete-text" class="modal__text">
+        « {{ target.title }} » sera définitivement supprimé, ainsi que toutes ses inscriptions. Cette action est irréversible.
+      </p>
+      <div class="modal__actions">
+        <button type="button" class="btn btn--outline" (click)="cancelDelete()">Annuler</button>
+        <button type="button" class="btn btn--danger" (click)="confirmDelete()">Supprimer</button>
+      </div>
+    </div>
+  </div>
+}
