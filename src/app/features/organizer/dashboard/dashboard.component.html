@@ -1,1 +1,245 @@
-<p>dashboard works!</p>
+<div class="dash">
+  <!-- ============================ BANNIÈRE ============================ -->
+  <section class="hero">
+    <svg class="hero__wave" viewBox="0 0 400 120" preserveAspectRatio="none" aria-hidden="true">
+      <defs>
+        <linearGradient id="orgHeroWave" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#8B7CF6" />
+          <stop offset="1" stop-color="#22C7D6" />
+        </linearGradient>
+      </defs>
+      <path
+        d="M0 90 C 50 20, 110 110, 180 60 S 300 0, 400 40"
+        fill="none"
+        stroke="url(#orgHeroWave)"
+        stroke-width="2.5"
+        vector-effect="non-scaling-stroke"
+      />
+    </svg>
+
+    <div class="hero__content">
+      <h1 class="hero__title">
+        Bon retour, <span class="hero__name">{{ userName() }}</span> 👋
+      </h1>
+      <p class="hero__text">Voici un aperçu de ce qui se passe sur vos événements.</p>
+      <!-- TODO : pointer vers la route de création quand elle existera -->
+      <a routerLink="/organisateur/evenements" class="hero__btn">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        Créer un événement
+      </a>
+    </div>
+
+    <svg class="hero__illustration" viewBox="0 0 120 120" fill="none" aria-hidden="true">
+      <defs>
+        <linearGradient id="orgHeroCal" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#8B7CF6" />
+          <stop offset="1" stop-color="#22C7D6" />
+        </linearGradient>
+      </defs>
+      <rect x="14" y="22" width="92" height="84" rx="14" fill="rgba(255,255,255,0.08)" stroke="url(#orgHeroCal)" stroke-width="2.5" />
+      <path d="M14 46h92" stroke="url(#orgHeroCal)" stroke-width="2.5" />
+      <path d="M38 12v20M82 12v20" stroke="url(#orgHeroCal)" stroke-width="4" stroke-linecap="round" />
+      <circle cx="36" cy="64" r="4" fill="rgba(255,255,255,0.75)" />
+      <circle cx="60" cy="64" r="4" fill="rgba(255,255,255,0.75)" />
+      <circle cx="84" cy="64" r="4" fill="rgba(255,255,255,0.75)" />
+      <circle cx="36" cy="86" r="4" fill="rgba(255,255,255,0.75)" />
+      <circle cx="60" cy="86" r="4" fill="rgba(255,255,255,0.75)" />
+      <circle cx="84" cy="86" r="7" fill="url(#orgHeroCal)" />
+    </svg>
+  </section>
+
+  <!-- ============================ STATS ============================ -->
+  <section class="stats" aria-label="Statistiques clés">
+    @for (s of stats(); track s.label) {
+      <a [routerLink]="s.link" class="stat" [attr.data-tone]="s.tone">
+        <span class="stat__icon">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            @for (d of s.icon; track d) {
+              <path [attr.d]="d"></path>
+            }
+          </svg>
+        </span>
+        <span class="stat__text">
+          <span class="stat__value">{{ s.value }}</span>
+          <span class="stat__label">{{ s.label }}</span>
+        </span>
+        <span class="stat__arrow" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 12h14"></path>
+            <path d="M12 5l7 7-7 7"></path>
+          </svg>
+        </span>
+      </a>
+    }
+  </section>
+
+  <!-- ============================ CONTENU ============================ -->
+  <div class="dash__grid">
+    <div class="dash__main">
+      <!-- Événements à venir -->
+      <section class="panel">
+        <header class="panel__header">
+          <h2 class="panel__title">Événements à venir</h2>
+          <a routerLink="/organisateur/evenements" class="panel__link">Voir tous les événements →</a>
+        </header>
+
+        <div class="events">
+          @for (e of upcomingEvents(); track e.id) {
+            <article class="event">
+              <div class="event__media">
+                <img [src]="e.imageUrl" [alt]="e.title" class="event__img" loading="lazy" />
+                <span class="event__badge">{{ e.mode }}</span>
+              </div>
+
+              <div class="event__body">
+                <h3 class="event__title">{{ e.title }}</h3>
+
+                <ul class="event__meta">
+                  <li>
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path>
+                      <path d="M16 2v4"></path><path d="M8 2v4"></path><path d="M3 10h18"></path>
+                    </svg>
+                    {{ e.dateLabel }}
+                  </li>
+                  <li>
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                      <path d="M12 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"></path>
+                    </svg>
+                    {{ e.location }}
+                  </li>
+                  <li>
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                      <path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"></path>
+                      <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                      <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                    {{ e.registered }} / {{ e.capacity }} inscrits
+                  </li>
+                </ul>
+
+                <!-- TODO : [routerLink]="['/organisateur/evenements', e.id]" quand la page détail existera -->
+                <a routerLink="/organisateur/evenements" class="event__btn">Voir l'événement</a>
+              </div>
+            </article>
+          } @empty {
+            <p class="empty">Aucun événement à venir pour le moment.</p>
+          }
+        </div>
+      </section>
+
+      <!-- Performance -->
+      <section class="panel">
+        <header class="panel__header">
+          <h2 class="panel__title">Performance de vos événements</h2>
+          <select
+            class="panel__select"
+            aria-label="Période du graphique"
+            [value]="period()"
+            (change)="onPeriodChange($event)"
+          >
+            @for (p of periods; track p.value) {
+              <option [value]="p.value" [selected]="p.value === period()">{{ p.label }}</option>
+            }
+          </select>
+        </header>
+
+        <div class="chart" #chartHost>
+          <svg
+            [attr.width]="width()"
+            [attr.height]="height()"
+            role="img"
+            aria-label="Courbe des inscriptions sur la période sélectionnée"
+          >
+            <defs>
+              <linearGradient id="orgPerfArea" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#22C7D6" stop-opacity="0.28" />
+                <stop offset="1" stop-color="#22C7D6" stop-opacity="0" />
+              </linearGradient>
+            </defs>
+
+            <!-- Grille + axe Y -->
+            @for (t of yTicks(); track t.value) {
+              <line class="chart__grid" [attr.x1]="pad.left" [attr.x2]="width() - pad.right" [attr.y1]="t.y" [attr.y2]="t.y" />
+              <text class="chart__axis" [attr.x]="pad.left - 10" [attr.y]="t.y" text-anchor="end" dominant-baseline="middle">{{ t.value }}</text>
+            }
+
+            <!-- Aire + courbe -->
+            <path [attr.d]="areaPath()" fill="url(#orgPerfArea)" />
+            <path class="chart__line" [attr.d]="linePath()" />
+
+            <!-- Axe X -->
+            @for (p of points(); track p.label; let i = $index) {
+              @if (showLabel(i)) {
+                <text class="chart__axis" [attr.x]="p.x" [attr.y]="height() - 8" text-anchor="middle">{{ p.label }}</text>
+              }
+            }
+
+            <!-- Survol -->
+            @if (hoveredPoint(); as hp) {
+              <line class="chart__guide" [attr.x1]="hp.x" [attr.x2]="hp.x" [attr.y1]="pad.top" [attr.y2]="height() - pad.bottom" />
+              <circle class="chart__dot" [attr.cx]="hp.x" [attr.cy]="hp.y" r="5" />
+            }
+
+            @for (p of points(); track p.label; let i = $index) {
+              <rect
+                class="chart__hit"
+                [attr.x]="p.x - colWidth() / 2"
+                [attr.y]="0"
+                [attr.width]="colWidth()"
+                [attr.height]="height()"
+                (pointerenter)="hovered.set(i)"
+                (pointerleave)="hovered.set(null)"
+              />
+            }
+          </svg>
+
+          @if (hoveredPoint(); as hp) {
+            <div class="chart__tooltip" [style.left.px]="tooltipX(hp.x)" [style.top.px]="hp.y">
+              <strong>{{ hp.value }}</strong> inscriptions · {{ hp.label }}
+            </div>
+          }
+        </div>
+      </section>
+    </div>
+
+    <!-- Activités récentes -->
+    <aside class="dash__aside">
+      <section class="panel">
+        <header class="panel__header">
+          <h2 class="panel__title">Activités récentes</h2>
+        </header>
+
+        <ul class="activities">
+          @for (a of activities(); track a.id) {
+            <li>
+              <a [routerLink]="a.link" class="activity">
+                <span class="activity__icon" [attr.data-tone]="a.tone">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    @for (d of a.icon; track d) {
+                      <path [attr.d]="d"></path>
+                    }
+                  </svg>
+                </span>
+                <span class="activity__text">
+                  <span class="activity__title">{{ a.title }}</span>
+                  <span class="activity__time">{{ a.timeLabel }}</span>
+                </span>
+                <svg class="activity__chevron" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M9 18l6-6-6-6"></path>
+                </svg>
+              </a>
+            </li>
+          } @empty {
+            <li class="empty">Aucune activité récente.</li>
+          }
+        </ul>
+      </section>
+    </aside>
+  </div>
+</div>
