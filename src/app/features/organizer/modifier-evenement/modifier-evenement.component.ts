@@ -9,48 +9,30 @@ import {
 } from '@angular/forms';
 import { DomSanitizer } from '@angular/platform-browser';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { firstValueFrom, forkJoin, of, switchMap, catchError, throwError } from 'rxjs';
 
-type EventStatus = 'draft' | 'published' | 'finished';
-type EventFormat = '' | 'online' | 'onsite';
-type EventType = 'free' | 'paid';
-type CapacityMode = '' | 'limited' | 'unlimited';
+import { CategoryService } from '../../../core/services/category.service';
+import { EventService } from '../../../core/services/event.service';
+import { NotificationService } from '../../../core/services/notification.service';
+import { TicketTypeService, TicketTypeDto } from '../../../core/services/ticket-type.service';
+import { CategoryDto, EventDto } from '../../../core/models/event.model';
+import {
+  UiCapacityMode, UiFormat, UiStatus, UiType,
+  combineDateTime, splitIso, toApiCapacityMode, toApiFormat, toApiType,
+  toUiCapacityMode, toUiFormat, toUiStatus, toUiType,
+} from '../../../core/models/event-mapping';
+
 type LoadState = 'loading' | 'ready' | 'notfound' | 'locked' | 'error';
 type FormatCommand = 'bold' | 'italic' | 'underline' | 'insertUnorderedList' | 'insertOrderedList';
 
 interface Ticket {
-  id: number; // négatif = ticket créé ici, pas encore enregistré côté serveur
+  id: string;              // UUID backend, ou "temp-N" pour les nouveaux
   name: string;
   price: number;
   seats: number;
   description: string;
   sold: number;
-}
-
-interface EventData {
-  id: number;
-  status: EventStatus;
-  title: string;
-  category: string;
-  summary: string;
-  coverUrl: string | null;
-  date: string;
-  startTime: string;
-  endTime: string;
-  format: 'online' | 'onsite';
-  venueName: string;
-  address: string;
-  city: string;
-  room: string;
-  platform: string;
-  link: string;
-  type: EventType;
-  capacityMode: 'limited' | 'unlimited';
-  capacity: number | null;
-  tickets: Ticket[];
-  descriptionHtml: string;
-  notes: string;
-  registered: number;
-  updatedAt: string;
+  isNew?: boolean;
 }
 
 interface Toast {
@@ -65,57 +47,9 @@ const LAST_STEP = 5;
 const longDate = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 const dateTime = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short' });
 const numberFmt = new Intl.NumberFormat('fr-FR');
-const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 /* ----------------------------------------------------------------
-   DONNÉES DE DÉMONSTRATION
-   TODO : remplacer fetchEvent() par ton service (GET /events/:id)
-   Pour tester : /evenements/1/modifier (publié, avec ventes),
-                 /evenements/2/modifier (brouillon),
-                 /evenements/9/modifier (terminé → verrouillé)
-   ---------------------------------------------------------------- */
-const MOCK_EVENTS: EventData[] = [
-  {
-    id: 1, status: 'published', title: 'Tech Conférence', category: 'Conférence',
-    summary: 'La grande conférence annuelle des acteurs du numérique à Dakar.',
-    coverUrl: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&q=80',
-    date: '2026-11-30', startTime: '14:00', endTime: '18:00', format: 'onsite',
-    venueName: 'Centre de conférence', address: 'Avenue Cheikh Anta Diop', city: 'Dakar', room: 'Salle A',
-    platform: '', link: '', type: 'paid', capacityMode: 'limited', capacity: 500,
-    tickets: [
-      { id: 1, name: 'Standard', price: 5000, seats: 400, description: "Accès standard à l'événement", sold: 380 },
-      { id: 2, name: 'VIP', price: 10000, seats: 100, description: 'Accès prioritaire et cocktail', sold: 100 },
-    ],
-    descriptionHtml: '<p>Une journée de <b>conférences</b> et de rencontres.</p><ul><li>Keynotes</li><li>Ateliers pratiques</li><li>Networking</li></ul>',
-    notes: "Pensez à apporter votre pièce d'identité.", registered: 480, updatedAt: '2026-10-18T09:30:00',
-  },
-  {
-    id: 2, status: 'draft', title: 'Python Workshop', category: 'Formation',
-    summary: 'Initiation pratique à Python en une demi-journée.',
-    coverUrl: null,
-    date: '2026-12-15', startTime: '10:00', endTime: '12:00', format: 'online',
-    venueName: '', address: '', city: '', room: '', platform: 'Zoom', link: '',
-    type: 'free', capacityMode: 'limited', capacity: 50, tickets: [],
-    descriptionHtml: '<p>Apprenez les bases de Python avec des exercices guidés.</p>',
-    notes: '', registered: 0, updatedAt: '2026-10-20T16:10:00',
-  },
-  {
-    id: 9, status: 'finished', title: 'Forum Emploi Jeunes', category: 'Forum',
-    summary: '', coverUrl: null, date: '2026-09-18', startTime: '09:00', endTime: '17:00', format: 'onsite',
-    venueName: 'Palais des congrès', address: '', city: 'Dakar', room: '', platform: '', link: '',
-    type: 'free', capacityMode: 'limited', capacity: 700, tickets: [],
-    descriptionHtml: '<p>Forum terminé.</p>', notes: '', registered: 640, updatedAt: '2026-09-19T08:00:00',
-  },
-];
-
-const fetchEvent = async (id: number): Promise<EventData | null> => {
-  await delay(500);
-  const found = MOCK_EVENTS.find((e) => e.id === id);
-  return found ? structuredClone(found) : null;
-};
-
-/* ----------------------------------------------------------------
-   VALIDATEURS
+   VALIDATEURS (inchangés)
    ---------------------------------------------------------------- */
 const todayIso = (): string => {
   const d = new Date();
@@ -164,6 +98,11 @@ export class OrganizerEditEventComponent implements AfterViewInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
+  private readonly eventService = inject(EventService);
+  private readonly categoryService = inject(CategoryService);
+  private readonly ticketTypeService = inject(TicketTypeService);
+  private readonly notification = inject(NotificationService);
+
   private readonly panel = viewChild.required<ElementRef<HTMLElement>>('panel');
   private readonly editor = viewChild.required<ElementRef<HTMLDivElement>>('editor');
 
@@ -181,13 +120,10 @@ export class OrganizerEditEventComponent implements AfterViewInit {
     { label: 'Aperçu', title: 'Aperçu' },
   ];
 
-  readonly categories = [
-    'Conférence', 'Formation', 'Atelier', 'Webinaire', 'Hackathon', 'Salon', 'Festival',
-    'Networking', 'Forum', 'Masterclass', 'Culture', 'Sport', 'Autre',
-  ];
+  readonly categories = signal<CategoryDto[]>([]);
   readonly platforms = ['Zoom', 'Google Meet', 'Microsoft Teams', 'YouTube Live', 'Autre'];
 
-  readonly statusLabel: Record<EventStatus, string> = {
+  readonly statusLabel: Record<UiStatus, string> = {
     draft: 'Brouillon',
     published: 'Publié',
     finished: 'Terminé',
@@ -197,21 +133,21 @@ export class OrganizerEditEventComponent implements AfterViewInit {
      ÉTAT DE L'ÉVÉNEMENT CHARGÉ
      ------------------------------------------------------------------ */
   readonly loadState = signal<LoadState>('loading');
-  readonly eventId = signal<number | null>(null);
+  readonly eventId = signal<string | null>(null);
   readonly eventTitle = signal('');
-  readonly status = signal<EventStatus>('draft');
+  readonly status = signal<UiStatus>('draft');
   readonly registered = signal(0);
   readonly updatedAt = signal<string | null>(null);
   readonly originalDate = signal('');
 
-  private loaded: EventData | null = null;
+  private loaded: EventDto | null = null;
+  private originalTicketIds = new Set<string>();
   private currentLoad = 0;
   private hadCover = false;
   private skipGuard = false;
   private resolveView!: () => void;
   private readonly viewReady = new Promise<void>((resolve) => (this.resolveView = resolve));
 
-  /** La date d'origine reste valide même si elle est passée ; une nouvelle date ne peut pas l'être */
   private readonly notPastUnlessUnchanged: ValidatorFn = (control) =>
     !control.value || control.value >= todayIso() || control.value === this.originalDate()
       ? null
@@ -231,7 +167,7 @@ export class OrganizerEditEventComponent implements AfterViewInit {
         date: ['', [Validators.required, this.notPastUnlessUnchanged]],
         startTime: ['', Validators.required],
         endTime: [''],
-        format: ['' as EventFormat, Validators.required],
+        format: ['' as UiFormat, Validators.required],
         venueName: [''],
         address: [''],
         city: [''],
@@ -242,8 +178,8 @@ export class OrganizerEditEventComponent implements AfterViewInit {
       { validators: timeRange },
     ),
     participation: this.fb.group({
-      type: ['free' as EventType, Validators.required],
-      capacityMode: ['' as CapacityMode, Validators.required],
+      type: ['free' as UiType, Validators.required],
+      capacityMode: ['' as UiCapacityMode, Validators.required],
       capacity: this.fb.control<number | null>(null),
     }),
     description: this.fb.group({
@@ -265,15 +201,14 @@ export class OrganizerEditEventComponent implements AfterViewInit {
   });
 
   /* ------------------------------------------------------------------
-     ÉTAT UI
+     ÉTAT UI (inchangé)
      ------------------------------------------------------------------ */
   readonly step = signal(0);
   readonly visited = signal<number[]>([0]);
   readonly attemptedSteps = signal<number[]>([]);
 
   readonly tickets = signal<Ticket[]>([]);
-  readonly editingTicket = signal<number | 'new' | null>(null);
-  private nextTempId = -1;
+  readonly editingTicket = signal<string | 'new' | null>(null);
 
   readonly cover = signal<{ name: string; size: number; url: string; remote: boolean } | null>(null);
   readonly coverError = signal<string | null>(null);
@@ -292,7 +227,6 @@ export class OrganizerEditEventComponent implements AfterViewInit {
   readonly toast = signal<Toast | null>(null);
   private toastTimer: ReturnType<typeof setTimeout> | undefined;
 
-  /** Instantané de l'état chargé / enregistré, pour détecter les modifications par étape */
   private readonly baseline = signal<string[] | null>(null);
 
   /* ------------------------------------------------------------------
@@ -320,7 +254,8 @@ export class OrganizerEditEventComponent implements AfterViewInit {
 
   readonly editingSold = computed(() => {
     const id = this.editingTicket();
-    return typeof id === 'number' ? (this.tickets().find((t) => t.id === id)?.sold ?? 0) : 0;
+    if (typeof id !== 'string') return 0;
+    return this.tickets().find((t) => t.id === id)?.sold ?? 0;
   });
 
   readonly ticketsIssue = computed<string | null>(() => {
@@ -339,14 +274,13 @@ export class OrganizerEditEventComponent implements AfterViewInit {
     return original && original < this.today ? original : this.today;
   });
 
-  readonly canDelete = computed(() => this.registered() === 0);
+  readonly canDelete = computed(() => this.status() === 'draft');
 
   readonly updatedLabel = computed(() => {
     const iso = this.updatedAt();
     return iso ? dateTime.format(new Date(iso)) : '';
   });
 
-  /** Chaque étape est comparée à l'état d'origine */
   private stepSnapshots(): string[] {
     const v = this.form.getRawValue();
     return [
@@ -369,7 +303,6 @@ export class OrganizerEditEventComponent implements AfterViewInit {
 
   readonly hasChanges = computed(() => this.changedSteps().length > 0);
 
-  /** Date, heure, format ou lieu modifiés alors que des participants sont inscrits */
   readonly showNotify = computed(
     () => this.status() === 'published' && this.registered() > 0 && this.changedSteps().includes(1),
   );
@@ -380,9 +313,10 @@ export class OrganizerEditEventComponent implements AfterViewInit {
     const s = v.schedule;
     const p = v.participation;
     const limit = Number(p.capacity);
+    const cat = this.categories().find((c) => c.id === v.info.category);
     return {
       title: v.info.title.trim(),
-      category: v.info.category,
+      category: cat?.name ?? '',
       intro: v.info.summary.trim(),
       dateLabel: s.date ? this.formatDateLong(s.date) : '',
       timeLabel: s.startTime ? (s.endTime ? `${s.startTime} – ${s.endTime}` : `À partir de ${s.startTime}`) : '',
@@ -415,10 +349,11 @@ export class OrganizerEditEventComponent implements AfterViewInit {
       .subscribe((mode) => this.applyCapacityValidators(mode));
 
     this.applyFormatValidators('');
+    this.loadCategories();
 
     this.route.paramMap
       .pipe(takeUntilDestroyed())
-      .subscribe((params) => void this.load(Number(params.get('id'))));
+      .subscribe((params) => void this.load(params.get('id')));
 
     this.destroyRef.onDestroy(() => {
       this.releaseCover();
@@ -433,81 +368,133 @@ export class OrganizerEditEventComponent implements AfterViewInit {
   /* ------------------------------------------------------------------
      CHARGEMENT
      ------------------------------------------------------------------ */
-  async load(id: number): Promise<void> {
-    const token = ++this.currentLoad;
-    this.eventId.set(Number.isFinite(id) ? id : null);
-    this.loadState.set('loading');
-    try {
-      const data = Number.isFinite(id) ? await fetchEvent(id) : null; // TODO : service
-      await this.viewReady;
-      if (token !== this.currentLoad) return; // on est passé à un autre événement entre-temps
+  private loadCategories(): void {
+    this.categoryService.list().subscribe({
+      next: (res) => this.categories.set(res.data ?? []),
+      error: (err) => {
+        console.error('[EditEvent] Échec chargement catégories', err.status);
+        this.notification.httpError(err);
+      },
+    });
+  }
 
-      if (!data) {
+  async load(id: string | null): Promise<void> {
+    const token = ++this.currentLoad;
+    this.eventId.set(id);
+    this.loadState.set('loading');
+
+    if (!id) {
+      this.loadState.set('notfound');
+      return;
+    }
+
+    try {
+      // Charger l'événement + ses ticket-types en parallèle
+      const [eventRes, ticketRes] = await Promise.all([
+        firstValueFrom(this.eventService.getEvent(id)),
+        firstValueFrom(
+          this.ticketTypeService.listByEvent(id).pipe(
+            catchError(() => of({ success: true, data: [], message: '' } as any)),
+          ),
+        ),
+      ]);
+
+      await this.viewReady;
+      if (token !== this.currentLoad) return;
+
+      const event = eventRes.data;
+      if (!event) {
         this.loadState.set('notfound');
         return;
       }
-      this.loaded = data;
-      this.eventTitle.set(data.title);
-      this.status.set(data.status);
 
-      if (data.status === 'finished') {
+      // ✅ Annotation explicite du tableau pour que TypeScript sache le type de `t`
+      const tickets: Ticket[] = (ticketRes.data ?? []).map((t: TicketTypeDto): Ticket => ({
+        id: t.id,
+        name: t.name,
+        price: Number(t.price),
+        seats: t.quantity_total,
+        description: t.description ?? '',
+        sold: t.quantity_sold,
+        isNew: false,
+      }));
+
+      this.originalTicketIds = new Set(tickets.map((t: Ticket) => t.id));
+      this.applyData(event, tickets);
+
+      if (toUiStatus(event.status) === 'finished') {
         this.loadState.set('locked');
         return;
       }
-      this.applyData(data);
-      this.step.set(0);
-      this.visited.set([0]);
-      this.attemptedSteps.set([]);
       this.loadState.set('ready');
-    } catch {
+    } catch (err) {
+      console.error('[EditEvent] Échec chargement', err);
       if (token === this.currentLoad) this.loadState.set('error');
     }
   }
 
   retry(): void {
-    void this.load(this.eventId() ?? 0);
+    void this.load(this.eventId());
   }
 
-  /** Remplit (ou remet à l'état d'origine) tout le formulaire */
-  private applyData(d: EventData): void {
-    this.registered.set(d.registered);
-    this.originalDate.set(d.date);
-    this.updatedAt.set(d.updatedAt);
+  private applyData(d: EventDto, tickets: Ticket[]): void {
+    this.loaded = d;
+    this.eventTitle.set(d.title);
+    this.status.set(toUiStatus(d.status));
+    this.registered.set(d.registered_count ?? 0);
+    this.originalDate.set(splitIso(d.start_at).date);
+    this.updatedAt.set(d.updated_at ?? null);
     this.notifyParticipants.set(true);
 
     this.releaseCover();
     this.coverFile = null;
     this.coverError.set(null);
-    this.hadCover = !!d.coverUrl;
-    this.cover.set(d.coverUrl ? { name: 'Image actuelle', size: 0, url: d.coverUrl, remote: true } : null);
+    this.hadCover = !!d.cover_image;
+    this.cover.set(
+      d.cover_image
+        ? { name: 'Image actuelle', size: 0, url: d.cover_image, remote: true }
+        : null,
+    );
 
-    this.tickets.set(d.tickets.map((t) => ({ ...t })));
-    this.nextTempId = -1;
+    this.tickets.set(tickets);
     this.editingTicket.set(null);
     this.ticketForm.reset();
     this.closeLink();
 
-    this.form.reset({
-      info: { title: d.title, category: d.category, summary: d.summary },
-      schedule: {
-        date: d.date, startTime: d.startTime, endTime: d.endTime, format: d.format,
-        venueName: d.venueName, address: d.address, city: d.city, room: d.room,
-        platform: d.platform, link: d.link,
-      },
-      participation: { type: d.type, capacityMode: d.capacityMode, capacity: d.capacity },
-      description: { full: d.descriptionHtml, notes: d.notes },
-    });
-    this.applyFormatValidators(d.format);
-    this.applyCapacityValidators(d.capacityMode);
+    const startSplit = splitIso(d.start_at);
+    const endSplit = splitIso(d.end_at);
 
-    // Le type gratuit/payant ne change plus dès que des participants sont inscrits
+    this.form.reset({
+      info: { title: d.title, category: d.category.id, summary: d.short_description },
+      schedule: {
+        date: startSplit.date,
+        startTime: startSplit.time,
+        endTime: endSplit.time,
+        format: toUiFormat(d.format),
+        venueName: d.venue_name ?? '',
+        address: d.address ?? '',
+        city: d.city ?? '',
+        room: d.room ?? '',
+        platform: d.online_platform ?? '',
+        link: d.access_url ?? '',
+      },
+      participation: {
+        type: toUiType(d.participation_type),
+        capacityMode: toUiCapacityMode(d.capacity_type),
+        capacity: d.capacity_limit ?? null,
+      },
+      description: { full: d.description ?? '', notes: '' },
+    });
+
+    this.applyFormatValidators(toUiFormat(d.format));
+    this.applyCapacityValidators(toUiCapacityMode(d.capacity_type));
+
     const type = this.participation.controls.type;
-    if (d.registered > 0) type.disable({ emitEvent: false });
+    if ((d.registered_count ?? 0) > 0) type.disable({ emitEvent: false });
     else type.enable({ emitEvent: false });
 
-    // Éditeur riche : contenu nettoyé, puis relu pour que l'instantané corresponde au rendu réel
     const el = this.editor().nativeElement;
-    el.innerHTML = this.sanitizer.sanitize(SecurityContext.HTML, d.descriptionHtml) ?? '';
+    el.innerHTML = this.sanitizer.sanitize(SecurityContext.HTML, d.description ?? '') ?? '';
     this.description.controls.full.setValue(el.innerHTML);
 
     this.form.markAsPristine();
@@ -515,29 +502,27 @@ export class OrganizerEditEventComponent implements AfterViewInit {
     this.baseline.set(this.stepSnapshots());
   }
 
-  /** Annule toutes les modifications non enregistrées */
   resetChanges(): void {
     if (!this.loaded) return;
-    this.applyData(this.loaded);
+    this.applyData(this.loaded, this.tickets().filter((t) => !t.isNew));
     this.showToast('success', 'Modifications annulées.');
   }
 
-  /** Après un enregistrement réussi : l'état courant devient la référence */
   private commitSaved(): void {
     const current = this.cover();
     if (current) this.cover.set({ ...current, remote: true });
     this.coverFile = null;
     this.hadCover = current !== null;
     this.originalDate.set(this.schedule.controls.date.value);
-    this.loaded = { ...(this.loaded as EventData), status: this.status() };
     this.form.markAsPristine();
     this.baseline.set(this.stepSnapshots());
+    this.tickets.update((list) => list.map((t) => ({ ...t, isNew: false })));
   }
 
   /* ------------------------------------------------------------------
-     VALIDATEURS CONDITIONNELS
+     VALIDATEURS CONDITIONNELS (inchangés)
      ------------------------------------------------------------------ */
-  private applyFormatValidators(format: EventFormat): void {
+  private applyFormatValidators(format: UiFormat): void {
     const c = this.schedule.controls;
     this.setRequired([c.venueName, c.address, c.city], format === 'onsite');
     this.setRequired([c.platform], format === 'online');
@@ -552,7 +537,7 @@ export class OrganizerEditEventComponent implements AfterViewInit {
     });
   }
 
-  private applyCapacityValidators(mode: CapacityMode): void {
+  private applyCapacityValidators(mode: UiCapacityMode): void {
     const capacity = this.participation.controls.capacity;
     if (mode === 'limited') {
       const registered = this.registered();
@@ -572,7 +557,7 @@ export class OrganizerEditEventComponent implements AfterViewInit {
   }
 
   /* ------------------------------------------------------------------
-     NAVIGATION ENTRE ÉTAPES
+     NAVIGATION (inchangée)
      ------------------------------------------------------------------ */
   isStepValid(index: number): boolean {
     switch (index) {
@@ -609,7 +594,6 @@ export class OrganizerEditEventComponent implements AfterViewInit {
 
   next(): void {
     const index = this.step();
-    // Brouillon : on peut avancer librement ; événement publié : l'étape doit être valide
     if (this.status() === 'published') {
       this.attemptedSteps.update((list) => (list.includes(index) ? list : [...list, index]));
       this.markStepTouched(index);
@@ -652,7 +636,7 @@ export class OrganizerEditEventComponent implements AfterViewInit {
   }
 
   /* ------------------------------------------------------------------
-     ERREURS
+     ERREURS (inchangées)
      ------------------------------------------------------------------ */
   showError(control: AbstractControl | null): boolean {
     return !!control && control.invalid && (control.touched || control.dirty);
@@ -677,16 +661,25 @@ export class OrganizerEditEventComponent implements AfterViewInit {
     if (e['pastDate']) return 'La date ne peut pas être dans le passé.';
     if (e['url']) return 'Entrez une adresse valide (https://...).';
     if (e['capacity']) return `Il ne reste que ${e['capacity'].max} place(s) disponible(s).`;
+    if (e['server']) return String(e['server']);
     return 'Valeur invalide.';
   }
 
-  /** Garde l'ancienne valeur dans la liste même si elle n'existe plus dans les options */
-  withCurrent(list: string[], value: string): string[] {
-    return value && !list.includes(value) ? [value, ...list] : list;
+  withCurrent(list: (string | CategoryDto)[], value: string): string[] {
+    if (!value) return list.map((x) => (typeof x === 'string' ? x : x.name));
+    if (typeof list[0] === 'string') {
+      const arr = list as string[];
+      return arr.includes(value) ? arr : [value, ...arr];
+    }
+    const arr = list as CategoryDto[];
+    const exists = arr.some((c) => c.id === value);
+    if (exists) return arr.map((c) => c.name);
+    const current = arr.find((c) => c.id === value);
+    return current ? [current.name, ...arr.map((c) => c.name)] : arr.map((c) => c.name);
   }
 
   /* ------------------------------------------------------------------
-     IMAGE DE COUVERTURE
+     IMAGE (inchangée)
      ------------------------------------------------------------------ */
   onFileInput(event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -742,7 +735,7 @@ export class OrganizerEditEventComponent implements AfterViewInit {
   }
 
   /* ------------------------------------------------------------------
-     TICKETS
+     TICKETS (inchangés sauf types)
      ------------------------------------------------------------------ */
   addTicket(): void {
     this.ticketForm.reset();
@@ -776,8 +769,7 @@ export class OrganizerEditEventComponent implements AfterViewInit {
     const seats = Number(v.seats);
     const seatsControl = this.ticketForm.controls.seats;
 
-    // On ne peut pas réduire les places sous le nombre déjà vendu
-    const sold = typeof editing === 'number' ? (this.tickets().find((t) => t.id === editing)?.sold ?? 0) : 0;
+    const sold = typeof editing === 'string' ? (this.tickets().find((t) => t.id === editing)?.sold ?? 0) : 0;
     if (seats < sold) {
       seatsControl.setErrors({ belowSold: { min: sold } });
       seatsControl.markAsTouched();
@@ -804,7 +796,7 @@ export class OrganizerEditEventComponent implements AfterViewInit {
       description: v.description.trim(),
     };
     if (editing === 'new') {
-      this.tickets.update((list) => [...list, { id: this.nextTempId--, sold: 0, ...data }]);
+      this.tickets.update((list) => [...list, { id: `temp-${Date.now()}`, sold: 0, isNew: true, ...data }]);
     } else {
       this.tickets.update((list) => list.map((t) => (t.id === editing ? { ...t, ...data } : t)));
     }
@@ -826,7 +818,7 @@ export class OrganizerEditEventComponent implements AfterViewInit {
   }
 
   /* ------------------------------------------------------------------
-     ÉDITEUR RICHE (contenteditable)
+     ÉDITEUR (inchangé)
      ------------------------------------------------------------------ */
   format(command: FormatCommand): void {
     this.editor().nativeElement.focus();
@@ -922,7 +914,7 @@ export class OrganizerEditEventComponent implements AfterViewInit {
   }
 
   /* ------------------------------------------------------------------
-     ENREGISTREMENT
+     ENREGISTREMENT → API
      ------------------------------------------------------------------ */
   onNotifyChange(event: Event): void {
     this.notifyParticipants.set((event.target as HTMLInputElement).checked);
@@ -932,7 +924,6 @@ export class OrganizerEditEventComponent implements AfterViewInit {
     const current = this.status();
 
     if (publish || current === 'published') {
-      // Publié (ou en cours de publication) : toutes les étapes doivent être valides
       const firstInvalid = [0, 1, 2, 3, 4].find((i) => !this.isStepValid(i));
       if (firstInvalid !== undefined) {
         this.form.markAllAsTouched();
@@ -943,85 +934,197 @@ export class OrganizerEditEventComponent implements AfterViewInit {
         return;
       }
     } else if (this.info.controls.title.invalid) {
-      // Brouillon : seul le titre est indispensable
       this.info.controls.title.markAsTouched();
       this.moveTo(0);
       this.focusFirstInvalid();
-      this.showToast('error', 'Le nom de l\'événement est obligatoire.');
+      this.showToast('error', "Le nom de l'événement est obligatoire.");
       return;
     }
 
     this.saving.set(publish ? 'publish' : 'save');
-    const payload = this.toPayload(publish ? 'published' : current);
-    try {
-      // TODO : await firstValueFrom(this.eventService.update(this.eventId()!, payload));
-      //        puis remplacer les tickets locaux (ids négatifs) par ceux renvoyés par l'API
-      console.debug("Payload de modification (à envoyer à l'API)", payload);
-      await delay(800);
+    console.info(`[EditEvent] ${publish ? 'Publication' : 'Enregistrement'} en cours...`);
 
-      if (publish) this.status.set('published');
+    try {
+      const id = this.eventId();
+      if (!id) throw new Error('Event ID manquant.');
+
+      // 1. PATCH de l'événement
+      const payload = this.buildUpdatePayload();
+      await firstValueFrom(this.eventService.updateEvent(id, payload));
+      console.info('[EditEvent] Événement mis à jour');
+
+      // 2. Upload couverture si changée
+      if (this.coverFile) {
+        try {
+          await firstValueFrom(this.eventService.uploadCover(id, this.coverFile));
+          console.info('[EditEvent] Couverture mise à jour');
+        } catch (coverErr) {
+          console.warn('[EditEvent] Upload couverture échoué', coverErr);
+          this.notification.warning("L'événement a été mis à jour mais l'image n'a pas pu être envoyée.", 'Attention');
+        }
+      }
+
+      // 3. Tickets : créer les nouveaux, mettre à jour les existants, désactiver les supprimés
+      if (this.isPaid()) {
+        await this.syncTickets(id);
+      }
+
+      // 4. Publier si demandé (ou si déjà publié, on ne republie pas)
+      if (publish && current === 'draft') {
+        await firstValueFrom(this.eventService.publishEvent(id));
+        this.status.set('published');
+        console.info('[EditEvent] Événement publié');
+      }
+
+      // 5. État local + succès
       this.updatedAt.set(new Date().toISOString());
       this.commitSaved();
-      this.showToast('success', publish ? 'Événement publié.' : 'Modifications enregistrées.');
-    } catch {
-      this.showToast('error', "L'enregistrement a échoué. Veuillez réessayer.");
+      this.notification.success(
+        publish ? 'Événement publié.' : 'Modifications enregistrées.',
+        'Succès',
+      );
+    } catch (err: any) {
+      console.error('[EditEvent] Échec enregistrement', err);
+      if (err?.error?.errors) {
+        this.applyServerErrors(err.error.errors);
+        this.notification.error(err.error.message || 'Certains champs sont invalides.', 'Validation');
+      } else {
+        this.notification.httpError(err);
+      }
     } finally {
       this.saving.set(null);
     }
   }
 
-  private toPayload(status: EventStatus) {
+  private buildUpdatePayload() {
     const v = this.form.getRawValue();
     const s = v.schedule;
     const p = v.participation;
+
+    const start_at = combineDateTime(s.date, s.startTime);
+    const end_at = s.endTime
+      ? combineDateTime(s.date, s.endTime)
+      : new Date(new Date(start_at).getTime() + 2 * 60 * 60 * 1000).toISOString();
+
+    let base_price: string | null = null;
+    if (p.type === 'paid' && this.tickets().length > 0) {
+      base_price = String(Math.min(...this.tickets().map((t) => t.price)));
+    } else if (p.type === 'paid') {
+      base_price = '1';
+    }
+
     return {
-      id: this.eventId(),
-      status,
       title: v.info.title.trim(),
+      short_description: v.info.summary.trim() || v.info.title.trim().slice(0, 100),
+      description: v.description.full || `<p>${v.info.summary.trim()}</p>`,
+      format: toApiFormat(s.format),
+      participation_type: toApiType(p.type),
+      capacity_type: toApiCapacityMode(p.capacityMode),
+      capacity_limit: p.capacityMode === 'limited' ? Number(p.capacity) : null,
+      base_price,
+      start_at,
+      end_at,
+      venue_name: s.format === 'onsite' ? s.venueName.trim() : '',
+      address: s.format === 'onsite' ? s.address.trim() : '',
+      city: s.format === 'onsite' ? s.city.trim() : '',
+      room: s.format === 'onsite' ? s.room.trim() : '',
+      online_platform: s.format === 'online' ? s.platform : '',
+      access_url: s.format === 'online' ? s.link.trim() : '',
       category: v.info.category,
-      summary: v.info.summary.trim(),
-      coverAction: this.coverFile ? 'replace' : this.cover() ? 'keep' : this.hadCover ? 'remove' : 'none',
-      coverImage: this.coverFile, // TODO : upload multipart ou URL signée
-      date: s.date,
-      startTime: s.startTime,
-      endTime: s.endTime || null,
-      format: s.format,
-      venue:
-        s.format === 'onsite'
-          ? { name: s.venueName.trim(), address: s.address.trim(), city: s.city.trim(), room: s.room.trim() || null }
-          : null,
-      online: s.format === 'online' ? { platform: s.platform, link: s.link.trim() || null } : null,
-      isFree: p.type === 'free',
-      capacity: p.capacityMode === 'limited' ? Number(p.capacity) : null,
-      tickets:
-        p.type === 'paid'
-          ? this.tickets().map((t) => ({
-              id: t.id > 0 ? t.id : null, // null = nouveau ticket
-              name: t.name,
-              price: t.price,
-              seats: t.seats,
-              description: t.description,
-            }))
-          : [],
-      description: v.description.full,
-      notes: v.description.notes.trim() || null,
-      notifyParticipants: this.showNotify() && this.notifyParticipants(),
     };
   }
 
+  private async syncTickets(eventId: string): Promise<void> {
+    const requests: Promise<any>[] = [];
+
+    for (const t of this.tickets()) {
+      if (t.isNew) {
+        requests.push(
+          firstValueFrom(
+            this.ticketTypeService.create(eventId, {
+              name: t.name,
+              price: String(t.price),
+              quantity_total: t.seats,
+              description: t.description || undefined,
+            }),
+          ),
+        );
+      } else {
+        requests.push(
+          firstValueFrom(
+            this.ticketTypeService.update(eventId, t.id, {
+              name: t.name,
+              price: String(t.price),
+              quantity_total: t.seats,
+              description: t.description || undefined,
+            }),
+          ),
+        );
+      }
+    }
+
+    // Tickets supprimés localement → désactiver côté backend
+    const currentIds = new Set(this.tickets().filter((t) => !t.isNew).map((t) => t.id));
+    for (const oldId of this.originalTicketIds) {
+      if (!currentIds.has(oldId)) {
+        requests.push(
+          firstValueFrom(
+            this.ticketTypeService.update(eventId, oldId, { is_active: false } as any),
+          ),
+        );
+      }
+    }
+
+    if (requests.length) {
+      await Promise.all(requests);
+      console.info(`[EditEvent] ${requests.length} tickets synchronisés`);
+    }
+  }
+
+  private applyServerErrors(errors: Record<string, string[] | string>): void {
+    const map: Record<string, AbstractControl | null> = {
+      title: this.info.controls.title,
+      short_description: this.info.controls.summary,
+      description: this.description.controls.full,
+      category: this.info.controls.category,
+      start_at: this.schedule.controls.date,
+      end_at: this.schedule.controls.endTime,
+      format: this.schedule.controls.format,
+      venue_name: this.schedule.controls.venueName,
+      address: this.schedule.controls.address,
+      city: this.schedule.controls.city,
+      online_platform: this.schedule.controls.platform,
+      access_url: this.schedule.controls.link,
+      capacity_limit: this.participation.controls.capacity,
+      base_price: this.participation.controls.capacity,
+    };
+    Object.entries(errors).forEach(([field, value]) => {
+      const ctrl = map[field];
+      if (!ctrl) return;
+      const messages = Array.isArray(value) ? value : [value];
+      ctrl.setErrors({ server: messages.join(' ') });
+      ctrl.markAsTouched();
+    });
+  }
+
   /* ------------------------------------------------------------------
-     SUPPRESSION
+     SUPPRESSION → API
      ------------------------------------------------------------------ */
   async deleteEvent(): Promise<void> {
     if (!this.canDelete()) return;
+    const id = this.eventId();
+    if (!id) return;
+
     this.deleting.set(true);
+    console.info('[EditEvent] Suppression...');
     try {
-      // TODO : await firstValueFrom(this.eventService.delete(this.eventId()!));
-      await delay(700);
+      await firstValueFrom(this.eventService.deleteEvent(id));
       this.skipGuard = true;
+      this.notification.success('Événement supprimé.', 'Succès');
       await this.router.navigate(['/organisateur/evenements']);
-    } catch {
-      this.showToast('error', "La suppression a échoué. Veuillez réessayer.");
+    } catch (err) {
+      console.error('[EditEvent] Échec suppression', err);
+      this.notification.httpError(err);
     } finally {
       this.deleting.set(false);
       this.confirmDelete.set(false);
@@ -1029,7 +1132,7 @@ export class OrganizerEditEventComponent implements AfterViewInit {
   }
 
   /* ------------------------------------------------------------------
-     DIVERS
+     DIVERS (inchangés)
      ------------------------------------------------------------------ */
   formatDateLong(iso: string): string {
     const [year, month, day] = iso.split('-').map(Number);
@@ -1042,7 +1145,6 @@ export class OrganizerEditEventComponent implements AfterViewInit {
     this.toastTimer = setTimeout(() => this.toast.set(null), 4500);
   }
 
-  /** Utilisé par le guard de route canDeactivate */
   canDeactivate(): boolean {
     return (
       this.skipGuard ||

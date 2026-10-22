@@ -42,4 +42,19 @@ export class TicketTypeService {
       `${this.BASE}/events/${eventId}/ticket-types/`,
     );
   }
+
+  update(eventId: string, ticketId: string, payload: Partial<CreateTicketTypePayload>) {
+    return this.http.patch<ApiResponse<TicketTypeDto>>(
+        `${this.BASE}/events/${eventId}/ticket-types/${ticketId}/`,
+        payload,
+    );
+    }
+
+    remove(eventId: string, ticketId: string) {
+    return this.http.delete<ApiResponse<null>>(
+        `${this.BASE}/ticket-types/${ticketId}/`,
+    );
+  }
+
+
 }

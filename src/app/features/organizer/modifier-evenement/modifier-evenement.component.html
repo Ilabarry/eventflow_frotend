@@ -187,8 +187,8 @@
               [attr.aria-invalid]="showError(info.controls.category)"
             >
               <option value="" disabled>Sélectionner une catégorie</option>
-              @for (c of withCurrent(categories, info.controls.category.value); track c) {
-                <option [value]="c">{{ c }}</option>
+              @for (c of categories(); track c.id) {
+                <option [value]="c.id">{{ c.name }}</option>
               }
             </select>
             @if (showError(info.controls.category)) {
@@ -414,7 +414,7 @@
                   [attr.aria-invalid]="showError(schedule.controls.platform)"
                 >
                   <option value="" disabled>Sélectionner une plateforme</option>
-                  @for (p of withCurrent(platforms, schedule.controls.platform.value); track p) {
+                  @for (p of platforms; track p) {
                     <option [value]="p">{{ p }}</option>
                   }
                 </select>
