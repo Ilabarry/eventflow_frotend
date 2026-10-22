@@ -351,7 +351,7 @@ export class EventsComponent implements OnInit {
   }
 
   getEventImage(event: BackendEvent): string {
-    return event.cover_image || 'assets/images/event-placeholder.svg';
+    return event.cover_image || 'img/FFFFFF.svg';
   }
 
   private matchesDateFilter(startAt: string, filter: string): boolean {

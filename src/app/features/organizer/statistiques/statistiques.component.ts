@@ -4,14 +4,27 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { firstValueFrom, forkJoin, of, catchError } from 'rxjs';
+
+import { EventService } from '../../../core/services/event.service';
+import { NotificationService } from '../../../core/services/notification.service';
+import { StatisticsService } from '../../../core/services/statistics.service';
+import {
+  OrganizerStatisticsDto,
+  TimeSeriesPointDto,
+} from '../../../core/services/dashboard.service';
+import { TicketTypeDto } from '../../../core/services/ticket-type.service';
+import { EventDto } from '../../../core/models/event.model';
+import { RegistrationService } from '../../../core/services/registration.service';
+
 
 type LoadState = 'loading' | 'ready' | 'error';
 type Period = 7 | 30 | 90;
 type ChartMode = 'cumulative' | 'daily';
 
 interface DayPoint {
-  date: string; // YYYY-MM-DD
-  count: number; // nouvelles inscriptions ce jour-là
+  date: string;   // YYYY-MM-DD
+  count: number;
 }
 
 interface TicketType {
@@ -20,11 +33,16 @@ interface TicketType {
   sold: number;
 }
 
+interface EventOption {
+  id: string;
+  title: string;
+}
+
 interface EventStats {
-  id: number;
+  id: string;
   title: string;
   isFree: boolean;
-  capacity: number | null; // null = illimitée
+  capacity: number | null;
   confirmed: number;
   pending: number;
   cancelled: number;
@@ -47,7 +65,6 @@ const dateShort = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'sho
 const dateTip = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
 const dateLong = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long' });
 const numberFmt = new Intl.NumberFormat('fr-FR');
-const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 const normalize = (value: string): string =>
   value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -55,100 +72,15 @@ const normalize = (value: string): string =>
 const slugify = (value: string): string =>
   normalize(value).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 
-/** Protège contre l'injection de formules dans Excel / LibreOffice */
 const csvCell = (value: string): string => {
   const safe = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
   return `"${safe.replace(/"/g, '""')}"`;
 };
 
-/* ----------------------------------------------------------------
-   DONNÉES DE DÉMONSTRATION
-   TODO : remplacer EVENT_OPTIONS et fetchStats() par tes services
-          (GET /events, GET /events/:id/stats?days=...)
-   Les chiffres sont cohérents entre eux :
-   inscriptions = confirmés + en attente = somme des tickets vendus
-   ---------------------------------------------------------------- */
-const EVENT_OPTIONS = [
-  { id: 1, title: "Forum de l'Innovation Numérique" },
-  { id: 2, title: 'Tech Conférence' },
-  { id: 3, title: 'Python Workshop' },
-  { id: 4, title: 'Hackathon Innovation' },
-];
-
-const MOCK: Record<number, Omit<EventStats, 'daily'>> = {
-  1: {
-    id: 1, title: "Forum de l'Innovation Numérique", isFree: false, capacity: 150,
-    confirmed: 87, pending: 0, cancelled: 0,
-    tickets: [
-      { name: 'Standard', seats: 100, sold: 56 },
-      { name: 'VIP', seats: 30, sold: 22 },
-      { name: 'Premium', seats: 20, sold: 9 },
-    ],
-  },
-  2: {
-    id: 2, title: 'Tech Conférence', isFree: false, capacity: 500,
-    confirmed: 408, pending: 14, cancelled: 9,
-    tickets: [
-      { name: 'Standard', seats: 350, sold: 310 },
-      { name: 'VIP', seats: 100, sold: 100 },
-      { name: 'Étudiant', seats: 50, sold: 12 },
-    ],
-  },
-  3: { id: 3, title: 'Python Workshop', isFree: true, capacity: 50, confirmed: 28, pending: 2, cancelled: 3, tickets: [] },
-  4: {
-    id: 4, title: 'Hackathon Innovation', isFree: false, capacity: null,
-    confirmed: 90, pending: 6, cancelled: 4,
-    tickets: [{ name: 'Participant', seats: 120, sold: 96 }],
-  },
-};
-
-const HISTORY_DAYS = 120;
-
-/** Générateur pseudo-aléatoire déterministe (mulberry32) */
-const rng = (seed: number) => () => {
-  seed = (seed + 0x6d2b79f5) | 0;
-  let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-};
-
 const isoDay = (d: Date): string => {
-  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
-  return `${d.getFullYear()}-${month}-${day}`;
-};
-
-/** Répartit `total` inscriptions sur HISTORY_DAYS jours, avec une croissance progressive */
-const buildDaily = (total: number, seed: number): DayPoint[] => {
-  const random = rng(seed);
-  const weights = Array.from(
-    { length: HISTORY_DAYS },
-    (_, i) => Math.pow((i + 1) / HISTORY_DAYS, 1.8) * (0.4 + random()),
-  );
-  const sum = weights.reduce((a, b) => a + b, 0);
-  const raw = weights.map((w) => (w / sum) * total);
-  const counts = raw.map(Math.floor);
-  const rest = total - counts.reduce((a, b) => a + b, 0);
-  raw
-    .map((value, i) => ({ i, fraction: value - Math.floor(value) }))
-    .sort((a, b) => b.fraction - a.fraction)
-    .slice(0, rest)
-    .forEach(({ i }) => counts[i]++);
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return counts.map((count, i) => {
-    const d = new Date(today);
-    d.setDate(today.getDate() - (HISTORY_DAYS - 1 - i));
-    return { date: isoDay(d), count };
-  });
-};
-
-const fetchStats = async (id: number): Promise<EventStats | null> => {
-  await delay(450);
-  const base = MOCK[id];
-  if (!base) return null;
-  return { ...structuredClone(base), daily: buildDaily(base.confirmed + base.pending, id * 104_729) };
+  return `${d.getFullYear()}-${m}-${day}`;
 };
 
 @Component({
@@ -162,16 +94,18 @@ export class OrganizerStatistiquesComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly zone = inject(NgZone);
+  private readonly eventService = inject(EventService);
+  private readonly statisticsService = inject(StatisticsService);
+  private readonly notification = inject(NotificationService);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly chartHost = viewChild<ElementRef<HTMLElement>>('chartHost');
+  private readonly registrationService = inject(RegistrationService);
 
-  readonly events = EVENT_OPTIONS;
+  readonly events = signal<EventOption[]>([]);
   readonly periods = PERIODS;
   readonly pad = { top: 16, right: 16, bottom: 30, left: 40 };
 
-  /* ------------------------------------------------------------------
-     ÉTAT
-     ------------------------------------------------------------------ */
-  readonly eventId = signal(EVENT_OPTIONS[0].id);
+  readonly eventId = signal<string | null>(null);
   readonly period = signal<Period>(30);
   readonly mode = signal<ChartMode>('cumulative');
   readonly stats = signal<EventStats | null>(null);
@@ -181,7 +115,7 @@ export class OrganizerStatistiquesComponent {
   readonly toast = signal<Toast | null>(null);
 
   private loadToken = 0;
-  private lastLoaded: number | null = null;
+  private lastLoaded: string | null = null;
   private toastTimer: ReturnType<typeof setTimeout> | undefined;
 
   /* ------------------------------------------------------------------
@@ -212,8 +146,12 @@ export class OrganizerStatistiquesComponent {
       fill: k.fill === null ? '—' : `${k.fill}%`,
       tickets: numberFmt.format(k.soldTickets),
       subInscriptions: `+${numberFmt.format(k.inPeriod)} sur ${this.period()} jours`,
-      subFill: k.capacity ? `${numberFmt.format(k.inscriptions)} / ${numberFmt.format(k.capacity)} places` : 'Capacité illimitée',
-      subTickets: k.isFree ? 'Inscriptions gratuites' : `${k.types} type${k.types > 1 ? 's' : ''} de ticket`,
+      subFill: k.capacity
+        ? `${numberFmt.format(k.inscriptions)} / ${numberFmt.format(k.capacity)} places`
+        : 'Capacité illimitée',
+      subTickets: k.isFree
+        ? 'Inscriptions gratuites'
+        : `${k.types} type${k.types > 1 ? 's' : ''} de ticket`,
     };
   });
 
@@ -235,7 +173,7 @@ export class OrganizerStatistiquesComponent {
   });
 
   /* ------------------------------------------------------------------
-     GRAPHIQUE (SVG pur, sans librairie)
+     GRAPHIQUE
      ------------------------------------------------------------------ */
   private readonly series = computed(() => {
     const s = this.stats();
@@ -259,7 +197,6 @@ export class OrganizerStatistiquesComponent {
     this.series().map((p) => (this.mode() === 'cumulative' ? p.total : p.day)),
   );
 
-  /** Échelle Y « propre » : 4 intervalles réguliers, valeurs entières */
   private readonly yScale = computed(() => {
     const max = Math.max(...this.values(), 1);
     const raw = max / 4;
@@ -293,7 +230,6 @@ export class OrganizerStatistiquesComponent {
     });
   });
 
-  /** Courbe lissée (courbes de Bézier horizontales, sans dépassement) */
   readonly linePath = computed(() => {
     const pts = this.points();
     return pts.reduce((d, p, i) => {
@@ -311,7 +247,6 @@ export class OrganizerStatistiquesComponent {
     return `${this.linePath()} L${pts[pts.length - 1].x},${base} L${pts[0].x},${base} Z`;
   });
 
-  /** Évite le chevauchement des dates sur petit écran */
   private readonly labelStep = computed(() =>
     Math.max(1, Math.ceil((this.points().length * 58) / this.innerW())),
   );
@@ -327,19 +262,23 @@ export class OrganizerStatistiquesComponent {
       `${this.period()} derniers jours : ${this.periodTotal()} nouvelle${this.periodTotal() > 1 ? 's' : ''} inscription${this.periodTotal() > 1 ? 's' : ''}.`,
   );
 
+  /* ------------------------------------------------------------------
+     INITIALISATION
+     ------------------------------------------------------------------ */
   constructor() {
-    // L'événement et la période viennent de l'URL : /organisateur/statistiques?evenement=2&periode=7
+    this.loadEvents();
+
     this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
       const period = Number(params.get('periode'));
       this.period.set(PERIODS.some((p) => p.value === period) ? (period as Period) : 30);
       this.hovered.set(null);
 
-      const requested = Number(params.get('evenement'));
-      const target = EVENT_OPTIONS.some((e) => e.id === requested) ? requested : EVENT_OPTIONS[0].id;
-      if (target !== this.lastLoaded) void this.load(target);
+      const requested = params.get('evenement');
+      if (requested && requested !== this.lastLoaded) {
+        void this.load(requested);
+      }
     });
 
-    // Adapte le SVG à la largeur réelle du conteneur (texte net sur mobile)
     effect((onCleanup) => {
       const host = this.chartHost()?.nativeElement;
       if (!host || typeof ResizeObserver === 'undefined') return;
@@ -351,44 +290,165 @@ export class OrganizerStatistiquesComponent {
       onCleanup(() => observer.disconnect());
     });
 
-    inject(DestroyRef).onDestroy(() => {
+    this.destroyRef.onDestroy(() => {
       if (this.toastTimer) clearTimeout(this.toastTimer);
     });
   }
 
+  private loadEvents(): void {
+    this.eventService.getMyEvents().subscribe({
+      next: (res) => {
+        const list = (res.data?.results ?? []).map((e: EventDto) => ({
+          id: e.id,
+          title: e.title,
+        }));
+        this.events.set(list);
+        console.info(`[Stats] ${list.length} événements chargés`);
+
+        const requested = this.route.snapshot.queryParamMap.get('evenement');
+        const target = list.some((e) => e.id === requested) ? requested : list[0]?.id ?? null;
+
+        if (target && target !== this.lastLoaded) {
+          if (target !== requested) {
+            void this.router.navigate([], {
+              relativeTo: this.route,
+              queryParams: { evenement: target },
+              queryParamsHandling: 'merge',
+              replaceUrl: true,
+            });
+          } else {
+            void this.load(target);
+          }
+        }
+      },
+      error: (err) => {
+        console.error('[Stats] Échec chargement événements', err.status);
+        this.notification.httpError(err);
+      },
+    });
+  }
+
   /* ------------------------------------------------------------------
-     CHARGEMENT
+     CHARGEMENT DES STATS
      ------------------------------------------------------------------ */
-  private async load(id: number): Promise<void> {
+  private async load(id: string): Promise<void> {
     const token = ++this.loadToken;
     this.lastLoaded = id;
     this.eventId.set(id);
     this.loadState.set('loading');
     this.hovered.set(null);
+    console.info(`[Stats] Chargement événement ${id}...`);
+
     try {
-      const data = await fetchStats(id); // TODO : service
-      if (token !== this.loadToken) return; // l'utilisateur a changé d'événement entre-temps
-      this.stats.set(data);
-      this.loadState.set(data ? 'ready' : 'error');
-    } catch {
-      if (token === this.loadToken) this.loadState.set('error');
+      const periodParam =
+        this.period() === 7 ? 'last_7_days' as const :
+        this.period() === 30 ? 'last_30_days' as const :
+        'custom';
+
+      let startDate: string | undefined;
+      let endDate: string | undefined;
+      if (this.period() === 90) {
+        const end = new Date();
+        const start = new Date();
+        start.setDate(end.getDate() - 90);
+        startDate = isoDay(start);
+        endDate = isoDay(end);
+      }
+
+      // ✅ UN SEUL Promise.all
+      const [eventRes, statsRes, ticketsRes, regsRes] = await Promise.all([
+        firstValueFrom(this.eventService.getEvent(id)),
+        firstValueFrom(
+          this.statisticsService.getOrganizerStatistics(id, periodParam, startDate, endDate).pipe(
+            catchError(() => of({ success: true, data: undefined } as any)),
+          ),
+        ),
+        firstValueFrom(
+          this.statisticsService.getTicketTypes(id).pipe(
+            catchError(() => of({ success: true, data: [] as TicketTypeDto[] } as any)),
+          ),
+        ),
+        firstValueFrom(
+          this.registrationService.listByEvent(id, 1, 1000).pipe(
+            catchError(() => of({ success: true, data: { results: [] } } as any)),
+          ),
+        ),
+      ]);
+
+      if (token !== this.loadToken) return;
+
+      const event: EventDto | undefined = eventRes.data;
+      if (!event) {
+        this.loadState.set('error');
+        return;
+      }
+
+      // ✅ Calculs par statut depuis les inscriptions
+      const regs: any[] = (regsRes.data?.results ?? []) as any[];
+      const confirmed = regs.filter((r: any) => r.status === 'CONFIRMED').length;
+      const pending = regs.filter((r: any) => r.status === 'PENDING').length;
+      const cancelled = regs.filter((r: any) => r.status === 'CANCELLED').length;
+
+      const tickets: TicketType[] = (ticketsRes.data ?? []).map((t: TicketTypeDto) => ({
+        name: t.name,
+        seats: t.quantity_total ?? 0,
+        sold: t.quantity_sold,
+      }));
+
+      const statsData: OrganizerStatisticsDto | undefined = statsRes.data;
+      const daily: DayPoint[] = (statsData?.registrations_over_time ?? []).map((p: TimeSeriesPointDto) => ({
+        date: p.period,
+        count: p.count,
+      }));
+
+      const isFree = event.participation_type === 'FREE';
+      const capacity = event.capacity_type === 'LIMITED' ? event.capacity_limit ?? null : null;
+
+      const stats: EventStats = {
+        id: event.id,
+        title: event.title,
+        isFree,
+        capacity,
+        confirmed,
+        pending,
+        cancelled,
+        tickets,
+        daily,
+      };
+
+      this.stats.set(stats);
+      this.loadState.set('ready');
+      console.info(
+        `[Stats] ${event.title} | ${daily.length} points | ${tickets.length} tickets | ` +
+        `${confirmed} confirmés / ${pending} pending / ${cancelled} annulés`,
+      );
+    } catch (err) {
+      console.error('[Stats] Échec chargement', err);
+      if (token === this.loadToken) {
+        this.loadState.set('error');
+        this.notification.httpError(err);
+      }
     }
   }
 
   retry(): void {
     this.lastLoaded = null;
-    void this.load(this.eventId());
+    if (this.eventId()) void this.load(this.eventId()!);
   }
 
+  /* ------------------------------------------------------------------
+     FILTRES URL
+     ------------------------------------------------------------------ */
   onEventChange(event: Event): void {
-    this.navigate({ evenement: Number((event.target as HTMLSelectElement).value) });
+    this.navigate({ evenement: (event.target as HTMLSelectElement).value });
   }
 
   onPeriodChange(event: Event): void {
-    this.navigate({ periode: Number((event.target as HTMLSelectElement).value) });
+    const newPeriod = Number((event.target as HTMLSelectElement).value);
+    this.navigate({ periode: newPeriod });
   }
 
-  private navigate(queryParams: Record<string, number>): void {
+  private navigate(queryParams: Record<string, string | number>): void {
     void this.router.navigate([], {
       relativeTo: this.route,
       queryParams,
@@ -403,7 +463,7 @@ export class OrganizerStatistiquesComponent {
   }
 
   /* ------------------------------------------------------------------
-     INTERACTIONS DU GRAPHIQUE
+     GRAPHIQUE — interactions
      ------------------------------------------------------------------ */
   showLabel(index: number): boolean {
     return (this.points().length - 1 - index) % this.labelStep() === 0;
@@ -452,7 +512,6 @@ export class OrganizerStatistiquesComponent {
     ];
     const lines = rows.map((row) => row.map(csvCell).join(';'));
 
-    // BOM + séparateur « ; » : s'ouvre directement et correctement dans Excel
     const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -463,7 +522,7 @@ export class OrganizerStatistiquesComponent {
     link.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
 
-    this.showToast('success', 'Statistiques exportées.');
+    this.notification.success('Statistiques exportées.', 'Export');
   }
 
   /* ------------------------------------------------------------------

@@ -19,7 +19,7 @@
         <div class="hero__filter">
           <label class="hero__label" for="st-event">Événement</label>
           <select id="st-event" class="hero__select" (change)="onEventChange($event)">
-            @for (e of events; track e.id) {
+            @for (e of events(); track e.id) {
               <option [value]="e.id" [selected]="e.id === eventId()">{{ e.title }}</option>
             }
           </select>
