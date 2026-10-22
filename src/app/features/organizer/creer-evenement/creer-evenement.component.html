@@ -142,8 +142,12 @@
               [attr.aria-invalid]="showError(info.controls.category)"
             >
               <option value="" disabled>Sélectionner une catégorie</option>
-              @for (c of categories; track c) {
-                <option [value]="c">{{ c }}</option>
+              @if (categoriesLoading()) {
+                <option value="" disabled>Chargement des catégories...</option>
+              } @else {
+                @for (c of categories(); track c.id) {
+                  <option [value]="c.id">{{ c.name }}</option>
+                }
               }
             </select>
             @if (showError(info.controls.category)) {

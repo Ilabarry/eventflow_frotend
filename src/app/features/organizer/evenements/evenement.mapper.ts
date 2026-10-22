@@ -1,7 +1,7 @@
 import { EventDto, EventFormat, EventStatus } from '../../../core/models/event.model';
 import { OrganizerEvent } from './evenements.component';
 
-const PLACEHOLDER_IMG = 'assets/img/event-placeholder.jpg';
+const PLACEHOLDER_IMG = 'img/event-placeholder.svg';
 
 /**
  * Mappe un EventDto backend vers le modèle d'affichage OrganizerEvent.

@@ -112,4 +112,18 @@ export class EventService {
       `${this.BASE}/${id}/share/`
     );
   }
+
+   /**
+     * POST /api/events/{id}/upload-cover/
+     * Envoie l'image de couverture en multipart.
+     */
+    uploadCover(eventId: string, file: File): Observable<ApiResponse<EventDto>> {
+    const formData = new FormData();
+    formData.append('cover_image', file);
+    return this.http.patch<ApiResponse<EventDto>>(
+        `${this.BASE}/${eventId}/`,
+        formData,
+    );
+    }
+
 }
