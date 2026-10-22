@@ -30,72 +30,87 @@ import { AdminNotificationsComponent } from './features/admin/notifications/noti
 import { OrganizerCreateEventComponent } from './features/organizer/creer-evenement/creer-evenement.component';
 import { OrganizerEditEventComponent } from './features/organizer/modifier-evenement/modifier-evenement.component';
 
+import { authGuard } from './core/guards/auth.guard';
+import { roleGuard } from './core/guards/role.guard';
+import { Role } from './core/models/user.model';
+
 export const routes: Routes = [
+  { path: 'register', component: RegisterComponent },
+  { path: 'login', component: LoginComponent },
+  {
+    path: '',
+    component: PublicLayoutComponent,
+    children: [
+      { path: '', component: HommeComponent },
+      { path: 'events', component: EventsComponent },
+      { path: 'events_detail', component: EventDetailComponent },
+      { path: '', redirectTo: 'events', pathMatch: 'full' },
+    ],
+  },
 
-    {path: 'register',component:RegisterComponent},
-    {path: 'login',component:LoginComponent},
-    {
-        path: '',
-        component: PublicLayoutComponent,
-        children: [
-       { path: '', redirectTo: 'events', pathMatch: 'full' },
-        { path: 'events', component: EventsComponent },
-        { path: 'events_detail', component: EventDetailComponent },
-        ]
-    },
+  // ============================================================
+  // ORGANISATEUR — auth + rôle
+  // ============================================================
+  {
+    path: 'organisateur',
+    component: OrganizerLayoutComponent,
+    canActivate: [authGuard, roleGuard([Role.ORGANISATEUR])],
+    children: [
+      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+      { path: 'dashboard', component: OrganizerDashboardComponent },
+      { path: 'evenements', component: OrganizerEvenementsComponent },
+      { path: 'participants', component: OrganizerParticipantsComponent },
+      { path: 'tickets', component: OrganizerTicketsComponent },
+      { path: 'statistiques', component: OrganizerStatistiquesComponent },
+      { path: 'notifications', component: OrganizerNotificationsComponent },
+      { path: 'creer-evenement', component: OrganizerCreateEventComponent },
+      {
+        path: 'evenements/:id/modifier',
+        component: OrganizerEditEventComponent,
+        canDeactivate: [(component: OrganizerEditEventComponent) => component.canDeactivate()],
+      },
+    ],
+  },
 
-    {
-      path: 'organisateur',
-      component: OrganizerLayoutComponent,
-      children: [
-        { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
-        { path: 'dashboard', component: OrganizerDashboardComponent },
-        { path: 'evenements', component: OrganizerEvenementsComponent },
-        { path: 'participants', component: OrganizerParticipantsComponent },
-        { path: 'tickets', component: OrganizerTicketsComponent },
-        { path: 'statistiques', component: OrganizerStatistiquesComponent },
-        { path: 'notifications', component: OrganizerNotificationsComponent },
-        { path: 'creer-evenement', component: OrganizerCreateEventComponent },
-        { path: 'evenements/:id/modifier', component: OrganizerEditEventComponent,
-          // alerte quand on quitte la page avec des modifications non enregistrées
-          canDeactivate: [(component: OrganizerEditEventComponent) => component.canDeactivate()],
-        },
-      //   { path: 'parametres', component: OrganizerSettingsComponent },
-      //   { path: 'messages', component: OrganizerMessagesComponent },
-      ],
-    },
+  // ============================================================
+  // PARTICIPANT — auth + rôle
+  // ============================================================
+  {
+    path: 'participant',
+    component: ParticipantLayoutComponent,
+    canActivate: [authGuard, roleGuard([Role.PARTICIPANT])],
+    children: [
+      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+      { path: 'dashboard', component: ParticipantDashboardComponent },
+      { path: 'inscriptions', component: ParticipantRegistrationsComponent },
+      { path: 'tickets', component: ParticipantTicketsComponent },
+      { path: 'attestations', component: ParticipantCertificatesComponent },
+      { path: 'profil', component: ParticipantProfileComponent },
+      { path: 'notifications', component: ParticipantNotificationsComponent },
+    ],
+  },
 
-    {
-      path: 'participant',
-      component: ParticipantLayoutComponent,
-      children: [
-        { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
-        { path: 'dashboard', component: ParticipantDashboardComponent },
-        { path: 'inscriptions', component: ParticipantRegistrationsComponent },
-        { path: 'tickets', component: ParticipantTicketsComponent },
-        { path: 'attestations', component: ParticipantCertificatesComponent },
-        { path: 'profil', component: ParticipantProfileComponent },
-        { path: 'notifications', component: ParticipantNotificationsComponent },
-        // { path: 'parametres', component: ParticipantSettingsComponent },
-        // { path: 'messages', component: ParticipantMessagesComponent },
-      ],
-    },
+  // ============================================================
+  // ADMIN — auth + rôle
+  // ============================================================
+  {
+    path: 'admin',
+    component: AdminLayoutComponent,
+    canActivate: [authGuard, roleGuard([Role.ADMINISTRATEUR])],
+    children: [
+      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+      { path: 'dashboard', component: AdminDashboardComponent },
+      { path: 'organisateurs', component: AdminOrganizersComponent },
+      { path: 'utilisateurs', component: AdminUsersComponent },
+      { path: 'evenements', component: AdminEventsComponent },
+      { path: 'categories', component: AdminCategoriesComponent },
+      { path: 'supervision', component: AdminSupervisionComponent },
+      { path: 'notifications', component: AdminNotificationsComponent },
+    ],
+  },
 
-    {
-      path: 'admin',
-      component: AdminLayoutComponent,
-      children: [
-        { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
-        { path: 'dashboard', component: AdminDashboardComponent },
-        { path: 'organisateurs', component: AdminOrganizersComponent },
-        { path: 'utilisateurs', component: AdminUsersComponent },
-        { path: 'evenements', component: AdminEventsComponent },
-        { path: 'categories', component: AdminCategoriesComponent },
-        { path: 'supervision', component: AdminSupervisionComponent },
-        { path: 'notifications', component: AdminNotificationsComponent },
-        // { path: 'parametres', component: AdminSettingsComponent },
-        // { path: 'messages', component: AdminMessagesComponent },
-      ],
-    },
-
+  // ============================================================
+  // 404
+  // ============================================================
+  { path: '**', redirectTo: '' },
 ];
