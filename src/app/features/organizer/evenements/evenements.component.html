@@ -191,7 +191,7 @@
                         </svg>
                         Gérer les tickets
                       </a>
-                      <a class="menu__item" role="menuitem" [routerLink]="['/organisateur/evenements', e.id]">
+                      <a class="menu__item" role="menuitem" routerLink="/organisateur/statistiques" [queryParams]="{ evenement: e.id }">
                         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                           <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                           <circle cx="12" cy="12" r="3"></circle>
@@ -277,7 +277,7 @@
 
           <footer class="card__actions">
             <a class="btn btn--outline" [routerLink]="['/organisateur/evenements', e.id]">Gérer</a>
-            <a class="btn btn--solid" [routerLink]="['/organisateur/modifier-evenements', e.id, 'modifier']">Modifier</a>
+            <a class="btn btn--solid" [routerLink]="['/organisateur/evenements', e.id, 'modifier']">Modifier</a>
           </footer>
         </article>
       }
@@ -299,7 +299,7 @@
       @if (events().length === 0) {
         <h2 class="empty__title">Vous n'avez pas encore d'événement</h2>
         <p class="empty__text">Créez votre premier événement pour commencer à recevoir des inscriptions.</p>
-        <a routerLink="/organisateur/evenements/nouveau" class="btn btn--solid">Créer un événement</a>
+        <a routerLink="/organisateur/creer-evenement" class="btn btn--solid">Créer un événement</a>
       } @else {
         <h2 class="empty__title">Aucun événement trouvé</h2>
         <p class="empty__text">Essayez de modifier votre recherche ou vos filtres.</p>

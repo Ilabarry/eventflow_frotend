@@ -1,5 +1,11 @@
-import { Component, HostListener, computed, signal } from '@angular/core';
+import { Component, HostListener, computed, signal, inject, OnInit, OnDestroy } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { Subject, takeUntil } from 'rxjs';
+
+import { EventService } from '../../../core/services/event.service';
+import { NotificationService } from '../../../core/services/notification.service';
+import { EventDto } from '../../../core/models/event.model';
+import { toOrganizerEvent } from './evenement.mapper';
 
 type EventStatus = 'published' | 'draft' | 'finished';
 type EventFormat = 'Présentiel' | 'En ligne' | 'Hybride';
@@ -7,14 +13,14 @@ type StatusFilter = 'all' | EventStatus;
 type DateFilter = 'all' | 'upcoming' | 'past' | 'month';
 type ViewMode = 'list' | 'grid';
 
-interface OrganizerEvent {
-  id: number;
+export interface OrganizerEvent {
+  id: string;
   title: string;
   imageUrl: string;
   status: EventStatus;
   format: EventFormat;
   category: string;
-  startDate: string; // ISO
+  startDate: string;
   location: string;
   registered: number;
   capacity: number;
@@ -26,16 +32,6 @@ interface EventView extends OrganizerEvent {
 
 const PAGE_SIZE = 6;
 
-/* Images de démonstration — TODO : utiliser l'image réelle de chaque événement */
-const IMAGES = [
-  'photo-1540575467063-178a50c2df87',
-  'photo-1505373877841-8d25f7d46678',
-  'photo-1511578314322-379afb476865',
-  'photo-1492684223066-81342ee5ff30',
-];
-const img = (i: number) => `https://images.unsplash.com/${IMAGES[i % IMAGES.length]}?w=600&q=80`;
-
-/** Compare sans tenir compte des accents ni de la casse */
 const normalize = (value: string): string =>
   value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
@@ -53,28 +49,20 @@ const formatDate = (iso: string): string => {
   templateUrl: './evenements.component.html',
   styleUrl: './evenements.component.scss',
 })
-export class OrganizerEvenementsComponent {
-  /* ------------------------------------------------------------------
-     DONNÉES (mock) — TODO : remplacer par ton service d'événements
-     ------------------------------------------------------------------ */
-  readonly events = signal<OrganizerEvent[]>([
-    { id: 1, title: 'Tech Conférence', imageUrl: img(0), status: 'published', format: 'Hybride', category: 'Conférence', startDate: '2026-11-30T14:00:00', location: 'Dakar', registered: 480, capacity: 500 },
-    { id: 2, title: 'Python Workshop', imageUrl: img(1), status: 'draft', format: 'En ligne', category: 'Formation', startDate: '2026-12-15T10:00:00', location: 'En ligne', registered: 0, capacity: 50 },
-    { id: 3, title: "Salon de l'Entrepreneuriat", imageUrl: img(2), status: 'published', format: 'Présentiel', category: 'Salon', startDate: '2026-11-14T09:00:00', location: 'Dakar', registered: 210, capacity: 300 },
-    { id: 4, title: 'Hackathon Innovation', imageUrl: img(3), status: 'published', format: 'Hybride', category: 'Hackathon', startDate: '2026-12-05T08:30:00', location: 'Dakar', registered: 96, capacity: 120 },
-    { id: 5, title: 'Masterclass UX Design', imageUrl: img(1), status: 'published', format: 'En ligne', category: 'Masterclass', startDate: '2026-11-08T18:00:00', location: 'En ligne', registered: 150, capacity: 200 },
-    { id: 6, title: 'Festival Jazz de Thiès', imageUrl: img(2), status: 'draft', format: 'Présentiel', category: 'Festival', startDate: '2027-05-20T20:00:00', location: 'Thiès', registered: 0, capacity: 2000 },
-    { id: 7, title: 'Startup Pitch Night', imageUrl: img(3), status: 'published', format: 'Présentiel', category: 'Networking', startDate: '2026-10-29T19:00:00', location: 'Dakar', registered: 80, capacity: 100 },
-    { id: 8, title: 'Webinaire Cybersécurité', imageUrl: img(0), status: 'published', format: 'En ligne', category: 'Webinaire', startDate: '2026-10-25T16:00:00', location: 'En ligne', registered: 320, capacity: 500 },
-    { id: 9, title: 'Forum Emploi Jeunes', imageUrl: img(1), status: 'finished', format: 'Présentiel', category: 'Forum', startDate: '2026-09-18T09:00:00', location: 'Dakar', registered: 640, capacity: 700 },
-    { id: 10, title: 'Atelier Photographie', imageUrl: img(2), status: 'finished', format: 'Présentiel', category: 'Atelier', startDate: '2026-09-05T10:00:00', location: 'Mbour', registered: 28, capacity: 30 },
-    { id: 11, title: 'Conférence IA & Société', imageUrl: img(3), status: 'finished', format: 'Hybride', category: 'Conférence', startDate: '2026-08-22T15:00:00', location: 'Dakar', registered: 410, capacity: 450 },
-    { id: 12, title: 'Bootcamp Web Full Stack', imageUrl: img(0), status: 'draft', format: 'Hybride', category: 'Formation', startDate: '2027-01-12T09:00:00', location: 'Dakar', registered: 0, capacity: 40 },
-  ]);
+export class OrganizerEvenementsComponent implements OnInit, OnDestroy {
+  private readonly eventService = inject(EventService);
+  private readonly notification = inject(NotificationService);
+  private readonly destroy$ = new Subject<void>();
 
-  /* ------------------------------------------------------------------
-     CONFIG UI
-     ------------------------------------------------------------------ */
+  // ------------------------------------------------------------------
+  // DONNÉES RÉELLES
+  // ------------------------------------------------------------------
+  readonly events = signal<OrganizerEvent[]>([]);
+  readonly loading = signal(true);
+
+  // ------------------------------------------------------------------
+  // CONFIG UI
+  // ------------------------------------------------------------------
   readonly statusTabs: { value: StatusFilter; label: string }[] = [
     { value: 'all', label: 'Tous' },
     { value: 'draft', label: 'Brouillon' },
@@ -94,9 +82,9 @@ export class OrganizerEvenementsComponent {
     { value: 'month', label: 'Ce mois-ci' },
   ];
 
-  /* ------------------------------------------------------------------
-     ÉTAT (filtres, vue, menus)
-     ------------------------------------------------------------------ */
+  // ------------------------------------------------------------------
+  // ÉTAT UI
+  // ------------------------------------------------------------------
   readonly query = signal('');
   readonly status = signal<StatusFilter>('all');
   readonly format = signal<'all' | EventFormat>('all');
@@ -105,12 +93,12 @@ export class OrganizerEvenementsComponent {
   readonly view = signal<ViewMode>('list');
 
   readonly visibleCount = signal(PAGE_SIZE);
-  readonly openMenuId = signal<number | null>(null);
+  readonly openMenuId = signal<string | null>(null);
   readonly deleteTarget = signal<EventView | null>(null);
 
-  /* ------------------------------------------------------------------
-     DONNÉES DÉRIVÉES
-     ------------------------------------------------------------------ */
+  // ------------------------------------------------------------------
+  // DONNÉES DÉRIVÉES
+  // ------------------------------------------------------------------
   private readonly eventsVm = computed<EventView[]>(() =>
     this.events().map((e) => ({ ...e, dateLabel: formatDate(e.startDate) })),
   );
@@ -158,9 +146,43 @@ export class OrganizerEvenementsComponent {
       this.category() !== 'all',
   );
 
-  /* ------------------------------------------------------------------
-     ACTIONS FILTRES
-     ------------------------------------------------------------------ */
+  // ------------------------------------------------------------------
+  // LIFECYCLE
+  // ------------------------------------------------------------------
+  ngOnInit(): void {
+    this.loadEvents();
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  private loadEvents(): void {
+    this.loading.set(true);
+    console.info('[OrganizerEvents] Chargement des événements...');
+
+    this.eventService
+      .getMyEvents()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          const dtos: EventDto[] = res.data?.results ?? [];
+          this.events.set(dtos.map(toOrganizerEvent));
+          this.loading.set(false);
+          console.info(`[OrganizerEvents] ${dtos.length} événements chargés (total ${res.data?.count})`);
+        },
+        error: (err) => {
+          this.loading.set(false);
+          console.error('[OrganizerEvents] Échec du chargement', err.status);
+          this.notification.httpError(err);
+        },
+      });
+  }
+
+  // ------------------------------------------------------------------
+  // FILTRES
+  // ------------------------------------------------------------------
   private resetPage(): void {
     this.visibleCount.set(PAGE_SIZE);
   }
@@ -203,32 +225,11 @@ export class OrganizerEvenementsComponent {
     this.visibleCount.update((n) => n + PAGE_SIZE);
   }
 
-  /* ------------------------------------------------------------------
-     ACTIONS ÉVÉNEMENT (TODO : brancher sur l'API)
-     ------------------------------------------------------------------ */
-  toggleMenu(id: number): void {
+  // ------------------------------------------------------------------
+  // ACTIONS BRANCHÉES SUR L'API
+  // ------------------------------------------------------------------
+  toggleMenu(id: string): void {
     this.openMenuId.update((current) => (current === id ? null : id));
-  }
-
-  toggleStatus(event: EventView): void {
-    this.events.update((list) =>
-      list.map((e) =>
-        e.id === event.id && e.status !== 'finished'
-          ? { ...e, status: e.status === 'published' ? 'draft' : 'published' }
-          : e,
-      ),
-    );
-    this.openMenuId.set(null);
-  }
-
-  duplicate(event: EventView): void {
-    const nextId = Math.max(0, ...this.events().map((e) => e.id)) + 1;
-    const { dateLabel: _ignored, ...base } = event;
-    this.events.update((list) => [
-      ...list,
-      { ...base, id: nextId, title: `${event.title} (copie)`, status: 'draft', registered: 0 },
-    ]);
-    this.openMenuId.set(null);
   }
 
   askDelete(event: EventView): void {
@@ -242,17 +243,105 @@ export class OrganizerEvenementsComponent {
 
   confirmDelete(): void {
     const target = this.deleteTarget();
-    if (target) this.events.update((list) => list.filter((e) => e.id !== target.id));
-    this.deleteTarget.set(null);
+    if (!target) return;
+
+    this.eventService
+      .deleteEvent(target.id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.events.update((list) => list.filter((e) => e.id !== target.id));
+          this.deleteTarget.set(null);
+          this.notification.success('Événement supprimé.');
+        },
+        error: (err) => {
+          this.notification.httpError(err);
+        },
+      });
+  }
+
+  toggleStatus(event: EventView): void {
+    const isDraft = event.status === 'draft';
+    const observable = isDraft
+      ? this.eventService.publishEvent(event.id)
+      : this.eventService.cancelEvent(event.id);
+
+    observable.pipe(takeUntil(this.destroy$)).subscribe({
+      next: (res) => {
+        // ✅ Extraction dans une variable locale → narrowing conservé
+        const data = res.data;
+        if (!data) {
+          this.notification.error('Réponse inattendue du serveur.');
+          return;
+        }
+        const updated = toOrganizerEvent(data);
+        this.events.update((list) => list.map((e) => (e.id === updated.id ? updated : e)));
+        this.openMenuId.set(null);
+        this.notification.success(isDraft ? 'Événement publié.' : 'Événement annulé.');
+      },
+      error: (err) => this.notification.httpError(err),
+    });
+  }
+
+  duplicate(event: EventView): void {
+    this.eventService
+      .getEvent(event.id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          const src = res.data;
+          if (!src) {
+            this.notification.error('Impossible de charger l\'événement à dupliquer.');
+            return;
+          }
+
+          this.eventService
+            .createEvent({
+              title: `${src.title} (copie)`,
+              short_description: src.short_description,
+              description: src.description ?? '',
+              format: src.format,
+              participation_type: src.participation_type,
+              capacity_type: src.capacity_type,
+              capacity_limit: src.capacity_limit ?? null,
+              base_price: src.base_price ?? null,
+              start_at: src.start_at,
+              end_at: src.end_at,
+              venue_name: src.venue_name,
+              address: src.address,
+              city: src.city,
+              room: src.room,
+              online_platform: src.online_platform,
+              access_url: src.access_url,
+              category: src.category.id,
+            })
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+              next: (created) => {
+                // ✅ Extraction dans une variable locale AVANT le callback de signal
+                const newData = created.data;
+                if (!newData) {
+                  this.notification.error('Création réussie mais réponse vide.');
+                  return;
+                }
+                this.events.update((list) => [toOrganizerEvent(newData), ...list]);
+                this.openMenuId.set(null);
+                this.notification.success('Événement dupliqué.');
+              },
+              error: (err) => this.notification.httpError(err),
+            });
+        },
+        error: (err) => this.notification.httpError(err),
+      });
   }
 
   onImageError(event: Event): void {
     (event.target as HTMLImageElement).style.display = 'none';
   }
 
-  /* ------------------------------------------------------------------
-     ÉVÉNEMENTS GLOBAUX
-     ------------------------------------------------------------------ */
+  // ------------------------------------------------------------------
+  // GLOBAL
+  // ------------------------------------------------------------------
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
     if (!(event.target as HTMLElement).closest('.card__menu-wrap')) {

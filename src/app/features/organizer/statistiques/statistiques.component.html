@@ -1,1 +1,266 @@
-<p>statistiques works!</p>
+<div class="st">
+  <!-- ============================ BANNIÈRE ============================ -->
+  <section class="hero">
+    <svg class="hero__wave" viewBox="0 0 400 120" preserveAspectRatio="none" aria-hidden="true">
+      <defs>
+        <linearGradient id="stHeroWave" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#8B7CF6" />
+          <stop offset="1" stop-color="#22C7D6" />
+        </linearGradient>
+      </defs>
+      <path d="M0 90 C 50 20, 110 110, 180 60 S 300 0, 400 40" fill="none" stroke="url(#stHeroWave)" stroke-width="2.5" vector-effect="non-scaling-stroke" />
+    </svg>
+
+    <div class="hero__content">
+      <h1 class="hero__title">Statistiques</h1>
+      <p class="hero__text">Analysez les performances de vos événements.</p>
+
+      <div class="hero__filters">
+        <div class="hero__filter">
+          <label class="hero__label" for="st-event">Événement</label>
+          <select id="st-event" class="hero__select" (change)="onEventChange($event)">
+            @for (e of events; track e.id) {
+              <option [value]="e.id" [selected]="e.id === eventId()">{{ e.title }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="hero__filter">
+          <label class="hero__label" for="st-period">Période</label>
+          <select id="st-period" class="hero__select" (change)="onPeriodChange($event)">
+            @for (p of periods; track p.value) {
+              <option [value]="p.value" [selected]="p.value === period()">{{ p.label }}</option>
+            }
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <button type="button" class="hero__btn" (click)="exportCsv()" [disabled]="loadState() !== 'ready'">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+        <polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line>
+      </svg>
+      Exporter
+    </button>
+  </section>
+
+  <!-- ============================ INDICATEURS ============================ -->
+  <section class="stats" aria-label="Indicateurs clés" [class.stats--loading]="loadState() === 'loading'">
+    <article class="stat" data-tone="violet">
+      <span class="stat__icon">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+          <path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"></path>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+        </svg>
+      </span>
+      <span class="stat__text">
+        <span class="stat__value">{{ view().inscriptions }}</span>
+        <span class="stat__label">Inscriptions</span>
+        <span class="stat__sub">{{ view().subInscriptions }}</span>
+      </span>
+    </article>
+
+    <article class="stat" data-tone="green">
+      <span class="stat__icon">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 3h7v7H3z"></path><path d="M14 3h7v7h-7z"></path><path d="M14 14h7v7h-7z"></path><path d="M3 14h7v7H3z"></path>
+        </svg>
+      </span>
+      <span class="stat__text">
+        <span class="stat__value">{{ view().fill }}</span>
+        <span class="stat__label">Remplissage</span>
+        <span class="stat__sub">{{ view().subFill }}</span>
+      </span>
+    </article>
+
+    <article class="stat" data-tone="cyan">
+      <span class="stat__icon">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"></path>
+          <path d="M13 5v2"></path><path d="M13 11v2"></path><path d="M13 17v2"></path>
+        </svg>
+      </span>
+      <span class="stat__text">
+        <span class="stat__value">{{ view().tickets }}</span>
+        <span class="stat__label">Tickets</span>
+        <span class="stat__sub">{{ view().subTickets }}</span>
+      </span>
+    </article>
+  </section>
+
+  @if (loadState() === 'error') {
+    <section class="state">
+      <span class="state__icon state__icon--danger">
+        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <path d="M12 9v4"></path><path d="M12 17h.01"></path>
+        </svg>
+      </span>
+      <h2 class="state__title">Impossible de charger les statistiques</h2>
+      <p class="state__text">Vérifiez votre connexion puis réessayez.</p>
+      <button type="button" class="btn btn--solid" (click)="retry()">Réessayer</button>
+    </section>
+  } @else {
+    <!-- ============================ GRAPHIQUE + TICKETS ============================ -->
+    <div class="grid">
+      <section class="panel">
+        <header class="panel__head">
+          <h2 class="panel__title">Évolution des inscriptions</h2>
+          <div class="seg" role="group" aria-label="Type de courbe">
+            <button
+              type="button" class="seg__btn" [class.seg__btn--active]="mode() === 'cumulative'"
+              [attr.aria-pressed]="mode() === 'cumulative'" (click)="setMode('cumulative')"
+            >
+              Cumulé
+            </button>
+            <button
+              type="button" class="seg__btn" [class.seg__btn--active]="mode() === 'daily'"
+              [attr.aria-pressed]="mode() === 'daily'" (click)="setMode('daily')"
+            >
+              Par jour
+            </button>
+          </div>
+        </header>
+
+        <div class="chart" #chartHost [style.min-height.px]="height()">
+          @if (loadState() === 'ready') {
+            <svg [attr.width]="width()" [attr.height]="height()" role="img" [attr.aria-label]="chartSummary()">
+              <defs>
+                <linearGradient id="stArea" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#22C7D6" stop-opacity="0.28" />
+                  <stop offset="1" stop-color="#22C7D6" stop-opacity="0" />
+                </linearGradient>
+              </defs>
+
+              @for (t of yTicks(); track t.value) {
+                <line class="chart__grid" [attr.x1]="pad.left" [attr.x2]="width() - pad.right" [attr.y1]="t.y" [attr.y2]="t.y" />
+                <text class="chart__axis" [attr.x]="pad.left - 10" [attr.y]="t.y" text-anchor="end" dominant-baseline="middle">{{ t.value }}</text>
+              }
+
+              <path [attr.d]="areaPath()" fill="url(#stArea)" />
+              <path class="chart__line" [attr.d]="linePath()" />
+
+              @for (p of points(); track p.date; let i = $index) {
+                @if (showLabel(i)) {
+                  <text class="chart__axis" [attr.x]="p.x" [attr.y]="height() - 8" text-anchor="middle">{{ p.label }}</text>
+                }
+              }
+
+              @if (hoverPoint(); as hp) {
+                <line class="chart__guide" [attr.x1]="hp.x" [attr.x2]="hp.x" [attr.y1]="pad.top" [attr.y2]="height() - pad.bottom" />
+                <circle class="chart__dot" [attr.cx]="hp.x" [attr.cy]="hp.y" r="5" />
+              }
+
+              <rect
+                class="chart__hit"
+                [attr.x]="pad.left" [attr.y]="pad.top" [attr.width]="innerW()" [attr.height]="innerH()"
+                (pointermove)="onChartMove($event)" (pointerleave)="hovered.set(null)"
+              />
+            </svg>
+
+            @if (hoverPoint(); as hp) {
+              <div class="chart__tooltip" [style.left.px]="tooltipX(hp.x)" [style.top.px]="hp.y">
+                <span class="chart__tooltip-date">{{ hp.tip }}</span>
+                @if (mode() === 'cumulative') {
+                  <span><strong>{{ hp.total }}</strong> au total · +{{ hp.day }} ce jour</span>
+                } @else {
+                  <span><strong>{{ hp.day }}</strong> inscription{{ hp.day > 1 ? 's' : '' }}</span>
+                }
+              </div>
+            }
+
+            @if (periodTotal() === 0) {
+              <p class="chart__empty">Aucune inscription sur cette période.</p>
+            }
+          } @else {
+            <div class="chart__skeleton" aria-busy="true" aria-label="Chargement du graphique"></div>
+          }
+        </div>
+      </section>
+
+      <section class="panel">
+        <header class="panel__head">
+          <h2 class="panel__title">Performance des tickets</h2>
+          @if (stats(); as s) {
+            @if (!s.isFree) {
+              <a class="panel__link" routerLink="/organisateur/tickets" [queryParams]="{ evenement: eventId() }">Gérer →</a>
+            }
+          }
+        </header>
+
+        @if (loadState() === 'loading') {
+          <ul class="tk-list" aria-busy="true" aria-label="Chargement des tickets">
+            @for (i of [1, 2, 3]; track i) {
+              <li class="tk-row">
+                <span class="sk sk--name"></span>
+                <span class="sk sk--bar"></span>
+                <span class="sk sk--value"></span>
+              </li>
+            }
+          </ul>
+        } @else if (stats()?.isFree) {
+          <div class="empty">
+            <span class="empty__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 12v10H4V12"></path><path d="M2 7h20v5H2z"></path><path d="M12 22V7"></path>
+                <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"></path>
+                <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"></path>
+              </svg>
+            </span>
+            <p class="empty__text">Cet événement est gratuit : il n'y a pas de tickets payants à analyser.</p>
+          </div>
+        } @else if (ticketRows().length === 0) {
+          <div class="empty">
+            <p class="empty__text">Aucun ticket n'a encore été créé pour cet événement.</p>
+            <a class="btn btn--outline btn--sm" routerLink="/organisateur/tickets" [queryParams]="{ evenement: eventId() }">Créer un ticket</a>
+          </div>
+        } @else {
+          <ul class="tk-list">
+            @for (t of ticketRows(); track t.name) {
+              <li class="tk-row" [class.tk-row--full]="t.full">
+                <span class="tk-row__name">{{ t.name }}</span>
+                <span
+                  class="tk-row__track" role="progressbar" [attr.aria-label]="'Tickets ' + t.name + ' vendus'"
+                  [attr.aria-valuenow]="t.percent" aria-valuemin="0" aria-valuemax="100"
+                >
+                  <span class="tk-row__fill" [style.width.%]="t.percent"></span>
+                </span>
+                <span class="tk-row__value">
+                  <strong>{{ t.sold }}</strong>/{{ t.seats }}
+                  @if (t.full) {
+                    <span class="tk-row__full">Complet</span>
+                  }
+                </span>
+              </li>
+            }
+          </ul>
+        }
+      </section>
+    </div>
+
+    <!-- ============================ PARTICIPANTS ============================ -->
+    <section class="panel">
+      <header class="panel__head">
+        <h2 class="panel__title">Participants</h2>
+        <a class="panel__link" routerLink="/organisateur/participants" [queryParams]="{ evenement: eventId() }">Voir la liste →</a>
+      </header>
+
+      <ul class="pills" [class.pills--loading]="loadState() === 'loading'">
+        @for (s of statusItems(); track s.key) {
+          <li class="pill" [attr.data-tone]="s.tone">
+            <span class="pill__dot" aria-hidden="true"></span>
+            <span class="pill__label">{{ s.label }}</span>
+            <span class="pill__value">{{ formatNumber(s.value) }}</span>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+</div>
+
+<!-- ============================ NOTIFICATION ============================ -->
+@if (toast(); as t) {
+  <div class="toast" [attr.data-kind]="t.kind" role="status" aria-live="polite">{{ t.text }}</div>
+}
