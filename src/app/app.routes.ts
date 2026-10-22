@@ -36,7 +36,7 @@ export const routes: Routes = [
     {path: 'login',component:LoginComponent},
     {
         path: '',
-        component: PublicLayoutComponent, // Le conteneur du Header et Footer
+        component: PublicLayoutComponent,
         children: [
        { path: '', redirectTo: 'events', pathMatch: 'full' },
         { path: 'events', component: EventsComponent },

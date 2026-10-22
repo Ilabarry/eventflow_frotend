@@ -1,6 +1,15 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Subject, firstValueFrom } from 'rxjs';
+
+import { NotificationService } from '../../../core/services/notification.service';
+import {
+  ApiNotificationType,
+  NotificationApiService,
+  NotificationDto,
+} from '../../../core/services/notification-api.service';
 
 type NotifType = 'registration' | 'ticket' | 'payment' | 'event' | 'reminder' | 'system';
 type Category = 'all' | 'registrations' | 'sales' | 'events' | 'system';
@@ -9,13 +18,13 @@ type LoadState = 'loading' | 'ready' | 'error';
 type Tone = 'violet' | 'cyan' | 'green' | 'amber' | 'gray';
 
 interface AppNotification {
-  id: number;
+  id: string;                  // UUID backend
   type: NotifType;
   title: string;
   message: string;
-  createdAt: string; // ISO
+  createdAt: string;
   read: boolean;
-  eventId: number | null;
+  eventId: string | null;      // UUID depuis metadata ou related_entity_id
 }
 
 interface Toast {
@@ -32,7 +41,6 @@ const PAGE_SIZE = 8;
 const dateShort = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' });
 const timeShort = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' });
 const dateFull = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'full', timeStyle: 'short' });
-const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 const startOfDay = (time: number): number => {
   const d = new Date(time);
@@ -40,7 +48,24 @@ const startOfDay = (time: number): number => {
   return d.getTime();
 };
 
-/** Apparence et destination de chaque type de notification */
+/* ------------------------------------------------------------------
+   Mapping type backend → type UI
+   ------------------------------------------------------------------ */
+const toUiType = (api: ApiNotificationType): NotifType => {
+  switch (api) {
+    case 'REGISTRATION':      return 'registration';
+    case 'TICKET':            return 'ticket';
+    case 'PAYMENT':           return 'payment';
+    case 'EVENT_PUBLICATION':
+    case 'EVENT_UPDATE':      return 'event';
+    case 'EVENT_REMINDER':    return 'reminder';
+    default:                  return 'system';
+  }
+};
+
+/* ------------------------------------------------------------------
+   META : apparence et destination par type UI
+   ------------------------------------------------------------------ */
 const META: Record<
   NotifType,
   {
@@ -49,7 +74,7 @@ const META: Record<
     icon: string[];
     route: string | null;
     cta: string | null;
-    withEvent: boolean; // ajoute ?evenement=ID au lien
+    withEvent: boolean;
   }
 > = {
   registration: {
@@ -59,10 +84,7 @@ const META: Record<
   },
   ticket: {
     tone: 'cyan', category: 'sales',
-    icon: [
-      'M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z',
-      'M13 5v2', 'M13 11v2', 'M13 17v2',
-    ],
+    icon: ['M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z', 'M13 5v2', 'M13 11v2', 'M13 17v2'],
     route: '/organisateur/tickets', cta: 'Voir les tickets', withEvent: true,
   },
   payment: {
@@ -72,10 +94,7 @@ const META: Record<
   },
   event: {
     tone: 'violet', category: 'events',
-    icon: [
-      'M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z',
-      'M16 2v4', 'M8 2v4', 'M3 10h18', 'M9 16l2 2 4-4',
-    ],
+    icon: ['M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z', 'M16 2v4', 'M8 2v4', 'M3 10h18', 'M9 16l2 2 4-4'],
     route: '/organisateur/evenements', cta: 'Voir mes événements', withEvent: false,
   },
   reminder: {
@@ -105,43 +124,6 @@ const GROUPS = [
   { key: 'older', label: 'Plus ancien' },
 ] as const;
 
-/* ----------------------------------------------------------------
-   DONNÉES DE DÉMONSTRATION
-   TODO : remplacer fetchNotifications() par ton service
-          (GET /notifications) et brancher les actions ci-dessous
-   ---------------------------------------------------------------- */
-const mk = (
-  id: number, type: NotifType, title: string, message: string, ageMs: number, read: boolean, eventId: number | null,
-): AppNotification => ({ id, type, title, message, createdAt: new Date(Date.now() - ageMs).toISOString(), read, eventId });
-
-const buildMock = (): AppNotification[] => [
-  mk(1, 'registration', 'Nouvelle inscription', "Awa Diop s'est inscrite à « Forum de l'Innovation Numérique ».", 5 * MIN, false, 1),
-  mk(2, 'ticket', 'Ticket vendu', "1 ticket VIP vendu pour « Forum de l'Innovation Numérique ».", 18 * MIN, false, 1),
-  mk(3, 'registration', 'Nouvelle inscription', "Mamadou Ba s'est inscrit à « Forum de l'Innovation Numérique ».", 45 * MIN, false, 1),
-  mk(4, 'payment', 'Paiement reçu', 'Paiement de 15 000 FCFA reçu pour « Tech Conférence ».', 2 * HOUR, false, 2),
-  mk(5, 'event', 'Événement publié', '« Tech Conférence » est publié et visible par les participants.', 3 * HOUR, false, 2),
-  mk(6, 'registration', 'Nouvelle inscription', "Cheikh Fall s'est inscrit à « Tech Conférence ».", 5 * HOUR, true, 2),
-  mk(7, 'reminder', 'Rappel : événement dans 3 jours', "« Forum de l'Innovation Numérique » approche. Vérifiez vos tickets et vos places.", 8 * HOUR, true, 1),
-  mk(8, 'ticket', 'Ticket complet', 'Le ticket VIP de « Tech Conférence » est complet.', 27 * HOUR, true, 2),
-  mk(9, 'registration', 'Nouvelle inscription', "Fatou Sow s'est inscrite à « Hackathon Innovation ».", 30 * HOUR, true, 4),
-  mk(10, 'payment', 'Paiement reçu', 'Paiement de 5 000 FCFA reçu pour « Tech Conférence ».', 33 * HOUR, true, 2),
-  mk(11, 'registration', 'Nouvelle inscription', "Ousmane Ndiaye s'est inscrit à « Hackathon Innovation ».", 3 * DAY, true, 4),
-  mk(12, 'event', 'Brouillon enregistré', '« Python Workshop » a été enregistré en brouillon.', 4 * DAY, true, 3),
-  mk(13, 'ticket', 'Ticket bientôt complet', "Le ticket Standard de « Forum de l'Innovation Numérique » est rempli à 80 %.", 4 * DAY, true, 1),
-  mk(14, 'reminder', 'Rappel : événement dans 7 jours', '« Hackathon Innovation » commence dans une semaine.', 5 * DAY, true, 4),
-  mk(15, 'registration', 'Nouvelle inscription', "Aïssatou Sarr s'est inscrite à « Python Workshop ».", 6 * DAY, true, 3),
-  mk(16, 'payment', 'Paiement reçu', "Paiement de 15 000 FCFA reçu pour « Forum de l'Innovation Numérique ».", 10 * DAY, true, 1),
-  mk(17, 'system', 'Nouvelles statistiques', 'Le suivi des inscriptions est désormais disponible dans la page Statistiques.', 12 * DAY, true, null),
-  mk(18, 'registration', 'Nouvelle inscription', "Ibrahima Gueye s'est inscrit à « Python Workshop ».", 15 * DAY, true, 3),
-  mk(19, 'event', 'Événement modifié', "« Forum de l'Innovation Numérique » a été mis à jour.", 18 * DAY, true, 1),
-  mk(20, 'system', 'Bienvenue sur EVENTFLOW', 'Votre espace organisateur est prêt. Créez votre premier événement.', 28 * DAY, true, null),
-];
-
-const fetchNotifications = async (): Promise<AppNotification[]> => {
-  await delay(450);
-  return buildMock().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-};
-
 @Component({
   selector: 'app-organizer-notifications',
   standalone: true,
@@ -150,11 +132,13 @@ const fetchNotifications = async (): Promise<AppNotification[]> => {
   styleUrl: './notifications.component.scss',
 })
 export class OrganizerNotificationsComponent {
+  private readonly api = inject(NotificationApiService);
+  private readonly notification = inject(NotificationService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly destroy$ = new Subject<void>();
+
   readonly categories = CATEGORIES;
 
-  /* ------------------------------------------------------------------
-     ÉTAT
-     ------------------------------------------------------------------ */
   readonly items = signal<AppNotification[]>([]);
   readonly loadState = signal<LoadState>('loading');
 
@@ -167,10 +151,53 @@ export class OrganizerNotificationsComponent {
   private toastTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor() {
-    inject(DestroyRef).onDestroy(() => {
+    this.destroyRef.onDestroy(() => {
       if (this.toastTimer) clearTimeout(this.toastTimer);
+      this.destroy$.next();
+      this.destroy$.complete();
     });
     void this.load();
+  }
+
+  /* ------------------------------------------------------------------
+     CHARGEMENT
+     ------------------------------------------------------------------ */
+  async load(): Promise<void> {
+    this.loadState.set('loading');
+    console.info('[Notifications] Chargement...');
+
+    try {
+      const res = await firstValueFrom(
+        this.api.list({ pageSize: 100 }),
+      );
+
+      const dtos: NotificationDto[] = res.data?.results ?? [];
+      this.items.set(dtos.map((d) => this.toAppNotification(d)));
+      this.loadState.set('ready');
+      console.info(`[Notifications] ${dtos.length} notifications chargées`);
+    } catch (err) {
+      this.loadState.set('error');
+      console.error('[Notifications] Échec chargement', err);
+      this.notification.httpError(err);
+    }
+  }
+
+  private toAppNotification(dto: NotificationDto): AppNotification {
+    // eventId : priorité au metadata.url → sinon related_entity_id si type event/registration
+    const eventId =
+      dto.metadata?.['eventId'] ??
+      dto.metadata?.['event_id'] ??
+      (dto.related_entity_type === 'event' ? dto.related_entity_id : null);
+
+    return {
+      id: dto.id,
+      type: toUiType(dto.type),
+      title: dto.title,
+      message: dto.message,
+      createdAt: dto.created_at,
+      read: dto.is_read,
+      eventId: eventId ?? null,
+    };
   }
 
   /* ------------------------------------------------------------------
@@ -223,19 +250,6 @@ export class OrganizerNotificationsComponent {
   }
 
   /* ------------------------------------------------------------------
-     CHARGEMENT
-     ------------------------------------------------------------------ */
-  async load(): Promise<void> {
-    this.loadState.set('loading');
-    try {
-      this.items.set(await fetchNotifications()); // TODO : service
-      this.loadState.set('ready');
-    } catch {
-      this.loadState.set('error');
-    }
-  }
-
-  /* ------------------------------------------------------------------
      FILTRES
      ------------------------------------------------------------------ */
   setReadFilter(value: ReadFilter): void {
@@ -259,45 +273,89 @@ export class OrganizerNotificationsComponent {
   }
 
   /* ------------------------------------------------------------------
-     ACTIONS (TODO : brancher sur l'API)
+     ACTIONS → API
      ------------------------------------------------------------------ */
-  open(n: AppNotification): void {
-    if (!n.read) this.setRead(n.id, true);
+  async open(n: AppNotification): Promise<void> {
+    if (!n.read) await this.setRead(n, true);
   }
 
-  toggleRead(n: AppNotification): void {
-    this.setRead(n.id, !n.read);
+  async toggleRead(n: AppNotification): Promise<void> {
+    await this.setRead(n, !n.read);
   }
 
-  private setRead(id: number, read: boolean): void {
-    this.items.update((list) => list.map((n) => (n.id === id ? { ...n, read } : n)));
+  private async setRead(n: AppNotification, read: boolean): Promise<void> {
+    // Optimistic update
+    this.items.update((list) => list.map((x) => (x.id === n.id ? { ...x, read } : x)));
+
+    if (!read) {
+      // Pas d'endpoint "unread" côté backend → on ne fait rien
+      this.notification.info('Marquage comme non-lu non supporté par le backend.', 'Info');
+      return;
+    }
+
+    try {
+      await firstValueFrom(this.api.markRead(n.id));
+      console.info(`[Notifications] ${n.id} marquée lue`);
+    } catch (err) {
+      // Rollback
+      this.items.update((list) => list.map((x) => (x.id === n.id ? { ...x, read: !read } : x)));
+      this.notification.httpError(err);
+    }
   }
 
-  markAllRead(): void {
+  async markAllRead(): Promise<void> {
     const count = this.stats().unread;
     if (count === 0) return;
+
+    // Optimistic update
+    const previous = this.items();
     this.items.update((list) => list.map((n) => (n.read ? n : { ...n, read: true })));
-    this.showToast('success', `${count} notification${count > 1 ? 's' : ''} marquée${count > 1 ? 's' : ''} comme lue${count > 1 ? 's' : ''}.`);
+
+    try {
+      await firstValueFrom(this.api.markAllRead());
+      this.showToast('success', `${count} notification${count > 1 ? 's' : ''} marquée${count > 1 ? 's' : ''} comme lue${count > 1 ? 's' : ''}.`);
+      console.info(`[Notifications] ${count} notifications marquées lues`);
+    } catch (err) {
+      // Rollback
+      this.items.set(previous);
+      this.notification.httpError(err);
+    }
   }
 
-  remove(n: AppNotification): void {
+  async remove(n: AppNotification): Promise<void> {
     const index = this.items().findIndex((x) => x.id === n.id);
     if (index < 0) return;
+
     this.lastDeleted = { item: n, index };
     this.items.update((list) => list.filter((x) => x.id !== n.id));
     this.showToast('success', 'Notification supprimée.', 'Annuler');
+
+    try {
+      await firstValueFrom(this.api.remove(n.id));
+      console.info(`[Notifications] ${n.id} supprimée`);
+    } catch (err) {
+      // Rollback
+      this.items.update((list) => {
+        const next = [...list];
+        next.splice(Math.min(index, next.length), 0, n);
+        return next.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      });
+      this.lastDeleted = null;
+      this.notification.httpError(err);
+    }
   }
 
   undo(): void {
+    // L'undo n'est possible qu'avant l'appel API réussi.
+    // Une fois la suppression confirmée par le backend, on ne peut plus annuler.
     const last = this.lastDeleted;
     if (!last) return;
-    this.items.update((list) => {
-      const next = [...list];
-      next.splice(Math.min(last.index, next.length), 0, last.item);
-      return next.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-    });
-    this.lastDeleted = null;
     this.toast.set(null);
+    this.notification.info(
+      "L'annulation n'est pas possible : la notification a déjà été supprimée côté serveur.",
+      'Info',
+    );
+    this.lastDeleted = null;
   }
 
   /* ------------------------------------------------------------------
@@ -311,7 +369,7 @@ export class OrganizerNotificationsComponent {
     return META[n.type].route;
   }
 
-  queryOf(n: AppNotification): { evenement: number } | null {
+  queryOf(n: AppNotification): { evenement: string } | null {
     return META[n.type].withEvent && n.eventId !== null ? { evenement: n.eventId } : null;
   }
 

@@ -263,7 +263,7 @@
 <!-- ============================ NOTIFICATION ============================ -->
 @if (toast(); as t) {
   <div class="toast" [attr.data-kind]="t.kind" role="status" aria-live="polite">
-    <span>{{ t.text }}</span>
+    {{ t.text }}
     @if (t.action) {
       <button type="button" class="toast__action" (click)="undo()">{{ t.action }}</button>
     }
