@@ -1,1 +1,502 @@
-<h1>Ma page d'evenement</h1>
+
+<div class="events-page" id="home">
+  <main>
+    <!-- Bannière principale -->
+    <section class="hero content-width" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <span class="eyebrow">
+          <span class="eyebrow-dot"></span>
+          Vivez l’événement autrement
+        </span>
+
+        <h1 id="hero-title">
+          TROUVEZ VOTRE
+          <span>PROCHAIN ÉVÉNEMENT</span>
+        </h1>
+
+        <p>Explorez les événements qui correspondent à vos envies.</p>
+
+        <div class="hero-stats" aria-label="Les avantages EVENTFLOW">
+          <span><span class="tiny-check">✓</span> Des événements variés</span>
+          <span><span class="tiny-check">✓</span> Une expérience simple</span>
+        </div>
+      </div>
+
+      <div class="hero-visual">
+        <img
+          src="https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=85"
+          alt="Salle de conférence pendant un événement professionnel"
+          fetchpriority="high"
+        />
+        <div class="hero-image-shade"></div>
+
+        <div class="floating-card floating-card-top">
+          <span class="floating-icon purple-icon" aria-hidden="true">▦</span>
+          <span>
+            <strong>Conférences</strong>
+            <small>Networking professionnel</small>
+          </span>
+        </div>
+
+        <div class="floating-card floating-card-bottom">
+          <span class="floating-icon cyan-icon" aria-hidden="true">★</span>
+          <span>
+            <strong>Des expériences</strong>
+            <small>uniques</small>
+          </span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Recherche et filtres rapides -->
+    <section class="search-section content-width" aria-label="Rechercher des événements">
+      <div class="search-panel">
+        <form class="search-row" (submit)="$event.preventDefault(); onFiltersChanged()">
+          <label class="search-input-wrap" for="event-search">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="10.8" cy="10.8" r="6.8"></circle>
+              <path d="m16 16 4.2 4.2"></path>
+            </svg>
+
+            <input
+              id="event-search"
+              type="search"
+              name="event-search"
+              placeholder="Rechercher un événement, une ville, une catégorie..."
+              [(ngModel)]="searchQuery"
+              (ngModelChange)="onFiltersChanged()"
+              autocomplete="off"
+            />
+          </label>
+
+          <button class="search-button" type="submit" aria-label="Lancer la recherche">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="10.8" cy="10.8" r="6.8"></circle>
+              <path d="m16 16 4.2 4.2"></path>
+            </svg>
+          </button>
+        </form>
+
+        <div class="quick-filters">
+          <label class="select-wrap">
+            <span class="sr-only">Catégorie</span>
+            <select
+              name="top-category"
+              [(ngModel)]="selectedTopCategory"
+              (ngModelChange)="onFiltersChanged()"
+            >
+              <option value="all">Toutes les catégories</option>
+              @for (category of categories; track category.id) {
+                <option [value]="category.id">{{ category.name }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="select-wrap">
+            <span class="sr-only">Date</span>
+            <select
+              name="top-date"
+              [(ngModel)]="selectedTopDate"
+              (ngModelChange)="onFiltersChanged()"
+            >
+              <option value="all">Toutes les dates</option>
+              @for (date of dateOptions; track date.value) {
+                <option [value]="date.value">{{ date.label }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="select-wrap">
+            <span class="sr-only">Format</span>
+            <select
+              name="top-format"
+              [(ngModel)]="selectedTopFormat"
+              (ngModelChange)="onFiltersChanged()"
+            >
+              <option value="all">Tous les formats</option>
+              @for (format of formats; track format.value) {
+                <option [value]="format.value">{{ format.label }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="select-wrap">
+            <span class="sr-only">Prix</span>
+            <select
+              name="top-price"
+              [(ngModel)]="selectedTopPrice"
+              (ngModelChange)="onFiltersChanged()"
+            >
+              <option value="all">Tous les prix</option>
+              @for (price of priceOptions; track price.value) {
+                <option [value]="price.value">{{ price.label }}</option>
+              }
+            </select>
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <!-- Liste et filtres latéraux -->
+    <section
+      class="listing-section content-width"
+      id="events"
+      aria-labelledby="events-title"
+    >
+      <details class="filters-panel" open>
+        <summary>
+          <span class="summary-filter-icon" aria-hidden="true">☷</span>
+          Filtres
+          <span class="summary-chevron" aria-hidden="true">⌄</span>
+        </summary>
+
+        <div class="filters-content">
+          <div class="filters-title-row">
+            <div class="filters-title">
+              <span class="filters-title-icon" aria-hidden="true">☷</span>
+              <h2>Filtrer</h2>
+            </div>
+
+            <button class="clear-filters" type="button" (click)="resetFilters()">
+              Réinitialiser
+            </button>
+          </div>
+
+          <fieldset class="filter-group">
+            <legend>Catégorie</legend>
+            @for (category of categories; track category.id) {
+              <label class="check-row">
+                <input
+                  type="checkbox"
+                  [checked]="selectedCategories.includes(category.name)"
+                  (change)="toggleFilter('categories', category.name, $event)"
+                />
+                <span class="custom-checkbox" aria-hidden="true"></span>
+                <span>{{ category.name }}</span>
+              </label>
+            }
+          </fieldset>
+
+          <fieldset class="filter-group">
+            <legend>Format</legend>
+            @for (format of formats; track format.value) {
+              <label class="check-row">
+                <input
+                  type="checkbox"
+                  [checked]="selectedFormats.includes(format.value)"
+                  (change)="toggleFilter('formats', format.value, $event)"
+                />
+                <span class="custom-checkbox" aria-hidden="true"></span>
+                <span>{{ format.label }}</span>
+              </label>
+            }
+          </fieldset>
+
+          <fieldset class="filter-group">
+            <legend>Prix</legend>
+            @for (price of priceOptions; track price.value) {
+              <label class="check-row">
+                <input
+                  type="checkbox"
+                  [checked]="selectedPrices.includes(price.value)"
+                  (change)="toggleFilter('prices', price.value, $event)"
+                />
+                <span class="custom-checkbox" aria-hidden="true"></span>
+                <span>{{ price.label }}</span>
+              </label>
+            }
+          </fieldset>
+
+          <fieldset class="filter-group date-filter-group">
+            <legend>Date</legend>
+            @for (date of dateOptions; track date.value) {
+              <label class="check-row">
+                <input
+                  type="checkbox"
+                  [checked]="selectedDates.includes(date.value)"
+                  (change)="toggleFilter('dates', date.value, $event)"
+                />
+                <span class="custom-checkbox" aria-hidden="true"></span>
+                <span>{{ date.label }}</span>
+              </label>
+            }
+          </fieldset>
+
+          <button class="reset-button" type="button" (click)="resetFilters()">
+            Réinitialiser les filtres
+          </button>
+        </div>
+      </details>
+
+      <!-- Résultats -->
+      <div class="results-column">
+        <div class="results-header">
+          <div class="results-heading">
+            <span class="section-kicker">À ne pas manquer</span>
+            <h2 id="events-title">Les événements à découvrir</h2>
+            <p>
+              <strong>{{ filteredEvents.length }}</strong>
+              événement(s) affiché(s)
+            </p>
+          </div>
+
+          <label class="sort-control">
+            <span>Trier par :</span>
+            <select
+              name="sort-events"
+              [(ngModel)]="sortBy"
+              (ngModelChange)="onFiltersChanged()"
+            >
+              <option value="relevance">Pertinence</option>
+              <option value="date">Date la plus proche</option>
+              <option value="price">Gratuit en premier</option>
+            </select>
+          </label>
+        </div>
+
+        @if (isLoading) {
+          <div class="empty-state" role="status" aria-live="polite">
+            <h3>Chargement des événements…</h3>
+            <p>Nous récupérons les événements disponibles.</p>
+          </div>
+        } @else if (errorMessage) {
+          <div class="empty-state" role="alert">
+            <h3>Impossible de charger les événements</h3>
+            <p>{{ errorMessage }}</p>
+            <button class="button-primary" type="button" (click)="loadEvents()">
+              Réessayer
+            </button>
+          </div>
+        } @else if (paginatedEvents.length > 0) {
+          <div class="event-grid">
+            @for (event of paginatedEvents; track event.id) {
+              <article class="event-card">
+                <button
+                  class="event-image-button"
+                  type="button"
+                  (click)="openEvent(event)"
+                  [attr.aria-label]="'Voir les détails de ' + event.title"
+                >
+                  <img
+                    [src]="getEventImage(event)"
+                    [alt]="'Image de l’événement ' + event.title"
+                    loading="lazy"
+                  />
+
+                  <span
+                    class="format-badge"
+                    [class.online-badge]="event.format === 'ONLINE'"
+                    [class.onsite-badge]="event.format === 'IN_PERSON'"
+                  >
+                    {{ formatLabel(event.format) }}
+                  </span>
+                </button>
+
+                <div class="event-card-body">
+                  <span class="event-date">
+                    {{ formatEventDate(event.start_at) }}
+                  </span>
+
+                  <h3>{{ event.title }}</h3>
+
+                  <p class="event-location">
+                    <span aria-hidden="true">⌖</span>
+                    {{ event.city || 'Lieu à préciser' }}
+                    <span aria-hidden="true">·</span>
+                    {{ formatLabel(event.format) }}
+                  </p>
+
+                  <p class="event-description">
+                    {{ event.short_description }}
+                  </p>
+
+                  <p class="event-category">
+                    {{ event.category.name }}
+                  </p>
+
+                  <div class="event-card-footer">
+                    <span
+                      class="price-badge"
+                      [class.paid-price]="event.participation_type === 'PAID'"
+                    >
+                      {{ formatPrice(event) }}
+                    </span>
+
+                    <button
+                      class="event-open-button"
+                      type="button"
+                      (click)="openEvent(event)"
+                      [attr.aria-label]="'Afficher les détails de ' + event.title"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              </article>
+            }
+          </div>
+        } @else {
+          <div class="empty-state">
+            <span class="empty-state-icon" aria-hidden="true">⌕</span>
+            <h3>Aucun événement trouvé</h3>
+            <p>Modifiez votre recherche ou retirez quelques filtres.</p>
+            <button class="button-primary" type="button" (click)="resetFilters()">
+              Réinitialiser les filtres
+            </button>
+          </div>
+        }
+
+        <!-- Pagination -->
+        @if (!isLoading && !errorMessage && totalPages > 1) {
+          <nav class="pagination" aria-label="Pagination des événements">
+            <button
+              type="button"
+              class="pagination-arrow"
+              aria-label="Page précédente"
+              [disabled]="currentPage === 1"
+              (click)="goToPage(currentPage - 1)"
+            >
+              ‹
+            </button>
+
+            @for (page of pageNumbers; track page) {
+              <button
+                type="button"
+                class="page-number"
+                [class.current-page]="currentPage === page"
+                [attr.aria-current]="currentPage === page ? 'page' : null"
+                (click)="goToPage(page)"
+              >
+                {{ page }}
+              </button>
+            }
+
+            <button
+              type="button"
+              class="pagination-arrow"
+              aria-label="Page suivante"
+              [disabled]="currentPage === totalPages"
+              (click)="goToPage(currentPage + 1)"
+            >
+              ›
+            </button>
+          </nav>
+        }
+      </div>
+    </section>
+
+    <!-- Parcours EVENTFLOW -->
+    <section class="flow-strip content-width" id="how-it-works" aria-label="Comment ça marche">
+      <div class="flow-step">
+        <span>01</span>
+        <strong>Découvrez</strong>
+        <small>Trouvez ce qui vous inspire.</small>
+      </div>
+      <span class="flow-connector" aria-hidden="true"></span>
+      <div class="flow-step">
+        <span>02</span>
+        <strong>Inscrivez-vous</strong>
+        <small>Réservez votre place facilement.</small>
+      </div>
+      <span class="flow-connector" aria-hidden="true"></span>
+      <div class="flow-step">
+        <span>03</span>
+        <strong>Participez</strong>
+        <small>Vivez de nouvelles expériences.</small>
+      </div>
+    </section>
+
+    <!-- Appel à l'action organisateur -->
+    <section class="organizer-cta content-width" id="create-event">
+      <div class="cta-calendar" aria-hidden="true">＋</div>
+      <div class="cta-copy">
+        <h2>VOUS ORGANISEZ UN ÉVÉNEMENT ?</h2>
+        <p>Publiez votre événement sur EVENTFLOW.</p>
+      </div>
+      <button
+        class="cta-button"
+        type="button"
+        (click)="showNavigationNotice('Créer un événement')"
+      >
+        Créer un événement <span aria-hidden="true">→</span>
+      </button>
+    </section>
+  </main>
+
+  <!-- Fenêtre de détail -->
+  @if (selectedEvent; as event) {
+    <div
+      class="modal-backdrop"
+      (click)="closeEvent()"
+      (keydown.escape)="closeEvent()"
+    >
+      <section
+        class="event-modal"
+        role="dialog"
+        aria-modal="true"
+        [attr.aria-label]="'Détails de ' + event.title"
+        (click)="$event.stopPropagation()"
+      >
+        <button
+          class="modal-close"
+          type="button"
+          aria-label="Fermer les détails"
+          (click)="closeEvent()"
+        >
+          ×
+        </button>
+
+        <img
+          [src]="getEventImage(event)"
+          [alt]="'Image de l’événement ' + event.title"
+        />
+
+        <div class="modal-content">
+          <span class="event-date">{{ formatEventDate(event.start_at) }}</span>
+
+          <span
+            class="format-badge modal-format"
+            [class.online-badge]="event.format === 'ONLINE'"
+            [class.onsite-badge]="event.format === 'IN_PERSON'"
+          >
+            {{ formatLabel(event.format) }}
+          </span>
+
+          <h2>{{ event.title }}</h2>
+          <p class="modal-category">
+            {{ event.category.name }} · {{ event.city || 'Lieu à préciser' }}
+          </p>
+          <p>{{ event.short_description }}</p>
+          <p class="modal-price">{{ formatPrice(event) }}</p>
+
+          <p class="modal-note">
+            Les informations présentées proviennent des données publiques
+            disponibles pour cet événement.
+          </p>
+
+          <button
+            class="button-primary modal-done"
+            type="button"
+            (click)="closeEvent()"
+          >
+            Fermer
+          </button>
+        </div>
+      </section>
+    </div>
+  }
+
+  <!-- Message d'information -->
+  @if (actionMessage) {
+    <div class="navigation-notice" role="status">
+      <span>{{ actionMessage }}</span>
+      <button
+        type="button"
+        aria-label="Fermer le message"
+        (click)="clearNavigationNotice()"
+      >
+        ×
+      </button>
+    </div>
+  }
+</div>
