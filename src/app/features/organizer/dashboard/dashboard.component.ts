@@ -74,7 +74,7 @@ const ICON = {
   ],
 } as const;
 
-const PLACEHOLDER_IMG = 'img/event-placeholder.svg';
+const PLACEHOLDER_IMG = 'img/FFFFFF.svg';
 
 const numberFmt = new Intl.NumberFormat('fr-FR');
 const longDate = new Intl.DateTimeFormat('fr-FR', {
