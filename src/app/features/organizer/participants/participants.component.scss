@@ -161,22 +161,28 @@
    SÉLECTEUR D'ÉVÉNEMENT
    ================================================================ */
 .picker {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 1rem;
-  padding: 0.75rem;
+  padding: 0.875rem;
   border: 1px solid var(--evf-border);
-  border-radius: 16px;
+  border-radius: 18px;
   background: var(--evf-surface);
   box-shadow: 0 2px 12px rgba(10, 10, 18, 0.04);
+  transition: box-shadow 0.2s ease;
+
+  &:hover {
+    box-shadow: 0 4px 16px rgba(10, 10, 18, 0.06);
+  }
 
   &__media {
     position: relative;
-    width: 96px;
-    height: 64px;
+    width: 100px;
+    height: 68px;
     flex-shrink: 0;
     border-radius: 12px;
-    background: #0A0A12;
+    background: linear-gradient(135deg, rgba(108, 92, 231, 0.15) 0%, rgba(34, 199, 214, 0.15) 100%);
     overflow: hidden;
 
     img {
@@ -188,18 +194,28 @@
     }
 
     @media (max-width: 520px) {
-      width: 72px;
-      height: 56px;
+      width: 76px;
+      height: 60px;
     }
+  }
+
+  &__placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    color: var(--evf-violet);
+    opacity: 0.5;
   }
 
   &__body {
     display: flex;
     flex-direction: column;
-    gap: 0.125rem;
+    gap: 0.25rem;
     min-width: 0;
     flex: 1;
-    max-width: 560px;
+    max-width: 640px;
   }
 
   &__label {
@@ -210,27 +226,30 @@
     color: var(--evf-text-muted);
   }
 
+  &__select-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
   &__select {
     width: 100%;
-    height: 38px;
-    padding: 0 2.25rem 0 0.75rem;
+    height: 42px;
+    padding: 0 2.5rem 0 0.875rem;
     border: 2px solid var(--evf-border);
     border-radius: var(--evf-radius-lg);
-    background-color: var(--evf-surface);
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236C5CE7' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 0.625rem center;
-    background-size: 18px;
+    background: var(--evf-surface);
     color: var(--evf-dark);
     font-family: var(--evf-font-heading);
     font-size: 0.95rem;
     font-weight: 700;
+    letter-spacing: -0.01em;
     text-overflow: ellipsis;
     cursor: pointer;
     appearance: none;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
 
-    &:hover {
+    &:hover:not(:disabled) {
       border-color: #CBD5E1;
     }
 
@@ -239,6 +258,18 @@
       border-color: var(--evf-violet);
       box-shadow: 0 0 0 4px rgba(108, 92, 231, 0.12);
     }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  }
+
+  &__chevron {
+    position: absolute;
+    right: 0.875rem;
+    color: var(--evf-violet);
+    pointer-events: none;
   }
 
   &__meta {
@@ -259,6 +290,38 @@
   &__sep {
     margin: 0 0.125rem;
   }
+
+  &__spinner {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    color: var(--evf-violet);
+
+    svg {
+      animation: spin 0.9s linear infinite;
+    }
+  }
+
+  @media (max-width: 520px) {
+    gap: 0.75rem;
+    padding: 0.75rem;
+
+    &__label {
+      font-size: 0.62rem;
+    }
+
+    &__select {
+      height: 38px;
+      font-size: 0.875rem;
+    }
+  }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 /* ================================================================

@@ -154,13 +154,10 @@ export class OrganizerParticipantsComponent {
 
     this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
       const requested = params.get('evenement');
-      const target =
-        requested && this.events().some((e) => e.id === requested)
-          ? requested
-          : this.events()[0]?.id ?? null;
+      if (!requested) return;
 
-      if (target && target !== this.lastLoaded) {
-        void this.loadParticipants(target);
+      if (requested !== this.lastLoaded) {
+        void this.loadParticipants(requested);
       }
     });
   }
@@ -183,15 +180,26 @@ export class OrganizerParticipantsComponent {
         }));
         this.events.set(list);
         this.eventsLoading.set(false);
-        console.info(`[Participants] ${list.length} événements chargés`);
 
+        // ✅ Si l'URL ne contient pas d'événement → on initialise avec le premier
         const requested = this.route.snapshot.queryParamMap.get('evenement');
-        const target = list.some((e) => e.id === requested) ? requested : list[0]?.id ?? null;
-        if (target && target !== this.lastLoaded) void this.loadParticipants(target);
+        if (!requested && list.length > 0) {
+          void this.router.navigate([], {
+            relativeTo: this.route,
+            queryParams: { evenement: list[0].id },
+            replaceUrl: true,
+          });
+          // Le queryParamMap émettra → loadParticipants sera appelé
+        } else if (requested && list.some((e) => e.id === requested)) {
+          // ✅ L'URL pointe vers un événement existant, mais loadParticipants
+          //    a pu échouer (events pas prêts). On garantit le chargement.
+          if (requested !== this.lastLoaded) {
+            void this.loadParticipants(requested);
+          }
+        }
       },
       error: (err) => {
         this.eventsLoading.set(false);
-        console.error('[Participants] Échec chargement événements', err.status);
         this.notification.httpError(err);
       },
     });
@@ -275,6 +283,8 @@ export class OrganizerParticipantsComponent {
 
   onEventChange(event: Event): void {
     const id = (event.target as HTMLSelectElement).value;
+    if (id === this.eventId()) return; // même valeur
+    // Met à jour l'URL → queryParamMap émet → loadParticipants
     void this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { evenement: id },
