@@ -1,10 +1,21 @@
 import {
   AfterViewInit, Component, DestroyRef, ElementRef, NgZone,
-  computed, inject, signal, viewChild,
+  computed, inject, signal, viewChild, OnInit,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { Subject, takeUntil, catchError, of } from 'rxjs';
 
-type Period = '30j' | '6m' | '12m';
+import { AuthService } from '../../../core/auth/auth.service';
+import { NotificationService } from '../../../core/services/notification.service';
+import {
+  ChartPeriod,
+  DashboardService,
+  OrganizerDashboardDto,
+  OrganizerStatisticsDto,
+  OrganizerUpcomingEventDto,
+  OrganizerRecentRegistrationDto,
+} from '../../../core/services/dashboard.service';
+
 type Tone = 'violet' | 'green' | 'cyan';
 
 interface StatCard {
@@ -16,18 +27,18 @@ interface StatCard {
 }
 
 interface UpcomingEvent {
-  id: number;
+  id: string;
   title: string;
   imageUrl: string;
   mode: 'Présentiel' | 'En ligne' | 'Hybride';
   dateLabel: string;
   location: string;
   registered: number;
-  capacity: number;
+  capacity: number | null;
 }
 
 interface Activity {
-  id: number;
+  id: string;
   title: string;
   timeLabel: string;
   tone: Tone;
@@ -40,7 +51,6 @@ interface ChartPoint {
   value: number;
 }
 
-/* Icônes (attributs "d" des <path>, style Feather) */
 const ICON = {
   calendar: [
     'M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z',
@@ -62,7 +72,34 @@ const ICON = {
     'M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z',
     'M13 5v2', 'M13 11v2', 'M13 17v2',
   ],
+} as const;
+
+const PLACEHOLDER_IMG = 'img/event-placeholder.svg';
+
+const numberFmt = new Intl.NumberFormat('fr-FR');
+const longDate = new Intl.DateTimeFormat('fr-FR', {
+  day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+});
+
+const formatEventDate = (iso: string): string => longDate.format(new Date(iso));
+
+const relativeTime = (iso: string): string => {
+  const diff = Date.now() - new Date(iso).getTime();
+  const min = Math.round(diff / 60_000);
+  if (min < 1) return "À l'instant";
+  if (min < 60) return `Il y a ${min} min`;
+  const h = Math.round(min / 60);
+  if (h < 24) return `Il y a ${h} h`;
+  const d = Math.round(h / 24);
+  if (d < 7) return `Il y a ${d} j`;
+  return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
 };
+
+const mapFormat = (f: string): 'Présentiel' | 'En ligne' | 'Hybride' =>
+  f === 'ONLINE' ? 'En ligne' : f === 'HYBRID' ? 'Hybride' : 'Présentiel';
+
+const activityToneFromStatus = (s: string): Tone =>
+  s === 'CONFIRMED' ? 'green' : s === 'PENDING' ? 'cyan' : 'violet';
 
 @Component({
   selector: 'app-organizer-dashboard',
@@ -71,78 +108,49 @@ const ICON = {
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss',
 })
-export class OrganizerDashboardComponent implements AfterViewInit {
+export class OrganizerDashboardComponent implements OnInit, AfterViewInit {
   private readonly zone = inject(NgZone);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly authService = inject(AuthService);
+  private readonly dashboardService = inject(DashboardService);
+  private readonly notification = inject(NotificationService);
+  private readonly destroy$ = new Subject<void>();
+
   private readonly chartHost = viewChild.required<ElementRef<HTMLElement>>('chartHost');
 
   /* ------------------------------------------------------------------
-     DONNÉES (mock) — TODO : remplacer par tes services (API Laravel / Django…)
+     ÉTAT DE LA PAGE
      ------------------------------------------------------------------ */
-  readonly userName = signal('Barry');
+  readonly loading = signal(true);
+  readonly chartLoading = signal(false);
 
-  readonly stats = signal<StatCard[]>([
-    { label: 'Événements', value: '12', tone: 'violet', link: '/organisateur/evenements', icon: ICON.calendar },
-    { label: 'Inscriptions', value: '248', tone: 'green', link: '/organisateur/participants', icon: ICON.userCheck },
-    { label: 'À venir', value: '08', tone: 'cyan', link: '/organisateur/evenements', icon: ICON.clock },
-  ]);
+  readonly userName = computed(() => this.authService.currentUser()?.first_name ?? '');
 
-  readonly upcomingEvents = signal<UpcomingEvent[]>([
-    {
-      id: 1,
-      title: 'Tech conférence',
-      imageUrl: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&q=80',
-      mode: 'Présentiel',
-      dateLabel: '30 sept - 14:30',
-      location: 'Dakar',
-      registered: 480,
-      capacity: 500,
-    },
-  ]);
-
-  readonly activities = signal<Activity[]>([
-    { id: 1, title: 'Nouvelle inscription', timeLabel: 'Il y a 5 min', tone: 'violet', link: '/organisateur/participants', icon: ICON.userPlus },
-    { id: 2, title: 'Événements publiés', timeLabel: 'Il y a 1 h', tone: 'cyan', link: '/organisateur/evenements', icon: ICON.checkCircle },
-    { id: 3, title: 'Ticket vendu', timeLabel: 'Il y a 2 h', tone: 'green', link: '/organisateur/tickets', icon: ICON.ticket },
-  ]);
+  readonly stats = signal<StatCard[]>([]);
+  readonly upcomingEvents = signal<UpcomingEvent[]>([]);
+  readonly activities = signal<Activity[]>([]);
 
   /* ------------------------------------------------------------------
-     GRAPHIQUE « Performance » (SVG pur, sans librairie)
+     GRAPHIQUE (période et état)
      ------------------------------------------------------------------ */
-  readonly periods: { value: Period; label: string }[] = [
-    { value: '30j', label: '30 derniers jours' },
-    { value: '6m', label: '6 derniers mois' },
-    { value: '12m', label: '12 derniers mois' },
+  readonly periods: { value: ChartPeriod; label: string }[] = [
+    { value: 'last_30_days', label: '30 derniers jours' },
+    { value: 'last_6_months', label: '6 derniers mois' },
+    { value: 'last_12_months', label: '12 derniers mois' },
   ];
-  readonly period = signal<Period>('6m');
+  readonly period = signal<ChartPeriod>('last_6_months');
 
-  private readonly chartData: Record<Period, ChartPoint[]> = {
-    '30j': [
-      { label: 'S1', value: 12 }, { label: 'S2', value: 25 },
-      { label: 'S3', value: 19 }, { label: 'S4', value: 38 },
-    ],
-    '6m': [
-      { label: 'Mai', value: 20 }, { label: 'Juin', value: 34 }, { label: 'Juil', value: 28 },
-      { label: 'Août', value: 52 }, { label: 'Sept', value: 47 }, { label: 'Oct', value: 78 },
-    ],
-    '12m': [
-      { label: 'Nov', value: 8 }, { label: 'Déc', value: 14 }, { label: 'Jan', value: 12 },
-      { label: 'Fév', value: 22 }, { label: 'Mars', value: 18 }, { label: 'Avr', value: 30 },
-      { label: 'Mai', value: 20 }, { label: 'Juin', value: 34 }, { label: 'Juil', value: 28 },
-      { label: 'Août', value: 52 }, { label: 'Sept', value: 47 }, { label: 'Oct', value: 78 },
-    ],
-  };
+  private readonly rawChartData = signal<ChartPoint[]>([]);
 
   readonly pad = { top: 16, right: 16, bottom: 30, left: 40 };
   readonly width = signal(600);
   readonly height = computed(() => (this.width() < 480 ? 200 : 240));
   readonly hovered = signal<number | null>(null);
 
-  private readonly data = computed(() => this.chartData[this.period()]);
+  private readonly data = computed(() => this.rawChartData());
   private readonly innerW = computed(() => Math.max(this.width() - this.pad.left - this.pad.right, 1));
   private readonly innerH = computed(() => this.height() - this.pad.top - this.pad.bottom);
 
-  /** Échelle Y « propre » : 4 intervalles réguliers */
   private readonly yScale = computed(() => {
     const max = Math.max(...this.data().map((d) => d.value), 1);
     const raw = max / 4;
@@ -163,6 +171,7 @@ export class OrganizerDashboardComponent implements AfterViewInit {
     const data = this.data();
     const { max } = this.yScale();
     const n = data.length;
+    if (n === 0) return [];
     return data.map((d, i) => ({
       ...d,
       x: this.pad.left + (n === 1 ? this.innerW() / 2 : (i * this.innerW()) / (n - 1)),
@@ -175,7 +184,6 @@ export class OrganizerDashboardComponent implements AfterViewInit {
     return n > 1 ? this.innerW() / (n - 1) : this.innerW();
   });
 
-  /** Courbe lissée (courbes de Bézier horizontales, sans dépassement) */
   readonly linePath = computed(() => {
     const pts = this.points();
     return pts.reduce((d, p, i) => {
@@ -193,7 +201,6 @@ export class OrganizerDashboardComponent implements AfterViewInit {
     return `${this.linePath()} L${pts[pts.length - 1].x},${base} L${pts[0].x},${base} Z`;
   });
 
-  /** Évite le chevauchement des labels sur petit écran */
   private readonly labelStep = computed(() =>
     Math.max(1, Math.ceil((this.data().length * 44) / this.innerW())),
   );
@@ -211,12 +218,157 @@ export class OrganizerDashboardComponent implements AfterViewInit {
     return Math.min(Math.max(x, 56), this.width() - 56);
   }
 
-  onPeriodChange(event: Event): void {
-    this.period.set((event.target as HTMLSelectElement).value as Period);
-    this.hovered.set(null);
+  /* ------------------------------------------------------------------
+     INITIALISATION
+     ------------------------------------------------------------------ */
+  ngOnInit(): void {
+    this.loadDashboard();
+    this.loadStatistics();
   }
 
-  /** Adapte le SVG à la largeur réelle du conteneur (texte net sur mobile) */
+  private loadDashboard(): void {
+    this.loading.set(true);
+    console.info('[Dashboard] Chargement du dashboard organisateur...');
+
+    this.dashboardService
+      .getOrganizerDashboard()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          const data: OrganizerDashboardDto | undefined = res.data;
+          if (!data) {
+            this.loading.set(false);
+            return;
+          }
+
+          this.stats.set(this.buildStats(data));
+          this.upcomingEvents.set(data.upcoming_events.map((e) => this.toUpcomingEvent(e)));
+          this.activities.set(data.recent_registrations.map((r) => this.toActivity(r)));
+          console.log('[Dashboard DEBUG] activities:', this.activities());
+
+          this.loading.set(false);
+          console.info(
+            `[Dashboard] ${data.summary.total_events} événements | ${data.summary.total_registrations} inscriptions`,
+          );
+        },
+        error: (err) => {
+          this.loading.set(false);
+          console.error('[Dashboard] Échec chargement', err.status);
+          this.notification.httpError(err);
+        },
+      });
+  }
+
+  private loadStatistics(): void {
+    this.chartLoading.set(true);
+    console.info(`[Dashboard] Chargement des stats (${this.period()})...`);
+
+    this.dashboardService
+      .getOrganizerStatistics(this.period())
+      .pipe(
+        takeUntil(this.destroy$),
+        catchError((err) => {
+          console.error('[Dashboard] Échec chargement stats', err.status);
+          this.notification.httpError(err);
+          return of({ success: false, message: '', data: undefined } as any);
+        }),
+      )
+      .subscribe((res) => {
+        const stats: OrganizerStatisticsDto | undefined = res.data;
+        if (stats) {
+          const series = stats.registrations_over_time.map((p) => ({
+            label: this.formatPointLabel(p.period, stats.period.granularity),
+            value: p.count,
+          }));
+          this.rawChartData.set(series);
+          console.info(`[Dashboard] ${series.length} points chargés pour le graphique`);
+        }
+        this.chartLoading.set(false);
+      });
+  }
+
+  /* ------------------------------------------------------------------
+     MAPPERS
+     ------------------------------------------------------------------ */
+  private buildStats(d: OrganizerDashboardDto): StatCard[] {
+    return [
+      {
+        label: 'Événements',
+        value: numberFmt.format(d.summary.total_events),
+        tone: 'violet',
+        link: '/organisateur/evenements',
+        icon: [...ICON.calendar],
+      },
+      {
+        label: 'Inscriptions',
+        value: numberFmt.format(d.summary.total_registrations),
+        tone: 'green',
+        link: '/organisateur/participants',
+        icon: [...ICON.userCheck],
+      },
+      {
+        label: 'À venir',
+        value: numberFmt.format(d.summary.upcoming_events),
+        tone: 'cyan',
+        link: '/organisateur/evenements',
+        icon: [...ICON.clock],
+      },
+    ];
+  }
+
+  private toUpcomingEvent(e: OrganizerUpcomingEventDto): UpcomingEvent {
+    return {
+      id: e.id,
+      title: e.title,
+      imageUrl: PLACEHOLDER_IMG,
+      mode: mapFormat(e.format),
+      dateLabel: formatEventDate(e.start_at),
+      location: e.format === 'ONLINE' ? 'En ligne' : (e.city || e.venue_name || '—'),
+      registered: e.capacity.occupied,
+      capacity: e.capacity.limit,
+    };
+  }
+
+  private toActivity(r: OrganizerRecentRegistrationDto): Activity {
+    const tone = activityToneFromStatus(r.status);
+    const statusLabel =
+      r.status === 'CONFIRMED' ? 'inscription confirmée' :
+      r.status === 'PENDING' ? 'inscription en attente' :
+      'inscription annulée';
+    return {
+      id: r.reference,
+      title: `${r.participant_name} — ${statusLabel} (${r.event.title})`,
+      timeLabel: relativeTime(r.registered_at),
+      tone,
+      link: '/organisateur/participants',
+      icon: [...(r.status === 'CONFIRMED' ? ICON.checkCircle : r.status === 'PENDING' ? ICON.clock : ICON.userPlus)],
+    };
+  }
+
+  private formatPointLabel(period: string, granularity: 'day' | 'month'): string {
+    if (granularity === 'month') {
+      // "2026-10" → "Oct"
+      const [y, m] = period.split('-').map(Number);
+      return new Date(y, m - 1, 1).toLocaleDateString('fr-FR', { month: 'short' });
+    }
+    // "2026-10-22" → "22 Oct"
+    const date = new Date(period);
+    return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+  }
+
+  /* ------------------------------------------------------------------
+     CHANGEMENT DE PÉRIODE
+     ------------------------------------------------------------------ */
+  onPeriodChange(event: Event): void {
+    const value = (event.target as HTMLSelectElement).value as ChartPeriod;
+    this.period.set(value);
+    this.hovered.set(null);
+    this.loadStatistics();
+  }
+
+  /* ------------------------------------------------------------------
+     RESIZE OBSERVER
+     ------------------------------------------------------------------ */
   ngAfterViewInit(): void {
     if (typeof ResizeObserver === 'undefined') return;
     const observer = new ResizeObserver(([entry]) => {
@@ -224,6 +376,10 @@ export class OrganizerDashboardComponent implements AfterViewInit {
       if (w > 0) this.zone.run(() => this.width.set(w));
     });
     observer.observe(this.chartHost().nativeElement);
-    this.destroyRef.onDestroy(() => observer.disconnect());
+    this.destroyRef.onDestroy(() => {
+      observer.disconnect();
+      this.destroy$.next();
+      this.destroy$.complete();
+    });
   }
 }

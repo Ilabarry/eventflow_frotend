@@ -87,48 +87,51 @@
         </header>
 
         <div class="events">
-          @for (e of upcomingEvents(); track e.id) {
-            <article class="event">
-              <div class="event__media">
-                <img [src]="e.imageUrl" [alt]="e.title" class="event__img" loading="lazy" />
-                <span class="event__badge">{{ e.mode }}</span>
-              </div>
-
-              <div class="event__body">
-                <h3 class="event__title">{{ e.title }}</h3>
-
-                <ul class="event__meta">
-                  <li>
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <path d="M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path>
-                      <path d="M16 2v4"></path><path d="M8 2v4"></path><path d="M3 10h18"></path>
-                    </svg>
-                    {{ e.dateLabel }}
-                  </li>
-                  <li>
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                      <path d="M12 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"></path>
-                    </svg>
-                    {{ e.location }}
-                  </li>
-                  <li>
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                      <path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"></path>
-                      <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                      <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                    </svg>
-                    {{ e.registered }} / {{ e.capacity }} inscrits
-                  </li>
-                </ul>
-
-                <!-- TODO : [routerLink]="['/organisateur/evenements', e.id]" quand la page détail existera -->
-                <a routerLink="/organisateur/evenements" class="event__btn">Voir l'événement</a>
-              </div>
-            </article>
-          } @empty {
+          @if (upcomingEvents().length === 0 && !loading()) {
             <p class="empty">Aucun événement à venir pour le moment.</p>
+          } @else {
+            @for (e of upcomingEvents(); track e.id) {
+              <article class="event">
+                <div class="event__media">
+                  <img [src]="e.imageUrl" [alt]="e.title" class="event__img" loading="lazy" />
+                  <span class="event__badge">{{ e.mode }}</span>
+                </div>
+
+                <div class="event__body">
+                  <h3 class="event__title">{{ e.title }}</h3>
+
+                  <ul class="event__meta">
+                    <li>
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path>
+                        <path d="M16 2v4"></path><path d="M8 2v4"></path><path d="M3 10h18"></path>
+                      </svg>
+                      {{ e.dateLabel }}
+                    </li>
+                    <li>
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                        <path d="M12 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"></path>
+                      </svg>
+                      {{ e.location }}
+                    </li>
+                    <li>
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"></path>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                      </svg>
+                      {{ e.registered }} / {{ e.capacity ?? '∞' }} inscrits
+                    </li>
+                  </ul>
+
+                  <a [routerLink]="['/organisateur/evenements', e.id, 'modifier']" class="event__btn">
+                    Voir l'événement
+                  </a>
+                </div>
+              </article>
+            }
           }
         </div>
       </section>
@@ -137,12 +140,7 @@
       <section class="panel">
         <header class="panel__header">
           <h2 class="panel__title">Performance de vos événements</h2>
-          <select
-            class="panel__select"
-            aria-label="Période du graphique"
-            [value]="period()"
-            (change)="onPeriodChange($event)"
-          >
+          <select ...>
             @for (p of periods; track p.value) {
               <option [value]="p.value" [selected]="p.value === period()">{{ p.label }}</option>
             }
@@ -150,63 +148,111 @@
         </header>
 
         <div class="chart" #chartHost>
-          <svg
-            [attr.width]="width()"
-            [attr.height]="height()"
-            role="img"
-            aria-label="Courbe des inscriptions sur la période sélectionnée"
-          >
-            <defs>
-              <linearGradient id="orgPerfArea" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stop-color="#22C7D6" stop-opacity="0.28" />
-                <stop offset="1" stop-color="#22C7D6" stop-opacity="0" />
-              </linearGradient>
-            </defs>
-
-            <!-- Grille + axe Y -->
-            @for (t of yTicks(); track t.value) {
-              <line class="chart__grid" [attr.x1]="pad.left" [attr.x2]="width() - pad.right" [attr.y1]="t.y" [attr.y2]="t.y" />
-              <text class="chart__axis" [attr.x]="pad.left - 10" [attr.y]="t.y" text-anchor="end" dominant-baseline="middle">{{ t.value }}</text>
-            }
-
-            <!-- Aire + courbe -->
-            <path [attr.d]="areaPath()" fill="url(#orgPerfArea)" />
-            <path class="chart__line" [attr.d]="linePath()" />
-
-            <!-- Axe X -->
-            @for (p of points(); track p.label; let i = $index) {
-              @if (showLabel(i)) {
-                <text class="chart__axis" [attr.x]="p.x" [attr.y]="height() - 8" text-anchor="middle">{{ p.label }}</text>
-              }
-            }
-
-            <!-- Survol -->
-            @if (hoveredPoint(); as hp) {
-              <line class="chart__guide" [attr.x1]="hp.x" [attr.x2]="hp.x" [attr.y1]="pad.top" [attr.y2]="height() - pad.bottom" />
-              <circle class="chart__dot" [attr.cx]="hp.x" [attr.cy]="hp.y" r="5" />
-            }
-
-            @for (p of points(); track p.label; let i = $index) {
-              <rect
-                class="chart__hit"
-                [attr.x]="p.x - colWidth() / 2"
-                [attr.y]="0"
-                [attr.width]="colWidth()"
-                [attr.height]="height()"
-                (pointerenter)="hovered.set(i)"
-                (pointerleave)="hovered.set(null)"
-              />
-            }
-          </svg>
-
-          @if (hoveredPoint(); as hp) {
-            <div class="chart__tooltip" [style.left.px]="tooltipX(hp.x)" [style.top.px]="hp.y">
-              <strong>{{ hp.value }}</strong> inscriptions · {{ hp.label }}
+          @if (chartLoading()) {
+            <div class="chart__loading" role="status" aria-live="polite">
+              <span class="spinner" aria-hidden="true"></span>
+              Chargement des données…
             </div>
+          } @else if (points().length === 0) {
+            <div class="chart__empty">
+              <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3 3v18h18"></path>
+                <path d="M18 17V9"></path>
+                <path d="M13 17V5"></path>
+                <path d="M8 17v-3"></path>
+              </svg>
+              <p>Aucune inscription enregistrée sur cette période.</p>
+              <p class="chart__empty-hint">Les statistiques apparaîtront dès les premières inscriptions.</p>
+            </div>
+          } @else {
+            <svg
+              [attr.width]="width()"
+              [attr.height]="height()"
+              role="img"
+              aria-label="Courbe des inscriptions sur la période sélectionnée"
+            >
+              <defs>
+                <linearGradient id="orgPerfArea" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#22C7D6" stop-opacity="0.28" />
+                  <stop offset="1" stop-color="#22C7D6" stop-opacity="0" />
+                </linearGradient>
+              </defs>
+
+              <!-- Grille + axe Y -->
+              @for (t of yTicks(); track t.value) {
+                <line
+                  class="chart__grid"
+                  [attr.x1]="pad.left"
+                  [attr.x2]="width() - pad.right"
+                  [attr.y1]="t.y"
+                  [attr.y2]="t.y"
+                />
+                <text
+                  class="chart__axis"
+                  [attr.x]="pad.left - 10"
+                  [attr.y]="t.y"
+                  text-anchor="end"
+                  dominant-baseline="middle"
+                >{{ t.value }}</text>
+              }
+
+              <!-- Aire + courbe lissée -->
+              <path [attr.d]="areaPath()" fill="url(#orgPerfArea)" />
+              <path class="chart__line" [attr.d]="linePath()" />
+
+              <!-- Axe X -->
+              @for (p of points(); track p.label; let i = $index) {
+                @if (showLabel(i)) {
+                  <text
+                    class="chart__axis"
+                    [attr.x]="p.x"
+                    [attr.y]="height() - 8"
+                    text-anchor="middle"
+                  >{{ p.label }}</text>
+                }
+              }
+
+              <!-- Survol : guide + point -->
+              @if (hoveredPoint(); as hp) {
+                <line
+                  class="chart__guide"
+                  [attr.x1]="hp.x"
+                  [attr.x2]="hp.x"
+                  [attr.y1]="pad.top"
+                  [attr.y2]="height() - pad.bottom"
+                />
+                <circle class="chart__dot" [attr.cx]="hp.x" [attr.cy]="hp.y" r="5" />
+              }
+
+              <!-- Zones de survol -->
+              @for (p of points(); track p.label; let i = $index) {
+                <rect
+                  class="chart__hit"
+                  [attr.x]="p.x - colWidth() / 2"
+                  [attr.y]="0"
+                  [attr.width]="colWidth()"
+                  [attr.height]="height()"
+                  (pointerenter)="hovered.set(i)"
+                  (pointerleave)="hovered.set(null)"
+                />
+              }
+            </svg>
+
+            <!-- Tooltip -->
+            @if (hoveredPoint(); as hp) {
+              <div
+                class="chart__tooltip"
+                [style.left.px]="tooltipX(hp.x)"
+                [style.top.px]="hp.y"
+              >
+                <strong>{{ hp.value }}</strong> inscriptions · {{ hp.label }}
+              </div>
+            }
           }
         </div>
       </section>
     </div>
+
 
     <!-- Activités récentes -->
     <aside class="dash__aside">

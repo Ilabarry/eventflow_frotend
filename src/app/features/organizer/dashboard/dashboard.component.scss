@@ -510,20 +510,20 @@
 /* ================================================================
    GRAPHIQUE
    ================================================================ */
+/* ================================================================
+   GRAPHIQUE
+   ================================================================ */
 .chart {
   position: relative;
   width: 100%;
-  overflow: hidden;
-
-  svg {
-    display: block;
-    overflow: visible;
-  }
+  min-height: 240px;
+  padding: 0.5rem 0;
+  margin-top: 0.5rem;
 
   &__grid {
     stroke: var(--evf-border);
     stroke-width: 1;
-    stroke-dasharray: 4 4;
+    stroke-dasharray: 3 4;
   }
 
   &__axis {
@@ -536,22 +536,22 @@
   &__line {
     fill: none;
     stroke: var(--evf-cyan);
-    stroke-width: 3;
+    stroke-width: 2.5;
     stroke-linecap: round;
     stroke-linejoin: round;
+  }
+
+  &__dot {
+    fill: var(--evf-cyan);
+    stroke: white;
+    stroke-width: 2;
   }
 
   &__guide {
     stroke: var(--evf-cyan);
     stroke-width: 1;
-    stroke-dasharray: 3 3;
-    opacity: 0.6;
-  }
-
-  &__dot {
-    fill: var(--evf-surface);
-    stroke: var(--evf-cyan);
-    stroke-width: 3;
+    stroke-dasharray: 4 4;
+    opacity: 0.4;
   }
 
   &__hit {
@@ -561,17 +561,73 @@
 
   &__tooltip {
     position: absolute;
-    z-index: 2;
-    padding: 0.4rem 0.7rem;
+    transform: translate(-50%, -100%);
+    padding: 0.5rem 0.75rem;
     border-radius: var(--evf-radius-md);
     background: var(--evf-dark);
     color: white;
-    font-size: 0.78rem;
+    font-family: var(--evf-font-body);
+    font-size: 0.8rem;
     white-space: nowrap;
     pointer-events: none;
-    transform: translate(-50%, calc(-100% - 12px));
-    box-shadow: 0 6px 18px rgba(10, 10, 18, 0.2);
+    box-shadow: var(--evf-shadow-lg);
+    z-index: 10;
+
+    strong {
+      color: var(--evf-cyan);
+    }
   }
+
+  &__loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 240px;
+    color: var(--evf-text-muted);
+    font-size: 0.875rem;
+  }
+
+  &__empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 240px;
+    padding: 1.5rem;
+    text-align: center;
+    color: var(--evf-text-muted);
+
+    svg {
+      opacity: 0.4;
+      margin-bottom: 0.5rem;
+    }
+
+    p {
+      margin: 0;
+      font-size: 0.875rem;
+    }
+  }
+
+  &__empty-hint {
+    font-size: 0.75rem;
+    opacity: 0.7;
+  }
+}
+
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--evf-border);
+  border-top-color: var(--evf-violet);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 /* ================================================================
@@ -665,4 +721,30 @@
   &:hover &__chevron {
     color: var(--evf-violet);
   }
+}
+
+
+.chart__loading,
+.chart__empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 200px;
+  color: var(--evf-text-muted);
+  font-size: 0.875rem;
+}
+
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--evf-border);
+  border-top-color: var(--evf-violet);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
