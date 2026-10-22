@@ -56,7 +56,10 @@ export const routes: Routes = [
         { path: 'statistiques', component: OrganizerStatistiquesComponent },
         { path: 'notifications', component: OrganizerNotificationsComponent },
         { path: 'creer-evenement', component: OrganizerCreateEventComponent },
-        { path: 'modifier-evenement', component: OrganizerEditEventComponent },
+        { path: 'evenements/:id/modifier', component: OrganizerEditEventComponent,
+          // alerte quand on quitte la page avec des modifications non enregistrées
+          canDeactivate: [(component: OrganizerEditEventComponent) => component.canDeactivate()],
+        },
       //   { path: 'parametres', component: OrganizerSettingsComponent },
       //   { path: 'messages', component: OrganizerMessagesComponent },
       ],

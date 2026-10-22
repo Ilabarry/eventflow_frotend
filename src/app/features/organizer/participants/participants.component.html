@@ -1,1 +1,509 @@
-<p>participants works!</p>
+<div class="page">
+  <!-- ============================ BANNIÈRE ============================ -->
+  <section class="hero">
+    <svg class="hero__wave" viewBox="0 0 400 120" preserveAspectRatio="none" aria-hidden="true">
+      <defs>
+        <linearGradient id="prtHeroWave" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#8B7CF6" />
+          <stop offset="1" stop-color="#22C7D6" />
+        </linearGradient>
+      </defs>
+      <path d="M0 90 C 50 20, 110 110, 180 60 S 300 0, 400 40" fill="none" stroke="url(#prtHeroWave)" stroke-width="2.5" vector-effect="non-scaling-stroke" />
+    </svg>
+
+    <div class="hero__content">
+      <h1 class="hero__title">Participants</h1>
+      <p class="hero__text">Suivez et gérez les inscriptions de vos événements.</p>
+    </div>
+
+    <svg class="hero__illustration" viewBox="0 0 120 120" fill="none" aria-hidden="true">
+      <defs>
+        <linearGradient id="prtHeroCal" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#8B7CF6" />
+          <stop offset="1" stop-color="#22C7D6" />
+        </linearGradient>
+      </defs>
+      <rect x="14" y="22" width="92" height="84" rx="14" fill="rgba(255,255,255,0.08)" stroke="url(#prtHeroCal)" stroke-width="2.5" />
+      <path d="M14 46h92" stroke="url(#prtHeroCal)" stroke-width="2.5" />
+      <path d="M38 12v20M82 12v20" stroke="url(#prtHeroCal)" stroke-width="4" stroke-linecap="round" />
+      <circle cx="36" cy="64" r="4" fill="rgba(255,255,255,0.75)" />
+      <circle cx="60" cy="64" r="4" fill="rgba(255,255,255,0.75)" />
+      <circle cx="84" cy="64" r="4" fill="rgba(255,255,255,0.75)" />
+      <circle cx="36" cy="86" r="4" fill="rgba(255,255,255,0.75)" />
+      <circle cx="60" cy="86" r="4" fill="rgba(255,255,255,0.75)" />
+      <circle cx="84" cy="86" r="7" fill="url(#prtHeroCal)" />
+    </svg>
+  </section>
+
+  <!-- ============================ ÉVÉNEMENT ============================ -->
+  <section class="picker" aria-label="Événement sélectionné">
+    <div class="picker__media">
+      <img [src]="currentEvent().imageUrl" alt="" />
+    </div>
+    <div class="picker__body">
+      <label class="picker__label" for="evt-select">Événement</label>
+      <select id="evt-select" class="picker__select" (change)="onEventChange($event)">
+        @for (e of events; track e.id) {
+          <option [value]="e.id" [selected]="e.id === eventId()">{{ e.title }}</option>
+        }
+      </select>
+      <p class="picker__meta">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path>
+          <path d="M16 2v4"></path><path d="M8 2v4"></path><path d="M3 10h18"></path>
+        </svg>
+        {{ currentEvent().dateLabel }}
+        <span class="picker__sep" aria-hidden="true">·</span>
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+          <path d="M12 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"></path>
+        </svg>
+        {{ currentEvent().location }}
+      </p>
+    </div>
+  </section>
+
+  <!-- ============================ STATS ============================ -->
+  <section class="stats" aria-label="Statistiques de l'événement" [class.stats--loading]="loadState() === 'loading'">
+    <article class="stat" data-tone="violet">
+      <span class="stat__icon">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+          <path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"></path>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+        </svg>
+      </span>
+      <span class="stat__text">
+        <span class="stat__value">{{ stats().active }}</span>
+        <span class="stat__label">Participants</span>
+      </span>
+    </article>
+
+    <article class="stat" data-tone="green">
+      <span class="stat__icon">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><path d="M22 4L12 14.01l-3-3"></path>
+        </svg>
+      </span>
+      <span class="stat__text">
+        <span class="stat__value">{{ stats().confirmed }}</span>
+        <span class="stat__label">Confirmés</span>
+      </span>
+    </article>
+
+    <article class="stat" data-tone="cyan">
+      <span class="stat__icon">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 3h7v7H3z"></path><path d="M14 3h7v7h-7z"></path><path d="M14 14h7v7h-7z"></path><path d="M3 14h7v7H3z"></path>
+        </svg>
+      </span>
+      <span class="stat__text">
+        <span class="stat__value">
+          {{ stats().active }}<span class="stat__total">/{{ stats().capacity ?? '∞' }}</span>
+        </span>
+        <span class="stat__label">Capacités</span>
+        @if (stats().percent !== null) {
+          <span
+            class="stat__bar" role="progressbar" aria-label="Taux de remplissage"
+            [attr.aria-valuenow]="stats().percent" aria-valuemin="0" aria-valuemax="100"
+          >
+            <span class="stat__bar-fill" [style.width.%]="stats().percent"></span>
+          </span>
+        }
+      </span>
+    </article>
+  </section>
+
+  <!-- ============================ OUTILS ============================ -->
+  <section class="toolbar" aria-label="Recherche et filtres">
+    <div class="search">
+      <svg class="search__icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+      </svg>
+      <input
+        type="search" class="search__input" placeholder="Rechercher un participant..."
+        aria-label="Rechercher un participant par nom, e-mail ou code ticket"
+        [value]="query()" (input)="onSearch($event)"
+      />
+    </div>
+
+    <div class="filters">
+      <select class="select" [class.select--active]="presence() !== 'all'" aria-label="Filtrer par présence" (change)="onPresence($event)">
+        @for (o of presenceOptions; track o.value) {
+          <option [value]="o.value" [selected]="presence() === o.value">{{ o.label }}</option>
+        }
+      </select>
+
+      <select class="select" [class.select--active]="status() !== 'all'" aria-label="Filtrer par statut" (change)="onStatus($event)">
+        @for (o of statusOptions; track o.value) {
+          <option [value]="o.value" [selected]="status() === o.value">{{ o.label }}</option>
+        }
+      </select>
+
+      <select class="select" [class.select--active]="ticket() !== 'all'" aria-label="Filtrer par ticket" (change)="onTicket($event)">
+        <option value="all" [selected]="ticket() === 'all'">Ticket</option>
+        @for (t of currentEvent().tickets; track t) {
+          <option [value]="t" [selected]="ticket() === t">{{ t }}</option>
+        }
+      </select>
+
+      <select class="select" [class.select--active]="period() !== 'all'" aria-label="Filtrer par date d'inscription" (change)="onPeriod($event)">
+        @for (o of periodOptions; track o.value) {
+          <option [value]="o.value" [selected]="period() === o.value">{{ o.label }}</option>
+        }
+      </select>
+
+      @if (hasActiveFilters()) {
+        <button type="button" class="link-btn" (click)="resetFilters()">Réinitialiser</button>
+      }
+
+      <div class="menu-wrap export">
+        <button
+          type="button" class="btn btn--outline btn--sm"
+          aria-haspopup="menu" [attr.aria-expanded]="exportOpen()"
+          (click)="toggleExport()"
+        >
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          Exporter
+          <svg class="chevron" [class.chevron--open]="exportOpen()" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M6 9l6 6 6-6"></path>
+          </svg>
+        </button>
+
+        @if (exportOpen()) {
+          <div class="menu" role="menu">
+            <button type="button" class="menu__item" role="menuitem" (click)="exportCsv()">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path>
+              </svg>
+              Télécharger en CSV
+            </button>
+            <button type="button" class="menu__item" role="menuitem" (click)="copyEmails()">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                <polyline points="22,6 12,13 2,6"></polyline>
+              </svg>
+              Copier les e-mails
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ TABLEAU ============================ -->
+  <section class="card">
+    @switch (loadState()) {
+      @case ('loading') {
+        <div class="skeleton" aria-busy="true" aria-label="Chargement des participants">
+          @for (i of [1, 2, 3, 4, 5, 6]; track i) {
+            <div class="skeleton__row">
+              <span class="skeleton__avatar"></span>
+              <span class="skeleton__line skeleton__line--lg"></span>
+              <span class="skeleton__line"></span>
+              <span class="skeleton__line skeleton__line--sm"></span>
+            </div>
+          }
+        </div>
+      }
+
+      @case ('error') {
+        <div class="state">
+          <span class="state__icon state__icon--danger">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+              <path d="M12 9v4"></path><path d="M12 17h.01"></path>
+            </svg>
+          </span>
+          <h2 class="state__title">Impossible de charger les participants</h2>
+          <p class="state__text">Vérifiez votre connexion puis réessayez.</p>
+          <button type="button" class="btn btn--solid" (click)="retry()">Réessayer</button>
+        </div>
+      }
+
+      @default {
+        @if (participants().length === 0) {
+          <div class="state">
+            <span class="state__icon">
+              <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"></path>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
+            </span>
+            <h2 class="state__title">Aucun participant pour le moment</h2>
+            <p class="state__text">Les inscriptions à cet événement apparaîtront ici.</p>
+          </div>
+        } @else if (filtered().length === 0) {
+          <div class="state">
+            <span class="state__icon">
+              <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+            </span>
+            <h2 class="state__title">Aucun participant trouvé</h2>
+            <p class="state__text">Essayez de modifier votre recherche ou vos filtres.</p>
+            <button type="button" class="btn btn--outline" (click)="resetFilters()">Réinitialiser les filtres</button>
+          </div>
+        } @else {
+          <table class="table">
+            <caption class="sr-only">Participants à « {{ currentEvent().title }} »</caption>
+            <thead>
+              <tr>
+                <th scope="col" [attr.aria-sort]="ariaSort('name')">
+                  <button type="button" class="th-btn" (click)="setSort('name')">
+                    Participants
+                    <span class="sort" [attr.data-dir]="sortKey() === 'name' ? sortDir() : null" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path class="sort__up" d="M7 10l5-5 5 5"></path><path class="sort__down" d="M7 14l5 5 5-5"></path></svg>
+                    </span>
+                  </button>
+                </th>
+                <th scope="col" [attr.aria-sort]="ariaSort('email')">
+                  <button type="button" class="th-btn" (click)="setSort('email')">
+                    E-mail
+                    <span class="sort" [attr.data-dir]="sortKey() === 'email' ? sortDir() : null" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path class="sort__up" d="M7 10l5-5 5 5"></path><path class="sort__down" d="M7 14l5 5 5-5"></path></svg>
+                    </span>
+                  </button>
+                </th>
+                <th scope="col" [attr.aria-sort]="ariaSort('ticket')">
+                  <button type="button" class="th-btn" (click)="setSort('ticket')">
+                    Tickets
+                    <span class="sort" [attr.data-dir]="sortKey() === 'ticket' ? sortDir() : null" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path class="sort__up" d="M7 10l5-5 5 5"></path><path class="sort__down" d="M7 14l5 5 5-5"></path></svg>
+                    </span>
+                  </button>
+                </th>
+                <th scope="col" [attr.aria-sort]="ariaSort('status')">
+                  <button type="button" class="th-btn" (click)="setSort('status')">
+                    Statut
+                    <span class="sort" [attr.data-dir]="sortKey() === 'status' ? sortDir() : null" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path class="sort__up" d="M7 10l5-5 5 5"></path><path class="sort__down" d="M7 14l5 5 5-5"></path></svg>
+                    </span>
+                  </button>
+                </th>
+                <th scope="col" class="col-date" [attr.aria-sort]="ariaSort('date')">
+                  <button type="button" class="th-btn" (click)="setSort('date')">
+                    Inscription
+                    <span class="sort" [attr.data-dir]="sortKey() === 'date' ? sortDir() : null" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path class="sort__up" d="M7 10l5-5 5 5"></path><path class="sort__down" d="M7 14l5 5 5-5"></path></svg>
+                    </span>
+                  </button>
+                </th>
+                <th scope="col" class="col-actions">Actions</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              @for (p of paged(); track p.id) {
+                <tr [class.row--cancelled]="p.status === 'cancelled'">
+                  <td class="cell-person">
+                    <span class="avatar" [attr.data-tone]="avatarTone(p)" aria-hidden="true">{{ initials(p) }}</span>
+                    <span class="person">
+                      <span class="person__name">{{ p.firstName }} {{ p.lastName }}</span>
+                      @if (p.checkedIn) {
+                        <span class="person__present">Présent</span>
+                      }
+                    </span>
+                  </td>
+                  <td data-label="E-mail" class="cell-email"><span class="email">{{ p.email }}</span></td>
+                  <td data-label="Ticket"><span class="tag" [attr.data-tone]="ticketTone(p)">{{ p.ticket }}</span></td>
+                  <td data-label="Statut">
+                    <span class="badge" [attr.data-status]="p.status">
+                      <span class="badge__dot"></span>{{ statusLabel[p.status] }}
+                    </span>
+                  </td>
+                  <td data-label="Inscrit le" class="col-date">{{ formatDate(p.registeredAt) }}</td>
+                  <td class="col-actions">
+                    <div class="menu-wrap">
+                      <button
+                        type="button" class="kebab" aria-haspopup="menu"
+                        [attr.aria-expanded]="openMenuId() === p.id"
+                        [attr.aria-label]="'Actions pour ' + p.firstName + ' ' + p.lastName"
+                        (click)="toggleMenu(p.id)"
+                      >
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+                          <circle cx="12" cy="5" r="1.7"></circle><circle cx="12" cy="12" r="1.7"></circle><circle cx="12" cy="19" r="1.7"></circle>
+                        </svg>
+                      </button>
+
+                      @if (openMenuId() === p.id) {
+                        <div class="menu" role="menu">
+                          <button type="button" class="menu__item" role="menuitem" (click)="openDetails(p)">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                            Voir les détails
+                          </button>
+
+                          @if (p.status !== 'cancelled') {
+                            <button type="button" class="menu__item" role="menuitem" (click)="toggleCheckIn(p)">
+                              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                                <path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"></path><path d="M16 11l2 2 4-4"></path>
+                              </svg>
+                              {{ p.checkedIn ? 'Retirer la présence' : 'Marquer présent' }}
+                            </button>
+                          }
+
+                          @if (p.status === 'pending') {
+                            <button type="button" class="menu__item" role="menuitem" (click)="confirmRegistration(p)">
+                              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><path d="M22 4L12 14.01l-3-3"></path>
+                              </svg>
+                              Confirmer l'inscription
+                            </button>
+                          } @else if (p.status === 'cancelled') {
+                            <button type="button" class="menu__item" role="menuitem" (click)="confirmRegistration(p)">
+                              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                              </svg>
+                              Rétablir l'inscription
+                            </button>
+                          }
+
+                          @if (p.status !== 'cancelled') {
+                            <button type="button" class="menu__item" role="menuitem" (click)="resendTicket(p)">
+                              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M22 2L11 13"></path><path d="M22 2l-7 20-4-9-9-4 20-7z"></path>
+                              </svg>
+                              Renvoyer le ticket
+                            </button>
+                            <button type="button" class="menu__item menu__item--danger" role="menuitem" (click)="askCancel(p)">
+                              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line>
+                              </svg>
+                              Annuler l'inscription
+                            </button>
+                          }
+                        </div>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+
+          <footer class="pager">
+            <p class="pager__info" aria-live="polite">
+              {{ range().start }}–{{ range().end }} sur {{ filtered().length }} participant{{ filtered().length > 1 ? 's' : '' }}
+            </p>
+
+            <label class="pager__size">
+              Par page
+              <select class="select select--sm" aria-label="Nombre de participants par page" (change)="onPageSize($event)">
+                @for (s of pageSizes; track s) {
+                  <option [value]="s" [selected]="pageSize() === s">{{ s }}</option>
+                }
+              </select>
+            </label>
+
+            <nav class="pager__nav" aria-label="Pagination">
+              <button type="button" class="page page--arrow" aria-label="Page précédente" [disabled]="pageSafe() === 1" (click)="goToPage(pageSafe() - 1)">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+              </button>
+
+              @for (item of pageItems(); track item.key) {
+                @if (item.page === null) {
+                  <span class="page page--gap" aria-hidden="true">…</span>
+                } @else {
+                  <button
+                    type="button" class="page" [class.page--active]="item.page === pageSafe()"
+                    [attr.aria-current]="item.page === pageSafe() ? 'page' : null"
+                    [attr.aria-label]="'Page ' + item.page"
+                    (click)="goToPage(item.page)"
+                  >
+                    {{ item.page }}
+                  </button>
+                }
+              }
+
+              <button type="button" class="page page--arrow" aria-label="Page suivante" [disabled]="pageSafe() === totalPages()" (click)="goToPage(pageSafe() + 1)">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"></path></svg>
+              </button>
+            </nav>
+          </footer>
+        }
+      }
+    }
+  </section>
+</div>
+
+<!-- ============================ DÉTAILS ============================ -->
+@if (detailsParticipant(); as d) {
+  <div class="modal" (click)="detailsId.set(null)">
+    <div
+      class="modal__dialog modal__dialog--left"
+      role="dialog" aria-modal="true" aria-labelledby="part-details-title"
+      (click)="$event.stopPropagation()"
+    >
+      <header class="details__head">
+        <span class="avatar avatar--lg" [attr.data-tone]="avatarTone(d)" aria-hidden="true">{{ initials(d) }}</span>
+        <div class="details__id">
+          <h2 id="part-details-title" class="details__name">{{ d.firstName }} {{ d.lastName }}</h2>
+          <span class="badge" [attr.data-status]="d.status"><span class="badge__dot"></span>{{ statusLabel[d.status] }}</span>
+        </div>
+        <button type="button" class="modal__close" aria-label="Fermer" (click)="detailsId.set(null)">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </header>
+
+      <dl class="details__list">
+        <div class="details__row"><dt>E-mail</dt><dd><a [href]="'mailto:' + d.email">{{ d.email }}</a></dd></div>
+        <div class="details__row"><dt>Téléphone</dt><dd><a [href]="'tel:' + d.phone.replaceAll(' ', '')">{{ d.phone }}</a></dd></div>
+        <div class="details__row"><dt>Ticket</dt><dd><span class="tag" [attr.data-tone]="ticketTone(d)">{{ d.ticket }}</span></dd></div>
+        <div class="details__row"><dt>Code ticket</dt><dd class="details__code">{{ d.code }}</dd></div>
+        <div class="details__row"><dt>Inscrit le</dt><dd>{{ formatDateTime(d.registeredAt) }}</dd></div>
+        <div class="details__row"><dt>Présence</dt><dd>{{ d.checkedIn ? 'Présent' : 'Non scanné' }}</dd></div>
+      </dl>
+
+      <div class="modal__actions">
+        <button type="button" class="btn btn--ghost" (click)="detailsId.set(null)">Fermer</button>
+        @if (d.status !== 'cancelled') {
+          <button type="button" class="btn btn--outline" (click)="toggleCheckIn(d)">
+            {{ d.checkedIn ? 'Retirer la présence' : 'Marquer présent' }}
+          </button>
+        }
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ============================ ANNULATION ============================ -->
+@if (cancelTarget(); as target) {
+  <div class="modal" (click)="cancelTarget.set(null)">
+    <div
+      class="modal__dialog"
+      role="alertdialog" aria-modal="true" aria-labelledby="part-cancel-title" aria-describedby="part-cancel-text"
+      (click)="$event.stopPropagation()"
+    >
+      <span class="modal__icon">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <path d="M12 9v4"></path><path d="M12 17h.01"></path>
+        </svg>
+      </span>
+      <h2 id="part-cancel-title" class="modal__title">Annuler cette inscription ?</h2>
+      <p id="part-cancel-text" class="modal__text">
+        L'inscription de <strong>{{ target.firstName }} {{ target.lastName }}</strong> sera annulée et sa place libérée.
+        Vous pourrez la rétablir tant qu'il reste de la capacité.
+      </p>
+      <div class="modal__actions">
+        <button type="button" class="btn btn--outline" (click)="cancelTarget.set(null)">Garder</button>
+        <button type="button" class="btn btn--danger" (click)="confirmCancel()">Annuler l'inscription</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ============================ NOTIFICATION ============================ -->
+@if (toast(); as t) {
+  <div class="toast" [attr.data-kind]="t.kind" role="status" aria-live="polite">{{ t.text }}</div>
+}

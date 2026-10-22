@@ -177,6 +177,13 @@
 
                   @if (openMenuId() === e.id) {
                     <div class="menu" role="menu">
+                      <a class="menu__item" role="menuitem" routerLink="/organisateur/participants" [queryParams]="{ evenement: e.id }">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                          <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                        Voir les participants
+                      </a>
                       <a class="menu__item" role="menuitem" [routerLink]="['/organisateur/evenements', e.id]">
                         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                           <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
