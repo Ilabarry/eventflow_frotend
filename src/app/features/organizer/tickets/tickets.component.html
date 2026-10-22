@@ -1,1 +1,435 @@
-<p>tickets works!</p>
+<div class="tk">
+  <!-- ============================ BANNIÈRE ============================ -->
+  <section class="hero">
+    <svg class="hero__wave" viewBox="0 0 400 120" preserveAspectRatio="none" aria-hidden="true">
+      <defs>
+        <linearGradient id="tkHeroWave" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#8B7CF6" />
+          <stop offset="1" stop-color="#22C7D6" />
+        </linearGradient>
+      </defs>
+      <path d="M0 90 C 50 20, 110 110, 180 60 S 300 0, 400 40" fill="none" stroke="url(#tkHeroWave)" stroke-width="2.5" vector-effect="non-scaling-stroke" />
+    </svg>
+
+    <div class="hero__content">
+      <h1 class="hero__title">Tickets</h1>
+      <p class="hero__text">Gérez les tarifs et les types de tickets de vos événements.</p>
+
+      <div class="hero__event">
+        <label class="hero__event-label" for="tk-event">Événement :</label>
+        <select id="tk-event" class="hero__select" (change)="onEventChange($event)">
+          @for (e of events; track e.id) {
+            <option [value]="e.id" [selected]="e.id === eventId()">{{ e.title }}</option>
+          }
+        </select>
+      </div>
+    </div>
+
+    <button
+      type="button" class="hero__btn" (click)="openAdd()"
+      [disabled]="currentEvent().isFree || loadState() !== 'ready'"
+    >
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+        <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
+      </svg>
+      Ajouter un ticket
+    </button>
+  </section>
+
+  <!-- ============================ STATS ============================ -->
+  <section class="stats" aria-label="Statistiques des tickets" [class.stats--loading]="loadState() === 'loading'">
+    <article class="stat" data-tone="violet">
+      <span class="stat__icon">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"></path>
+          <path d="M13 5v2"></path><path d="M13 11v2"></path><path d="M13 17v2"></path>
+        </svg>
+      </span>
+      <span class="stat__text">
+        <span class="stat__value">{{ stats().types }}</span>
+        <span class="stat__label">Types</span>
+      </span>
+    </article>
+
+    <article class="stat" data-tone="cyan">
+      <span class="stat__icon">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+          <path d="M3 6h18"></path><path d="M16 10a4 4 0 0 1-8 0"></path>
+        </svg>
+      </span>
+      <span class="stat__text">
+        <span class="stat__value">{{ formatNumber(stats().sold) }}</span>
+        <span class="stat__label">Vendus</span>
+      </span>
+    </article>
+
+    <article class="stat" data-tone="amber">
+      <span class="stat__icon">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M15 9.5a3 3 0 0 0-3-1.5c-1.7 0-3 1-3 2.25S10.3 12 12 12s3 .75 3 2.25S13.7 16.5 12 16.5a3 3 0 0 1-3-1.5"></path>
+          <path d="M12 6v2"></path><path d="M12 16.5V18"></path>
+        </svg>
+      </span>
+      <span class="stat__text">
+        <span class="stat__value stat__value--money">
+          {{ formatNumber(stats().revenue) }} <span class="stat__unit">FCFA</span>
+        </span>
+        <span class="stat__label">Revenus</span>
+      </span>
+    </article>
+  </section>
+
+  <!-- ============================ OUTILS ============================ -->
+  <section class="toolbar" aria-label="Recherche">
+    <p class="toolbar__count" aria-live="polite">
+      @if (loadState() === 'ready' && !currentEvent().isFree) {
+        {{ filtered().length }} ticket{{ filtered().length > 1 ? 's' : '' }}
+      }
+    </p>
+
+    <div class="search">
+      <svg class="search__icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+      </svg>
+      <input
+        type="search" class="search__input" placeholder="Rechercher un ticket..."
+        aria-label="Rechercher un ticket" [value]="query()" (input)="onSearch($event)"
+      />
+    </div>
+  </section>
+
+  <!-- ============================ CONTENU ============================ -->
+  @switch (loadState()) {
+    @case ('loading') {
+      <div class="grid" aria-busy="true" aria-label="Chargement des tickets">
+        @for (i of [1, 2]; track i) {
+          <div class="ticket ticket--skeleton">
+            <span class="sk sk--sm"></span>
+            <span class="sk sk--lg"></span>
+            <span class="sk"></span>
+            <span class="sk sk--bar"></span>
+            <span class="sk sk--sm"></span>
+          </div>
+        }
+      </div>
+    }
+
+    @case ('error') {
+      <section class="state">
+        <span class="state__icon state__icon--danger">
+          <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <path d="M12 9v4"></path><path d="M12 17h.01"></path>
+          </svg>
+        </span>
+        <h2 class="state__title">Impossible de charger les tickets</h2>
+        <p class="state__text">Vérifiez votre connexion puis réessayez.</p>
+        <button type="button" class="btn btn--solid" (click)="retry()">Réessayer</button>
+      </section>
+    }
+
+    @default {
+      @if (currentEvent().isFree) {
+        <section class="state">
+          <span class="state__icon">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M20 12v10H4V12"></path><path d="M2 7h20v5H2z"></path><path d="M12 22V7"></path>
+              <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"></path>
+              <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"></path>
+            </svg>
+          </span>
+          <h2 class="state__title">Cet événement est gratuit</h2>
+          <p class="state__text">
+            Les participants s'inscrivent sans paiement : il n'y a pas de tickets à gérer.
+            Pour vendre des tickets, passez l'événement en « payant » dans ses paramètres.
+          </p>
+          <a class="btn btn--outline" [routerLink]="['/organisateur/evenements', eventId(), 'modifier']">Modifier l'événement</a>
+        </section>
+      } @else if (tickets().length === 0) {
+        <section class="state">
+          <span class="state__icon">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"></path>
+              <path d="M13 5v2"></path><path d="M13 11v2"></path><path d="M13 17v2"></path>
+            </svg>
+          </span>
+          <h2 class="state__title">Aucun ticket pour le moment</h2>
+          <p class="state__text">Créez votre premier type de ticket pour ouvrir les ventes de cet événement.</p>
+          <button type="button" class="btn btn--solid" (click)="openAdd()">Ajouter un ticket</button>
+        </section>
+      } @else if (filtered().length === 0) {
+        <section class="state">
+          <span class="state__icon">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+          </span>
+          <h2 class="state__title">Aucun ticket trouvé</h2>
+          <p class="state__text">Essayez avec un autre nom ou une autre description.</p>
+          <button type="button" class="btn btn--outline" (click)="query.set('')">Effacer la recherche</button>
+        </section>
+      } @else {
+        <div class="grid">
+          @for (t of filtered(); track t.id) {
+            <article class="ticket" [attr.data-state]="stateOf(t)">
+              <header class="ticket__head">
+                <div class="ticket__title">
+                  <h2 class="ticket__name">{{ t.name }}</h2>
+                  @if (t.paused) {
+                    <span class="chip chip--gray">En pause</span>
+                  } @else if (remaining(t) === 0) {
+                    <span class="chip chip--green">Complet</span>
+                  }
+                </div>
+
+                <div class="menu-wrap">
+                  <button
+                    type="button" class="kebab" aria-haspopup="menu"
+                    [attr.aria-expanded]="openMenuId() === t.id"
+                    [attr.aria-label]="'Actions pour le ticket ' + t.name"
+                    (click)="toggleMenu(t.id)"
+                  >
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+                      <circle cx="5" cy="12" r="1.7"></circle><circle cx="12" cy="12" r="1.7"></circle><circle cx="19" cy="12" r="1.7"></circle>
+                    </svg>
+                  </button>
+
+                  @if (openMenuId() === t.id) {
+                    <div class="menu" role="menu">
+                      <button type="button" class="menu__item" role="menuitem" (click)="openEdit(t)">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                          <path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                        </svg>
+                        Modifier
+                      </button>
+                      <button type="button" class="menu__item" role="menuitem" (click)="duplicate(t)">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                        Dupliquer
+                      </button>
+                      <button type="button" class="menu__item" role="menuitem" (click)="togglePause(t)">
+                        @if (t.paused) {
+                          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                          </svg>
+                          Reprendre la vente
+                        } @else {
+                          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>
+                          </svg>
+                          Suspendre la vente
+                        }
+                      </button>
+                      <button
+                        type="button" class="menu__item menu__item--danger" role="menuitem"
+                        [disabled]="t.sold > 0" (click)="askDelete(t)"
+                        [attr.title]="t.sold > 0 ? 'Impossible : des tickets ont déjà été vendus. Suspendez plutôt la vente.' : null"
+                      >
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                          <path d="M3 6h18"></path>
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                        Supprimer
+                      </button>
+                    </div>
+                  }
+                </div>
+              </header>
+
+              <p class="ticket__price">
+                <span class="ticket__price-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"></path>
+                    <path d="M13 5v2"></path><path d="M13 11v2"></path><path d="M13 17v2"></path>
+                  </svg>
+                </span>
+                <span class="ticket__price-num">{{ formatNumber(t.price) }}</span>
+                <span class="ticket__price-cur">FCFA</span>
+              </p>
+
+              <p class="ticket__desc">{{ t.description || 'Aucune description' }}</p>
+
+              <div class="progress">
+                <span
+                  class="progress__track" role="progressbar"
+                  [attr.aria-label]="'Tickets vendus : ' + t.name"
+                  [attr.aria-valuenow]="percent(t)" aria-valuemin="0" aria-valuemax="100"
+                >
+                  <span class="progress__fill" [style.width.%]="percent(t)"></span>
+                </span>
+                <span class="progress__value">{{ percent(t) }}%</span>
+              </div>
+
+              <p class="ticket__stock">
+                <strong>{{ t.sold }}</strong> vendu{{ t.sold > 1 ? 's' : '' }}
+                <span aria-hidden="true">·</span>
+                <strong>{{ remaining(t) }}</strong> restante{{ remaining(t) > 1 ? 's' : '' }}
+              </p>
+
+              <footer class="ticket__actions">
+                <button type="button" class="btn btn--outline btn--block" (click)="openEdit(t)">Modifier</button>
+                <button
+                  type="button" class="icon-btn icon-btn--danger"
+                  [attr.aria-label]="'Supprimer le ticket ' + t.name"
+                  [disabled]="t.sold > 0"
+                  [attr.title]="t.sold > 0 ? 'Suppression impossible : des tickets ont déjà été vendus' : 'Supprimer'"
+                  (click)="askDelete(t)"
+                >
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M3 6h18"></path>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    <path d="M10 11v6"></path><path d="M14 11v6"></path>
+                  </svg>
+                </button>
+              </footer>
+            </article>
+          }
+        </div>
+      }
+    }
+  }
+</div>
+
+<!-- ============================ AJOUT / MODIFICATION ============================ -->
+@if (editorOpen()) {
+  <div class="modal" (click)="closeEditor()">
+    <form
+      class="modal__dialog modal__dialog--left"
+      [formGroup]="form" (ngSubmit)="save()" novalidate
+      role="dialog" aria-modal="true" aria-labelledby="tk-modal-title"
+      (click)="$event.stopPropagation()"
+    >
+      <header class="modal__head">
+        <h2 id="tk-modal-title" class="modal__title">
+          {{ editingId() === null ? 'Ajouter un ticket' : 'Modifier le ticket' }}
+        </h2>
+        <button type="button" class="modal__close" aria-label="Fermer" (click)="closeEditor()">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </header>
+      <p class="modal__sub">{{ currentEvent().title }}</p>
+
+      <div class="field">
+        <label class="field__label" for="tk-name">Nom du ticket <span class="req">*</span></label>
+        <input
+          id="tk-name" type="text" class="input" formControlName="name" [maxlength]="nameMax" placeholder="Exemple : Standard"
+          [class.input--error]="showError(form.controls.name)"
+          [attr.aria-invalid]="showError(form.controls.name)"
+        />
+        @if (showError(form.controls.name)) {
+          <span class="field__error">{{ errorMessage(form.controls.name) }}</span>
+        }
+      </div>
+
+      <div class="fields-2">
+        <div class="field">
+          <label class="field__label" for="tk-price">Prix <span class="req">*</span></label>
+          <div class="input-suffix">
+            <input
+              id="tk-price" type="number" min="1" step="1" inputmode="numeric" class="input" formControlName="price" placeholder="5000"
+              [class.input--error]="showError(form.controls.price)"
+              [attr.aria-invalid]="showError(form.controls.price)"
+            />
+            <span class="input-suffix__text">FCFA</span>
+          </div>
+          @if (showError(form.controls.price)) {
+            <span class="field__error">{{ errorMessage(form.controls.price) }}</span>
+          }
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="tk-seats">Places <span class="req">*</span></label>
+          <input
+            id="tk-seats" type="number" min="1" step="1" inputmode="numeric" class="input" formControlName="seats" placeholder="100"
+            [class.input--error]="showError(form.controls.seats)"
+            [attr.aria-invalid]="showError(form.controls.seats)"
+          />
+          @if (showError(form.controls.seats)) {
+            <span class="field__error">{{ errorMessage(form.controls.seats) }}</span>
+          }
+        </div>
+      </div>
+
+      @if (editingTicket(); as current) {
+        @if (current.sold > 0) {
+          <p class="note">
+            {{ current.sold }} ticket{{ current.sold > 1 ? 's' : '' }} déjà vendu{{ current.sold > 1 ? 's' : '' }} :
+            le nouveau prix ne s'applique qu'aux prochaines ventes et le nombre de places ne peut pas descendre sous {{ current.sold }}.
+          </p>
+        }
+      }
+
+      @if (maxSeats() !== null) {
+        <p class="field__hint">
+          Capacité de l'événement : {{ formatNumber(currentEvent().capacity ?? 0) }} places ·
+          encore à répartir : <strong>{{ maxSeats() }}</strong>
+        </p>
+      }
+
+      <div class="field">
+        <label class="field__label" for="tk-desc">Description</label>
+        <textarea
+          id="tk-desc" class="input textarea" rows="2" formControlName="description" maxlength="200"
+          placeholder="Accès standard à l'événement"
+          [class.input--error]="showError(form.controls.description)"
+        ></textarea>
+        <span class="field__hint">{{ form.controls.description.value.length }} / 200</span>
+      </div>
+
+      <div class="modal__actions">
+        <button type="button" class="btn btn--ghost" (click)="closeEditor()" [disabled]="saving()">Annuler</button>
+        <button type="submit" class="btn btn--solid" [disabled]="saving()">
+          @if (saving()) {
+            <span class="spinner" aria-hidden="true"></span> Enregistrement...
+          } @else {
+            {{ editingId() === null ? 'Ajouter le ticket' : 'Enregistrer' }}
+          }
+        </button>
+      </div>
+    </form>
+  </div>
+}
+
+<!-- ============================ SUPPRESSION ============================ -->
+@if (deleteTarget(); as target) {
+  <div class="modal" (click)="cancelDelete()">
+    <div
+      class="modal__dialog"
+      role="alertdialog" aria-modal="true" aria-labelledby="tk-del-title" aria-describedby="tk-del-text"
+      (click)="$event.stopPropagation()"
+    >
+      <span class="modal__icon">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <path d="M12 9v4"></path><path d="M12 17h.01"></path>
+        </svg>
+      </span>
+      <h2 id="tk-del-title" class="modal__title">Supprimer ce ticket ?</h2>
+      <p id="tk-del-text" class="modal__text">
+        Le ticket <strong>« {{ target.name }} »</strong> ({{ formatNumber(target.price) }} FCFA) sera définitivement supprimé.
+        Cette action est irréversible.
+      </p>
+      <div class="modal__actions">
+        <button type="button" class="btn btn--outline" (click)="cancelDelete()" [disabled]="deleting()">Annuler</button>
+        <button type="button" class="btn btn--danger" (click)="confirmDelete()" [disabled]="deleting()">
+          @if (deleting()) {
+            <span class="spinner" aria-hidden="true"></span> Suppression...
+          } @else {
+            Supprimer
+          }
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ============================ NOTIFICATION ============================ -->
+@if (toast(); as t) {
+  <div class="toast" [attr.data-kind]="t.kind" role="status" aria-live="polite">{{ t.text }}</div>
+}
