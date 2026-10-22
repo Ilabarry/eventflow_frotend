@@ -17,9 +17,15 @@
 
       <div class="hero__event">
         <label class="hero__event-label" for="tk-event">Événement :</label>
-        <select id="tk-event" class="hero__select" (change)="onEventChange($event)">
-          @for (e of events; track e.id) {
-            <option [value]="e.id" [selected]="e.id === eventId()">{{ e.title }}</option>
+        <select id="tk-event" class="hero__select" (change)="onEventChange($event)" [disabled]="eventsLoading()">
+          @if (eventsLoading()) {
+            <option value="" disabled selected>Chargement...</option>
+          } @else if (events().length === 0) {
+            <option value="" disabled selected>Aucun événement</option>
+          } @else {
+            @for (e of events(); track e.id) {
+              <option [value]="e.id" [selected]="e.id === eventId()">{{ e.title }}</option>
+            }
           }
         </select>
       </div>
@@ -27,7 +33,7 @@
 
     <button
       type="button" class="hero__btn" (click)="openAdd()"
-      [disabled]="currentEvent().isFree || loadState() !== 'ready'"
+      [disabled]="!currentEvent() || currentEvent()!.isFree || loadState() !== 'ready'"
     >
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
         <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
@@ -84,7 +90,7 @@
   <!-- ============================ OUTILS ============================ -->
   <section class="toolbar" aria-label="Recherche">
     <p class="toolbar__count" aria-live="polite">
-      @if (loadState() === 'ready' && !currentEvent().isFree) {
+      @if (loadState() === 'ready' && currentEvent() && !currentEvent()!.isFree) {
         {{ filtered().length }} ticket{{ filtered().length > 1 ? 's' : '' }}
       }
     </p>
@@ -131,7 +137,18 @@
     }
 
     @default {
-      @if (currentEvent().isFree) {
+      @if (!currentEvent()) {
+        <section class="state">
+          <span class="state__icon">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"></path>
+              <path d="M13 5v2"></path><path d="M13 11v2"></path><path d="M13 17v2"></path>
+            </svg>
+          </span>
+          <h2 class="state__title">Chargement de l'événement...</h2>
+          <p class="state__text">Sélectionnez un événement pour gérer ses tickets.</p>
+        </section>
+      } @else if (currentEvent()!.isFree) {
         <section class="state">
           <span class="state__icon">
             <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -313,7 +330,7 @@
           </svg>
         </button>
       </header>
-      <p class="modal__sub">{{ currentEvent().title }}</p>
+      <p class="modal__sub">{{ currentEvent()?.title }}</p>
 
       <div class="field">
         <label class="field__label" for="tk-name">Nom du ticket <span class="req">*</span></label>
@@ -367,7 +384,7 @@
 
       @if (maxSeats() !== null) {
         <p class="field__hint">
-          Capacité de l'événement : {{ formatNumber(currentEvent().capacity ?? 0) }} places ·
+          Capacité de l'événement : {{ formatNumber(currentEvent()?.capacity ?? 0) }} places ·
           encore à répartir : <strong>{{ maxSeats() }}</strong>
         </p>
       }

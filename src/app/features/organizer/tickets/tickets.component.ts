@@ -1,27 +1,43 @@
 import { DOCUMENT } from '@angular/common';
-import { Component, DestroyRef, ElementRef, HostListener, computed, effect, inject, signal } from '@angular/core';
+import {
+  Component, DestroyRef, ElementRef, HostListener, computed, effect, inject, signal,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { AbstractControl, NonNullableFormBuilder, ReactiveFormsModule, ValidatorFn, Validators } from '@angular/forms';
+import {
+  AbstractControl, NonNullableFormBuilder, ReactiveFormsModule, ValidatorFn, Validators,
+} from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { firstValueFrom, forkJoin, of, catchError } from 'rxjs';
+
+import { EventService } from '../../../core/services/event.service';
+import { NotificationService } from '../../../core/services/notification.service';
+import {
+  CreateTicketTypePayload,
+  TicketTypeDto,
+  TicketTypeService,
+  UpdateTicketTypePayload,
+} from '../../../core/services/ticket-type.service';
+import { EventDto } from '../../../core/models/event.model';
 
 type LoadState = 'loading' | 'ready' | 'error';
 type TicketState = 'active' | 'paused' | 'soldout';
 
 interface EventOption {
-  id: number;
+  id: string;
   title: string;
   isFree: boolean;
-  capacity: number | null; // null = illimitée
+  capacity: number | null;  // null = illimité
 }
 
 interface Ticket {
-  id: number;
+  id: string;               // UUID backend (ou "temp-N" pour création locale)
   name: string;
   price: number;
-  seats: number; // places totales du ticket
+  seats: number;
   sold: number;
   description: string;
-  paused: boolean; // vente suspendue
+  paused: boolean;
+  isNew?: boolean;          // true = pas encore persisté côté backend
 }
 
 interface Toast {
@@ -30,43 +46,11 @@ interface Toast {
 }
 
 const numberFmt = new Intl.NumberFormat('fr-FR');
-const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
-/** Compare sans tenir compte des accents ni de la casse */
 const normalize = (value: string): string =>
   value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
 const NAME_MAX = 40;
-
-/* ----------------------------------------------------------------
-   DONNÉES DE DÉMONSTRATION
-   TODO : remplacer EVENTS et fetchTickets() par tes services
-          (GET /events, GET /events/:id/tickets)
-   ---------------------------------------------------------------- */
-const EVENTS: EventOption[] = [
-  { id: 1, title: "Forum de l'Innovation Numérique", isFree: false, capacity: 150 },
-  { id: 2, title: 'Tech Conférence', isFree: false, capacity: 500 },
-  { id: 3, title: 'Python Workshop', isFree: true, capacity: 50 },
-  { id: 4, title: 'Hackathon Innovation', isFree: false, capacity: null },
-];
-
-const MOCK_TICKETS: Record<number, Ticket[]> = {
-  1: [
-    { id: 1, name: 'Standard', price: 5000, seats: 102, sold: 82, description: 'Accès standard', paused: false },
-    { id: 2, name: 'VIP', price: 15000, seats: 43, sold: 36, description: 'Accès VIP + espace réservé', paused: false },
-  ],
-  2: [
-    { id: 11, name: 'Standard', price: 5000, seats: 350, sold: 310, description: "Accès standard à l'événement", paused: false },
-    { id: 12, name: 'VIP', price: 15000, seats: 100, sold: 100, description: 'Accès prioritaire et cocktail', paused: false },
-    { id: 13, name: 'Étudiant', price: 2500, seats: 50, sold: 12, description: 'Sur présentation de la carte étudiante', paused: true },
-  ],
-  4: [{ id: 21, name: 'Participant', price: 3000, seats: 120, sold: 96, description: 'Accès aux deux jours', paused: false }],
-};
-
-const fetchTickets = async (eventId: number): Promise<Ticket[]> => {
-  await delay(450);
-  return structuredClone(MOCK_TICKETS[eventId] ?? []);
-};
 
 @Component({
   selector: 'app-organizer-tickets',
@@ -82,21 +66,26 @@ export class OrganizerTicketsComponent {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly document = inject(DOCUMENT);
 
-  readonly events = EVENTS;
+  private readonly eventService = inject(EventService);
+  private readonly ticketService = inject(TicketTypeService);
+  private readonly notification = inject(NotificationService);
+
   readonly nameMax = NAME_MAX;
 
   /* ------------------------------------------------------------------
-     ÉTAT (déclaré AVANT le formulaire : les validateurs s'en servent)
+     ÉTAT
      ------------------------------------------------------------------ */
-  readonly eventId = signal(EVENTS[0].id);
+  readonly events = signal<EventOption[]>([]);
+  readonly eventsLoading = signal(true);
+  readonly eventId = signal<string | null>(null);
   readonly tickets = signal<Ticket[]>([]);
   readonly loadState = signal<LoadState>('loading');
 
   readonly query = signal('');
-  readonly openMenuId = signal<number | null>(null);
+  readonly openMenuId = signal<string | null>(null);
 
   readonly editorOpen = signal(false);
-  readonly editingId = signal<number | null>(null); // null = nouveau ticket
+  readonly editingId = signal<string | null>(null);
   readonly saving = signal(false);
 
   readonly deleteTarget = signal<Ticket | null>(null);
@@ -105,21 +94,24 @@ export class OrganizerTicketsComponent {
   readonly toast = signal<Toast | null>(null);
 
   private loadToken = 0;
-  private lastLoaded: number | null = null;
+  private lastLoaded: string | null = null;
   private lastFocus: HTMLElement | null = null;
   private toastTimer: ReturnType<typeof setTimeout> | undefined;
 
   /* ------------------------------------------------------------------
      DONNÉES DÉRIVÉES
      ------------------------------------------------------------------ */
-  readonly currentEvent = computed(() => EVENTS.find((e) => e.id === this.eventId()) ?? EVENTS[0]);
+  readonly currentEvent = computed<EventOption | null>(() => {
+    const id = this.eventId();
+    return this.events().find((e) => e.id === id) ?? null;
+  });
 
   readonly stats = computed(() => {
     const list = this.tickets();
     return {
       types: list.length,
-      sold: list.reduce((sum, t) => sum + t.sold, 0),
-      revenue: list.reduce((sum, t) => sum + t.sold * t.price, 0),
+      sold: list.reduce((s, t) => s + t.sold, 0),
+      revenue: list.reduce((s, t) => s + t.sold * t.price, 0),
     };
   });
 
@@ -129,36 +121,41 @@ export class OrganizerTicketsComponent {
     return this.tickets().filter((t) => normalize(`${t.name} ${t.description}`).includes(q));
   });
 
-  readonly allocated = computed(() => this.tickets().reduce((sum, t) => sum + t.seats, 0));
-  readonly editingTicket = computed(() => this.tickets().find((t) => t.id === this.editingId()) ?? null);
+  readonly allocated = computed(() => this.tickets().reduce((s, t) => s + t.seats, 0));
+  readonly editingTicket = computed(
+    () => this.tickets().find((t) => t.id === this.editingId()) ?? null,
+  );
 
-  /** On ne peut pas descendre sous le nombre déjà vendu */
   readonly minSeats = computed(() => Math.max(1, this.editingTicket()?.sold ?? 0));
 
-  /** Places encore à répartir (hors ticket en cours d'édition) ; null = capacité illimitée */
+  /** Places encore à répartir (hors ticket en édition) ; null = illimité. */
   readonly maxSeats = computed<number | null>(() => {
-    const capacity = this.currentEvent().capacity;
-    if (capacity === null) return null;
+    const ev = this.currentEvent();
+    if (!ev || ev.capacity === null) return null;
     const others = this.tickets()
       .filter((t) => t.id !== this.editingId())
       .reduce((sum, t) => sum + t.seats, 0);
-    return Math.max(capacity - others, 0);
+    return Math.max(ev.capacity - others, 0);
   });
 
   /* ------------------------------------------------------------------
-     FORMULAIRE (ajout / modification d'un ticket)
+     FORMULAIRE
      ------------------------------------------------------------------ */
   private readonly uniqueName: ValidatorFn = (control) => {
     const value = normalize(String(control.value ?? '').trim());
     if (!value) return null;
     const editing = this.editingId();
-    return this.tickets().some((t) => t.id !== editing && normalize(t.name) === value) ? { taken: true } : null;
+    return this.tickets().some(
+      (t) => t.id !== editing && normalize(t.name) === value,
+    )
+      ? { taken: true }
+      : null;
   };
 
   private readonly seatsRange: ValidatorFn = (control) => {
     if (control.value === null || control.value === '') return null;
     const n = Number(control.value);
-    if (!Number.isInteger(n)) return null; // l'erreur « entier » est gérée par pattern
+    if (!Number.isInteger(n)) return null;
     const min = this.minSeats();
     if (n < min) return min > 1 ? { belowSold: { min } } : { min: { min: 1 } };
     const max = this.maxSeats();
@@ -169,21 +166,35 @@ export class OrganizerTicketsComponent {
   readonly form = this.fb.group({
     name: ['', [Validators.required, Validators.maxLength(NAME_MAX), this.uniqueName]],
     price: this.fb.control<number | null>(null, [
-      Validators.required, Validators.min(1), Validators.max(100_000_000), Validators.pattern(/^\d+$/),
+      Validators.required,
+      Validators.min(1),
+      Validators.max(100_000_000),
+      Validators.pattern(/^\d+$/),
     ]),
-    seats: this.fb.control<number | null>(null, [Validators.required, Validators.pattern(/^\d+$/), this.seatsRange]),
+    seats: this.fb.control<number | null>(null, [
+      Validators.required, Validators.pattern(/^\d+$/), this.seatsRange,
+    ]),
     description: ['', Validators.maxLength(200)],
   });
 
   constructor() {
-    // L'événement affiché vient de l'URL : /organisateur/tickets?evenement=2
+    // 1. Chargement des événements de l'organisateur
+    this.loadEvents();
+
+    // 2. Lecture du queryParam `evenement`
     this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
-      const requested = Number(params.get('evenement'));
-      const target = EVENTS.some((e) => e.id === requested) ? requested : EVENTS[0].id;
-      if (target !== this.lastLoaded) void this.loadEvent(target);
+      const requested = params.get('evenement');
+      const target =
+        requested && this.events().some((e) => e.id === requested)
+          ? requested
+          : this.events()[0]?.id ?? null;
+
+      if (target && target !== this.lastLoaded) {
+        void this.loadTickets(target);
+      }
     });
 
-    // Bloque le scroll de la page quand une fenêtre est ouverte
+    // 3. Blocage du scroll quand modale ouverte
     effect(() => {
       const open = this.editorOpen() || this.deleteTarget() !== null;
       this.document.body.style.overflow = open ? 'hidden' : '';
@@ -196,32 +207,79 @@ export class OrganizerTicketsComponent {
   }
 
   /* ------------------------------------------------------------------
-     CHARGEMENT
+     CHARGEMENT DES ÉVÉNEMENTS
      ------------------------------------------------------------------ */
-  private async loadEvent(id: number): Promise<void> {
+  private loadEvents(): void {
+    this.eventsLoading.set(true);
+    this.eventService.getMyEvents().subscribe({
+      next: (res) => {
+        const list: EventOption[] = (res.data?.results ?? []).map((e: EventDto) => ({
+          id: e.id,
+          title: e.title,
+          isFree: e.participation_type === 'FREE',
+          capacity: e.capacity_type === 'LIMITED' ? e.capacity_limit ?? null : null,
+        }));
+        this.events.set(list);
+        this.eventsLoading.set(false);
+        console.info(`[Tickets] ${list.length} événements chargés`);
+
+        // Relancer la sélection si l'URL contenait déjà un `evenement`
+        const requested = this.route.snapshot.queryParamMap.get('evenement');
+        const target = list.some((e) => e.id === requested) ? requested : list[0]?.id ?? null;
+        if (target && target !== this.lastLoaded) void this.loadTickets(target);
+      },
+      error: (err) => {
+        this.eventsLoading.set(false);
+        console.error('[Tickets] Échec chargement événements', err.status);
+        this.notification.httpError(err);
+      },
+    });
+  }
+
+  /* ------------------------------------------------------------------
+     CHARGEMENT DES TICKETS
+     ------------------------------------------------------------------ */
+  private async loadTickets(id: string): Promise<void> {
     const token = ++this.loadToken;
     this.lastLoaded = id;
     this.eventId.set(id);
     this.loadState.set('loading');
     this.query.set('');
     this.openMenuId.set(null);
+
     try {
-      const data = await fetchTickets(id); // TODO : service
-      if (token !== this.loadToken) return; // l'utilisateur a changé d'événement entre-temps
-      this.tickets.set(data);
+      const res = await firstValueFrom(this.ticketService.listByEvent(id));
+      if (token !== this.loadToken) return;
+
+      const tickets: Ticket[] = (res.data ?? []).map((t: TicketTypeDto) => ({
+        id: t.id,
+        name: t.name,
+        price: Number(t.price),
+        seats: t.quantity_total ?? 0,
+        sold: t.quantity_sold,
+        description: t.description ?? '',
+        paused: !t.is_active,
+      }));
+
+      this.tickets.set(tickets);
       this.loadState.set('ready');
-    } catch {
-      if (token === this.loadToken) this.loadState.set('error');
+      console.info(`[Tickets] ${tickets.length} tickets chargés pour l'événement ${id}`);
+    } catch (err) {
+      console.error('[Tickets] Échec chargement tickets', err);
+      if (token === this.loadToken) {
+        this.loadState.set('error');
+        this.notification.httpError(err);
+      }
     }
   }
 
   retry(): void {
-    this.lastLoaded = null;
-    void this.loadEvent(this.eventId());
+    const id = this.eventId();
+    if (id) void this.loadTickets(id);
   }
 
   onEventChange(event: Event): void {
-    const id = Number((event.target as HTMLSelectElement).value);
+    const id = (event.target as HTMLSelectElement).value;
     void this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { evenement: id },
@@ -235,7 +293,7 @@ export class OrganizerTicketsComponent {
   }
 
   /* ------------------------------------------------------------------
-     AFFICHAGE D'UN TICKET
+     AFFICHAGE
      ------------------------------------------------------------------ */
   percent(t: Ticket): number {
     return t.seats > 0 ? Math.min(100, Math.round((t.sold / t.seats) * 100)) : 0;
@@ -258,13 +316,16 @@ export class OrganizerTicketsComponent {
      AJOUT / MODIFICATION
      ------------------------------------------------------------------ */
   openAdd(): void {
-    if (this.currentEvent().isFree || this.loadState() !== 'ready') return;
+    const ev = this.currentEvent();
+    if (!ev || ev.isFree || this.loadState() !== 'ready') return;
     this.openMenuId.set(null);
     this.editingId.set(null);
+
     if (this.maxSeats() === 0) {
-      this.showToast('error', "Toutes les places de l'événement sont déjà réparties entre vos tickets.");
+      this.showToast('error', "Toutes les places de l'événement sont déjà réparties.");
       return;
     }
+
     this.rememberFocus();
     this.form.reset();
     this.editorOpen.set(true);
@@ -275,7 +336,12 @@ export class OrganizerTicketsComponent {
     this.openMenuId.set(null);
     this.rememberFocus();
     this.editingId.set(t.id);
-    this.form.reset({ name: t.name, price: t.price, seats: t.seats, description: t.description });
+    this.form.reset({
+      name: t.name,
+      price: t.price,
+      seats: t.seats,
+      description: t.description,
+    });
     this.editorOpen.set(true);
     this.focusFirstField();
   }
@@ -287,74 +353,165 @@ export class OrganizerTicketsComponent {
   }
 
   async save(): Promise<void> {
-    // Les règles dynamiques (nom unique, places) sont recalculées avant la validation
     this.form.controls.name.updateValueAndValidity();
     this.form.controls.seats.updateValueAndValidity();
     this.form.markAllAsTouched();
+
     if (this.form.invalid) {
-      setTimeout(() => this.host.nativeElement.querySelector<HTMLElement>('.modal .ng-invalid')?.focus(), 30);
+      setTimeout(
+        () => this.host.nativeElement.querySelector<HTMLElement>('.modal .ng-invalid')?.focus(),
+        30,
+      );
       return;
     }
 
+    const eventId = this.eventId();
+    if (!eventId) return;
+
     const v = this.form.getRawValue();
-    const data = {
+    const editingId = this.editingId();
+    const payload = {
       name: v.name.trim(),
-      price: Number(v.price),
-      seats: Number(v.seats),
-      description: v.description.trim(),
+      price: String(Number(v.price)),
+      quantity_total: Number(v.seats),
+      description: v.description.trim() || undefined,
     };
-    const id = this.editingId();
 
     this.saving.set(true);
+    console.info(`[Tickets] ${editingId ? 'Mise à jour' : 'Création'} en cours...`);
+
     try {
-      // TODO : await firstValueFrom(id === null ? this.api.create(eventId, data) : this.api.update(id, data));
-      await delay(500);
-      if (id === null) {
-        this.tickets.update((list) => [...list, { id: this.nextId(), sold: 0, paused: false, ...data }]);
-        this.showToast('success', `Ticket « ${data.name} » ajouté.`);
+      if (!editingId) {
+        const res = await firstValueFrom(this.ticketService.create(eventId, payload));
+        const created = res.data;
+        if (!created) throw new Error('Réponse vide.');
+
+        const newTicket: Ticket = {
+          id: created.id,
+          name: created.name,
+          price: Number(created.price),
+          seats: created.quantity_total ?? 0,
+          sold: created.quantity_sold,
+          description: created.description ?? '',
+          paused: !created.is_active,
+        };
+        this.tickets.update((list) => [...list, newTicket]);
+        this.notification.success(`Ticket « ${newTicket.name} » ajouté.`, 'Succès');
       } else {
-        this.tickets.update((list) => list.map((t) => (t.id === id ? { ...t, ...data } : t)));
-        this.showToast('success', `Ticket « ${data.name} » mis à jour.`);
+        const patch: UpdateTicketTypePayload = {
+          name: payload.name,
+          price: payload.price,
+          quantity_total: payload.quantity_total,
+          description: payload.description,
+        };
+        const res = await firstValueFrom(this.ticketService.update(editingId, patch));
+        const updated = res.data;
+        if (!updated) throw new Error('Réponse vide.');
+
+        this.tickets.update((list) =>
+          list.map((t) =>
+            t.id === editingId
+              ? {
+                  ...t,
+                  name: updated.name,
+                  price: Number(updated.price),
+                  seats: updated.quantity_total ?? 0,
+                  description: updated.description ?? '',
+                }
+              : t,
+          ),
+        );
+        this.notification.success(`Ticket « ${payload.name} » mis à jour.`, 'Succès');
       }
       this.saving.set(false);
       this.closeEditor();
-    } catch {
+    } catch (err: any) {
+      console.error('[Tickets] Échec enregistrement', err);
       this.saving.set(false);
-      this.showToast('error', "L'enregistrement a échoué. Veuillez réessayer.");
+      if (err?.error?.errors) {
+        this.applyServerErrors(err.error.errors);
+        this.notification.error(err.error.message || 'Champs invalides.', 'Validation');
+      } else {
+        this.notification.httpError(err);
+      }
     }
-  }
-
-  private nextId(): number {
-    return Math.max(0, ...this.tickets().map((t) => t.id)) + 1;
   }
 
   /* ------------------------------------------------------------------
-     ACTIONS DU MENU (TODO : brancher sur l'API)
+     MENU / ACTIONS
      ------------------------------------------------------------------ */
-  toggleMenu(id: number): void {
+  toggleMenu(id: string): void {
     this.openMenuId.update((current) => (current === id ? null : id));
   }
 
-  togglePause(t: Ticket): void {
+  async togglePause(t: Ticket): Promise<void> {
     this.openMenuId.set(null);
-    this.tickets.update((list) => list.map((x) => (x.id === t.id ? { ...x, paused: !x.paused } : x)));
-    this.showToast('success', t.paused ? `Vente reprise pour « ${t.name} ».` : `Vente suspendue pour « ${t.name} ».`);
+    try {
+      const res = await firstValueFrom(
+        this.ticketService.update(t.id, { is_active: t.paused }),
+      );
+      const updated = res.data;
+      if (!updated) return;
+
+      this.tickets.update((list) =>
+        list.map((x) => (x.id === t.id ? { ...x, paused: !updated.is_active } : x)),
+      );
+      this.notification.success(
+        t.paused ? `Vente reprise pour « ${t.name} ».` : `Vente suspendue pour « ${t.name} ».`,
+        'Succès',
+      );
+    } catch (err) {
+      this.notification.httpError(err);
+    }
   }
 
-  duplicate(t: Ticket): void {
+  async duplicate(t: Ticket): Promise<void> {
     this.openMenuId.set(null);
-    const capacity = this.currentEvent().capacity;
+    const eventId = this.eventId();
+    if (!eventId) return;
+
+    const capacity = this.currentEvent()?.capacity ?? null;
     if (capacity !== null && this.allocated() + t.seats > capacity) {
-      this.showToast('error', `Capacité insuffisante : il reste ${Math.max(capacity - this.allocated(), 0)} place(s) à répartir.`);
+      this.showToast(
+        'error',
+        `Capacité insuffisante : il reste ${Math.max(capacity - this.allocated(), 0)} place(s).`,
+      );
       return;
     }
+
     const name = this.copyName(t.name);
-    this.tickets.update((list) => [...list, { ...t, id: this.nextId(), name, sold: 0, paused: false }]);
-    this.showToast('success', `Ticket dupliqué : « ${name} ».`);
+    const payload: CreateTicketTypePayload = {
+      name,
+      price: String(t.price),
+      quantity_total: t.seats,
+      description: t.description || undefined,
+    };
+
+    try {
+      const res = await firstValueFrom(this.ticketService.create(eventId, payload));
+      const created = res.data;
+      if (!created) return;
+
+      this.tickets.update((list) => [
+        ...list,
+        {
+          id: created.id,
+          name: created.name,
+          price: Number(created.price),
+          seats: created.quantity_total ?? 0,
+          sold: created.quantity_sold,
+          description: created.description ?? '',
+          paused: !created.is_active,
+        },
+      ]);
+      this.notification.success(`Ticket dupliqué : « ${name} ».`, 'Succès');
+    } catch (err) {
+      this.notification.httpError(err);
+    }
   }
 
   private copyName(base: string): string {
-    const taken = (value: string) => this.tickets().some((t) => normalize(t.name) === normalize(value));
+    const taken = (v: string) => this.tickets().some((t) => normalize(t.name) === normalize(v));
     let index = 1;
     let name: string;
     do {
@@ -366,7 +523,7 @@ export class OrganizerTicketsComponent {
   }
 
   askDelete(t: Ticket): void {
-    if (t.sold > 0) return; // un ticket déjà vendu ne peut pas être supprimé
+    if (t.sold > 0) return;
     this.openMenuId.set(null);
     this.rememberFocus();
     this.deleteTarget.set(t);
@@ -381,22 +538,24 @@ export class OrganizerTicketsComponent {
   async confirmDelete(): Promise<void> {
     const target = this.deleteTarget();
     if (!target) return;
+
     this.deleting.set(true);
+    console.info(`[Tickets] Suppression de "${target.name}"...`);
     try {
-      // TODO : await firstValueFrom(this.api.delete(target.id));
-      await delay(400);
+      await firstValueFrom(this.ticketService.remove(target.id));
       this.tickets.update((list) => list.filter((t) => t.id !== target.id));
       this.deleting.set(false);
       this.deleteTarget.set(null);
-      this.showToast('success', `Ticket « ${target.name} » supprimé.`);
-    } catch {
+      this.notification.success(`Ticket « ${target.name} » supprimé.`, 'Succès');
+    } catch (err) {
+      console.error('[Tickets] Échec suppression', err);
       this.deleting.set(false);
-      this.showToast('error', 'La suppression a échoué. Veuillez réessayer.');
+      this.notification.httpError(err);
     }
   }
 
   /* ------------------------------------------------------------------
-     ERREURS DU FORMULAIRE
+     ERREURS
      ------------------------------------------------------------------ */
   showError(control: AbstractControl | null): boolean {
     return !!control && control.invalid && (control.touched || control.dirty);
@@ -413,7 +572,24 @@ export class OrganizerTicketsComponent {
     if (e['overCapacity']) return `Maximum ${e['overCapacity'].max} places : c'est ce qu'il reste à répartir.`;
     if (e['min']) return `La valeur minimale est ${e['min'].min}.`;
     if (e['max']) return `La valeur maximale est ${numberFmt.format(e['max'].max)}.`;
+    if (e['server']) return String(e['server']);
     return 'Valeur invalide.';
+  }
+
+  private applyServerErrors(errors: Record<string, string[] | string>): void {
+    const map: Record<string, AbstractControl | null> = {
+      name: this.form.controls.name,
+      price: this.form.controls.price,
+      quantity_total: this.form.controls.seats,
+      description: this.form.controls.description,
+    };
+    Object.entries(errors).forEach(([field, value]) => {
+      const ctrl = map[field];
+      if (!ctrl) return;
+      const messages = Array.isArray(value) ? value : [value];
+      ctrl.setErrors({ server: messages.join(' ') });
+      ctrl.markAsTouched();
+    });
   }
 
   /* ------------------------------------------------------------------
@@ -431,7 +607,10 @@ export class OrganizerTicketsComponent {
   }
 
   private focusFirstField(): void {
-    setTimeout(() => this.host.nativeElement.querySelector<HTMLInputElement>('.modal input')?.focus(), 30);
+    setTimeout(
+      () => this.host.nativeElement.querySelector<HTMLInputElement>('.modal input')?.focus(),
+      30,
+    );
   }
 
   private showToast(kind: Toast['kind'], text: string): void {

@@ -413,7 +413,7 @@ export class OrganizerEditEventComponent implements AfterViewInit {
         id: t.id,
         name: t.name,
         price: Number(t.price),
-        seats: t.quantity_total,
+        seats: t.quantity_total ?? 0,
         description: t.description ?? '',
         sold: t.quantity_sold,
         isNew: false,
@@ -1052,7 +1052,7 @@ export class OrganizerEditEventComponent implements AfterViewInit {
       } else {
         requests.push(
           firstValueFrom(
-            this.ticketTypeService.update(eventId, t.id, {
+            this.ticketTypeService.update(t.id, {
               name: t.name,
               price: String(t.price),
               quantity_total: t.seats,
@@ -1069,7 +1069,7 @@ export class OrganizerEditEventComponent implements AfterViewInit {
       if (!currentIds.has(oldId)) {
         requests.push(
           firstValueFrom(
-            this.ticketTypeService.update(eventId, oldId, { is_active: false } as any),
+            this.ticketTypeService.update(oldId, { is_active: false }),
           ),
         );
       }
