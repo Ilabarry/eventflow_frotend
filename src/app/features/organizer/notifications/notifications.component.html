@@ -1,1 +1,271 @@
-<p>notifications works!</p>
+<div class="nt">
+  <!-- ============================ BANNIÈRE ============================ -->
+  <section class="hero">
+    <svg class="hero__wave" viewBox="0 0 400 120" preserveAspectRatio="none" aria-hidden="true">
+      <defs>
+        <linearGradient id="ntHeroWave" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#8B7CF6" />
+          <stop offset="1" stop-color="#22C7D6" />
+        </linearGradient>
+      </defs>
+      <path d="M0 90 C 50 20, 110 110, 180 60 S 300 0, 400 40" fill="none" stroke="url(#ntHeroWave)" stroke-width="2.5" vector-effect="non-scaling-stroke" />
+    </svg>
+
+    <div class="hero__content">
+      <h1 class="hero__title">Notifications</h1>
+      <p class="hero__text">Restez informé de l'activité de vos événements.</p>
+    </div>
+
+    <div class="hero__actions">
+      <button type="button" class="hero__btn" (click)="markAllRead()" [disabled]="stats().unread === 0">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M18 6L7 17l-5-5"></path><path d="M22 10L13 19l-2-2"></path>
+        </svg>
+        Tout marquer comme lu
+      </button>
+      <a routerLink="/organisateur/parametres" class="hero__link">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M4 21v-7"></path><path d="M4 10V3"></path><path d="M12 21v-9"></path><path d="M12 8V3"></path>
+          <path d="M20 21v-5"></path><path d="M20 12V3"></path><path d="M1 14h6"></path><path d="M9 8h6"></path><path d="M17 16h6"></path>
+        </svg>
+        Préférences
+      </a>
+    </div>
+  </section>
+
+  <!-- ============================ INDICATEURS ============================ -->
+  <section class="stats" aria-label="Résumé des notifications" [class.stats--loading]="loadState() === 'loading'">
+    <article class="stat" data-tone="violet">
+      <span class="stat__icon">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+        </svg>
+      </span>
+      <span class="stat__text">
+        <span class="stat__value">{{ stats().unread }}</span>
+        <span class="stat__label">Non lues</span>
+      </span>
+    </article>
+
+    <article class="stat" data-tone="cyan">
+      <span class="stat__icon">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path>
+          <path d="M16 2v4"></path><path d="M8 2v4"></path><path d="M3 10h18"></path>
+        </svg>
+      </span>
+      <span class="stat__text">
+        <span class="stat__value">{{ stats().today }}</span>
+        <span class="stat__label">Aujourd'hui</span>
+      </span>
+    </article>
+
+    <article class="stat" data-tone="green">
+      <span class="stat__icon">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline>
+          <path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path>
+        </svg>
+      </span>
+      <span class="stat__text">
+        <span class="stat__value">{{ stats().total }}</span>
+        <span class="stat__label">Total</span>
+      </span>
+    </article>
+  </section>
+
+  <!-- ============================ FILTRES ============================ -->
+  <section class="toolbar" aria-label="Filtres">
+    <div class="seg" role="group" aria-label="Afficher">
+      <button
+        type="button" class="seg__btn" [class.seg__btn--active]="readFilter() === 'all'"
+        [attr.aria-pressed]="readFilter() === 'all'" (click)="setReadFilter('all')"
+      >
+        Toutes
+      </button>
+      <button
+        type="button" class="seg__btn" [class.seg__btn--active]="readFilter() === 'unread'"
+        [attr.aria-pressed]="readFilter() === 'unread'" (click)="setReadFilter('unread')"
+      >
+        Non lues
+        @if (stats().unread > 0) {
+          <span class="seg__count">{{ stats().unread }}</span>
+        }
+      </button>
+    </div>
+
+    <div class="chips" role="group" aria-label="Filtrer par catégorie">
+      @for (c of categories; track c.value) {
+        <button
+          type="button" class="chip" [class.chip--active]="category() === c.value"
+          [attr.aria-pressed]="category() === c.value" (click)="setCategory(c.value)"
+        >
+          {{ c.label }}
+          @if (c.value !== 'all' && categoryUnread(c.value) > 0) {
+            <span class="chip__count">{{ categoryUnread(c.value) }}</span>
+          }
+        </button>
+      }
+    </div>
+
+    <p class="toolbar__count" aria-live="polite">
+      @if (loadState() === 'ready') {
+        {{ filtered().length }} notification{{ filtered().length > 1 ? 's' : '' }}
+      }
+    </p>
+  </section>
+
+  <!-- ============================ LISTE ============================ -->
+  @switch (loadState()) {
+    @case ('loading') {
+      <div class="skeleton" aria-busy="true" aria-label="Chargement des notifications">
+        @for (i of [1, 2, 3, 4]; track i) {
+          <div class="skeleton__row">
+            <span class="sk sk--icon"></span>
+            <span class="skeleton__lines">
+              <span class="sk sk--title"></span>
+              <span class="sk"></span>
+            </span>
+          </div>
+        }
+      </div>
+    }
+
+    @case ('error') {
+      <section class="state">
+        <span class="state__icon state__icon--danger">
+          <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <path d="M12 9v4"></path><path d="M12 17h.01"></path>
+          </svg>
+        </span>
+        <h2 class="state__title">Impossible de charger les notifications</h2>
+        <p class="state__text">Vérifiez votre connexion puis réessayez.</p>
+        <button type="button" class="btn btn--solid" (click)="load()">Réessayer</button>
+      </section>
+    }
+
+    @default {
+      @if (filtered().length === 0) {
+        <section class="state">
+          <span class="state__icon">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+            </svg>
+          </span>
+
+          @switch (emptyKind()) {
+            @case ('none') {
+              <h2 class="state__title">Aucune notification</h2>
+              <p class="state__text">Vous serez informé ici des inscriptions, des ventes de tickets et des rappels de vos événements.</p>
+            }
+            @case ('caught-up') {
+              <h2 class="state__title">Vous êtes à jour</h2>
+              <p class="state__text">Aucune notification non lue pour le moment.</p>
+              <button type="button" class="btn btn--outline" (click)="resetFilters()">Voir toutes les notifications</button>
+            }
+            @default {
+              <h2 class="state__title">Aucune notification trouvée</h2>
+              <p class="state__text">Aucune notification ne correspond à ces filtres.</p>
+              <button type="button" class="btn btn--outline" (click)="resetFilters()">Réinitialiser les filtres</button>
+            }
+          }
+        </section>
+      } @else {
+        <ng-template #body let-n>
+          <span class="item__icon" [attr.data-tone]="meta(n).tone">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              @for (d of meta(n).icon; track d) {
+                <path [attr.d]="d"></path>
+              }
+            </svg>
+          </span>
+
+          <span class="item__text">
+            <span class="item__top">
+              <span class="item__title">
+                @if (!n.read) {
+                  <span class="sr-only">Non lue : </span>
+                }
+                {{ n.title }}
+              </span>
+              <time class="item__time" [attr.datetime]="n.createdAt" [attr.title]="fullDate(n.createdAt)">
+                {{ timeLabel(n.createdAt) }}
+              </time>
+            </span>
+            <span class="item__msg">{{ n.message }}</span>
+            @if (meta(n).cta; as cta) {
+              <span class="item__cta">{{ cta }} →</span>
+            }
+          </span>
+        </ng-template>
+
+        @for (g of groups(); track g.key) {
+          <section class="group" [attr.aria-label]="g.label">
+            <h2 class="group__title">{{ g.label }}</h2>
+
+            <ul class="list">
+              @for (n of g.items; track n.id) {
+                <li class="item" [class.item--unread]="!n.read">
+                  @if (routeOf(n); as route) {
+                    <a class="item__main" [routerLink]="route" [queryParams]="queryOf(n)" (click)="open(n)">
+                      <ng-container [ngTemplateOutlet]="body" [ngTemplateOutletContext]="{ $implicit: n }" />
+                    </a>
+                  } @else {
+                    <button type="button" class="item__main" (click)="open(n)">
+                      <ng-container [ngTemplateOutlet]="body" [ngTemplateOutletContext]="{ $implicit: n }" />
+                    </button>
+                  }
+
+                  <div class="item__actions">
+                    <button
+                      type="button" class="icon-btn"
+                      [attr.aria-label]="n.read ? 'Marquer comme non lue' : 'Marquer comme lue'"
+                      [attr.title]="n.read ? 'Marquer comme non lue' : 'Marquer comme lue'"
+                      (click)="toggleRead(n)"
+                    >
+                      @if (n.read) {
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                          <circle cx="12" cy="12" r="9"></circle>
+                        </svg>
+                      } @else {
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                          <path d="M20 6L9 17l-5-5"></path>
+                        </svg>
+                      }
+                    </button>
+                    <button
+                      type="button" class="icon-btn icon-btn--danger"
+                      aria-label="Supprimer la notification" title="Supprimer" (click)="remove(n)"
+                    >
+                      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M3 6h18"></path>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                      </svg>
+                    </button>
+                  </div>
+                </li>
+              }
+            </ul>
+          </section>
+        }
+
+        @if (remaining() > 0) {
+          <button type="button" class="more" (click)="showMore()">
+            Afficher plus ({{ remaining() }} restante{{ remaining() > 1 ? 's' : '' }})
+          </button>
+        }
+      }
+    }
+  }
+</div>
+
+<!-- ============================ NOTIFICATION ============================ -->
+@if (toast(); as t) {
+  <div class="toast" [attr.data-kind]="t.kind" role="status" aria-live="polite">
+    <span>{{ t.text }}</span>
+    @if (t.action) {
+      <button type="button" class="toast__action" (click)="undo()">{{ t.action }}</button>
+    }
+  </div>
+}
