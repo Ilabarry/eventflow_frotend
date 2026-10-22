@@ -132,6 +132,31 @@
   }
 }
 
+.menu__hint {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.85rem;
+  color: var(--evf-text-muted);
+  font-style: italic;
+  border-bottom: 1px solid var(--evf-border);
+}
+
+.menu__hint--success {
+  color: var(--evf-success);
+  font-style: normal;
+}
+
+.person__absent {
+  font-size: 0.75rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: var(--evf-warning);
+  color: white;
+  margin-left: 0.4rem;
+}
+
 /* ================================================================
    SÉLECTEUR D'ÉVÉNEMENT
    ================================================================ */
