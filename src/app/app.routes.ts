@@ -28,6 +28,7 @@ import { AdminCategoriesComponent } from './features/admin/categories/categories
 import { AdminSupervisionComponent } from './features/admin/supervision/supervision.component';
 import { AdminNotificationsComponent } from './features/admin/notifications/notifications.component';
 import { OrganizerCreateEventComponent } from './features/organizer/creer-evenement/creer-evenement.component';
+import { OrganizerEditEventComponent } from './features/organizer/modifier-evenement/modifier-evenement.component';
 
 export const routes: Routes = [
 
@@ -55,6 +56,7 @@ export const routes: Routes = [
         { path: 'statistiques', component: OrganizerStatistiquesComponent },
         { path: 'notifications', component: OrganizerNotificationsComponent },
         { path: 'creer-evenement', component: OrganizerCreateEventComponent },
+        { path: 'modifier-evenement', component: OrganizerEditEventComponent },
       //   { path: 'parametres', component: OrganizerSettingsComponent },
       //   { path: 'messages', component: OrganizerMessagesComponent },
       ],

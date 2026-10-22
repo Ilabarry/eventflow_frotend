@@ -1,0 +1,1013 @@
+<div class="create">
+  <!-- ============================ BANNIÈRE ============================ -->
+  <section class="hero">
+    <svg class="hero__wave" viewBox="0 0 400 120" preserveAspectRatio="none" aria-hidden="true">
+      <defs>
+        <linearGradient id="edtHeroWave" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#8B7CF6" />
+          <stop offset="1" stop-color="#22C7D6" />
+        </linearGradient>
+      </defs>
+      <path d="M0 90 C 50 20, 110 110, 180 60 S 300 0, 400 40" fill="none" stroke="url(#edtHeroWave)" stroke-width="2.5" vector-effect="non-scaling-stroke" />
+    </svg>
+
+    <div class="hero__content">
+      <h1 class="hero__title">Modifier l'événement</h1>
+      <p class="hero__text">Mettez à jour les informations de votre événement.</p>
+    </div>
+
+    <svg class="hero__illustration" viewBox="0 0 120 120" fill="none" aria-hidden="true">
+      <defs>
+        <linearGradient id="edtHeroCal" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#8B7CF6" />
+          <stop offset="1" stop-color="#22C7D6" />
+        </linearGradient>
+      </defs>
+      <rect x="14" y="22" width="92" height="84" rx="14" fill="rgba(255,255,255,0.08)" stroke="url(#edtHeroCal)" stroke-width="2.5" />
+      <path d="M14 46h92" stroke="url(#edtHeroCal)" stroke-width="2.5" />
+      <path d="M38 12v20M82 12v20" stroke="url(#edtHeroCal)" stroke-width="4" stroke-linecap="round" />
+      <circle cx="36" cy="64" r="4" fill="rgba(255,255,255,0.75)" />
+      <circle cx="60" cy="64" r="4" fill="rgba(255,255,255,0.75)" />
+      <circle cx="84" cy="64" r="4" fill="rgba(255,255,255,0.75)" />
+      <circle cx="36" cy="86" r="4" fill="rgba(255,255,255,0.75)" />
+      <circle cx="60" cy="86" r="4" fill="rgba(255,255,255,0.75)" />
+      <circle cx="84" cy="86" r="7" fill="url(#edtHeroCal)" />
+    </svg>
+  </section>
+
+  <!-- ============================ ÉTATS : CHARGEMENT / ERREURS ============================ -->
+  @if (loadState() === 'loading') {
+    <section class="skeleton" aria-busy="true" aria-label="Chargement de l'événement">
+      <div class="skeleton__side">
+        <span class="skeleton__line"></span><span class="skeleton__line"></span><span class="skeleton__line"></span>
+        <span class="skeleton__line"></span><span class="skeleton__line"></span><span class="skeleton__line"></span>
+      </div>
+      <div class="skeleton__main">
+        <span class="skeleton__line skeleton__line--title"></span>
+        <span class="skeleton__block"></span>
+        <span class="skeleton__block"></span>
+        <span class="skeleton__block skeleton__block--tall"></span>
+      </div>
+    </section>
+  }
+
+  @if (loadState() === 'notfound') {
+    <section class="state">
+      <span class="state__icon">
+        <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+      </span>
+      <h2 class="state__title">Événement introuvable</h2>
+      <p class="state__text">Cet événement n'existe pas ou a été supprimé.</p>
+      <a routerLink="/organisateur/evenements" class="btn btn--solid">Retour à mes événements</a>
+    </section>
+  }
+
+  @if (loadState() === 'error') {
+    <section class="state">
+      <span class="state__icon state__icon--danger">
+        <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <path d="M12 9v4"></path><path d="M12 17h.01"></path>
+        </svg>
+      </span>
+      <h2 class="state__title">Impossible de charger l'événement</h2>
+      <p class="state__text">Vérifiez votre connexion puis réessayez.</p>
+      <div class="state__actions">
+        <button type="button" class="btn btn--solid" (click)="retry()">Réessayer</button>
+        <a routerLink="/organisateur/evenements" class="btn btn--outline">Retour</a>
+      </div>
+    </section>
+  }
+
+  @if (loadState() === 'locked') {
+    <section class="state">
+      <span class="state__icon">
+        <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        </svg>
+      </span>
+      <h2 class="state__title">Événement terminé</h2>
+      <p class="state__text">
+        « {{ eventTitle() }} » est terminé : il ne peut plus être modifié.
+      </p>
+      <a routerLink="/organisateur/evenements" class="btn btn--solid">Retour à mes événements</a>
+    </section>
+  }
+
+  <!-- ============================ ASSISTANT ============================ -->
+  <div class="create__layout" [hidden]="loadState() !== 'ready'">
+    <!-- Étapes -->
+    <aside class="stepper" aria-label="Sections de l'événement">
+      <p class="stepper__label">Étapes</p>
+      <p class="stepper__mobile">
+        Étape {{ step() + 1 }} sur {{ steps.length }} · <strong>{{ steps[step()].label }}</strong>
+      </p>
+      <div class="stepper__progress" aria-hidden="true">
+        <span class="stepper__bar" [style.width.%]="((step() + 1) / steps.length) * 100"></span>
+      </div>
+
+      <ol class="stepper__list">
+        @for (s of steps; track s.label; let i = $index) {
+          <li>
+            <button
+              type="button"
+              class="stepper__item"
+              [attr.data-state]="stepState(i)"
+              [attr.data-changed]="isChanged(i)"
+              [attr.aria-current]="step() === i ? 'step' : null"
+              (click)="goTo(i)"
+            >
+              <span class="stepper__dot">{{ i + 1 }}</span>
+              <span class="stepper__text">{{ s.label }}</span>
+              @if (isChanged(i)) {
+                <span class="sr-only">(modifié)</span>
+              }
+            </button>
+          </li>
+        }
+      </ol>
+    </aside>
+
+    <!-- Formulaire -->
+    <section class="panel" #panel tabindex="-1">
+      <header class="panel__top">
+        <div class="panel__meta">
+          <span class="status" [attr.data-status]="status()">{{ statusLabel[status()] }}</span>
+          @if (registered() > 0) {
+            <span class="panel__meta-item">{{ registered() }} inscrit{{ registered() > 1 ? 's' : '' }}</span>
+          }
+          @if (updatedLabel()) {
+            <span class="panel__meta-item">Modifié le {{ updatedLabel() }}</span>
+          }
+        </div>
+        <a routerLink="/organisateur/evenements" class="panel__back">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+          </svg>
+          Retour à mes événements
+        </a>
+      </header>
+
+      @if (registered() > 0 && status() === 'published') {
+        <div class="notice notice--info" role="note">
+          <span>
+            Cet événement compte déjà <strong>{{ registered() }} inscrit{{ registered() > 1 ? 's' : '' }}</strong> :
+            le type (gratuit / payant), la capacité et les tickets vendus ne peuvent pas être réduits en dessous des inscriptions existantes.
+          </span>
+        </div>
+      }
+
+      <form [formGroup]="form" novalidate>
+        <!-- ======================= 01 · INFORMATIONS ======================= -->
+        <section class="step" [hidden]="step() !== 0" formGroupName="info" aria-labelledby="step-title-0">
+          <h2 class="step__title" id="step-title-0"><span class="step__num">01</span> Informations générales</h2>
+
+          <div class="field">
+            <label class="field__label" for="ev-title">Nom de l'événement <span class="req">*</span></label>
+            <input
+              id="ev-title" type="text" class="input" formControlName="title" maxlength="100"
+              placeholder="Exemple : Tech Conference Dakar"
+              [class.input--error]="showError(info.controls.title)"
+              [attr.aria-invalid]="showError(info.controls.title)"
+            />
+            @if (showError(info.controls.title)) {
+              <span class="field__error">{{ errorMessage(info.controls.title) }}</span>
+            }
+          </div>
+
+          <div class="field">
+            <label class="field__label" for="ev-category">Catégorie <span class="req">*</span></label>
+            <select
+              id="ev-category" class="input select" formControlName="category"
+              [class.input--error]="showError(info.controls.category)"
+              [attr.aria-invalid]="showError(info.controls.category)"
+            >
+              <option value="" disabled>Sélectionner une catégorie</option>
+              @for (c of withCurrent(categories, info.controls.category.value); track c) {
+                <option [value]="c">{{ c }}</option>
+              }
+            </select>
+            @if (showError(info.controls.category)) {
+              <span class="field__error">{{ errorMessage(info.controls.category) }}</span>
+            }
+          </div>
+
+          <div class="field">
+            <span class="field__label" id="cover-label">Image de couverture</span>
+            <input #fileInput type="file" class="sr-only" tabindex="-1" accept="image/jpeg,image/png,image/webp" (change)="onFileInput($event)" />
+
+            @if (cover(); as c) {
+              <div class="cover">
+                <img [src]="c.url" alt="Image de couverture" class="cover__img" />
+                <div class="cover__info">
+                  <span class="cover__name">{{ c.name }}</span>
+                  @if (!c.remote) {
+                    <span class="cover__size">{{ formatSize(c.size) }} · sera enregistrée avec vos modifications</span>
+                  }
+                  <span class="cover__actions">
+                    <button type="button" class="link-btn" (click)="fileInput.click()">Remplacer</button>
+                    <button type="button" class="link-btn link-btn--danger" (click)="removeCover()">Supprimer</button>
+                  </span>
+                </div>
+              </div>
+            } @else {
+              <div
+                class="dropzone"
+                [class.dropzone--over]="dragging()"
+                role="button" tabindex="0" aria-labelledby="cover-label"
+                (click)="fileInput.click()"
+                (keydown.enter)="fileInput.click()"
+                (keydown.space)="$event.preventDefault(); fileInput.click()"
+                (dragover)="onDragOver($event)"
+                (dragleave)="dragging.set(false)"
+                (drop)="onDrop($event)"
+              >
+                <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="16 16 12 12 8 16"></polyline>
+                  <line x1="12" y1="12" x2="12" y2="21"></line>
+                  <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"></path>
+                </svg>
+                <span class="dropzone__title">+ Ajouter une image</span>
+                <span class="dropzone__hint">JPG / PNG / WEBP · 5 Mo maximum</span>
+              </div>
+            }
+            @if (coverError(); as err) {
+              <span class="field__error">{{ err }}</span>
+            }
+          </div>
+
+          <div class="field">
+            <label class="field__label" for="ev-summary">Courte présentation</label>
+            <textarea
+              id="ev-summary" class="input textarea" rows="3" formControlName="summary" maxlength="200"
+              placeholder="Présentez votre événement en quelques mots..."
+              [class.input--error]="showError(info.controls.summary)"
+            ></textarea>
+            <span class="field__hint">{{ info.controls.summary.value.length }} / 200</span>
+          </div>
+        </section>
+
+        <!-- ======================= 02 · DATE & LIEU ======================= -->
+        <section class="step" [hidden]="step() !== 1" formGroupName="schedule" aria-labelledby="step-title-1">
+          <h2 class="step__title" id="step-title-1"><span class="step__num">02</span> Date &amp; lieu</h2>
+
+          <div class="grid grid--narrow">
+            <div class="field">
+              <label class="field__label" for="ev-date">Date de l'événement <span class="req">*</span></label>
+              <div class="input-icon">
+                <svg class="input-icon__svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path>
+                  <path d="M16 2v4"></path><path d="M8 2v4"></path><path d="M3 10h18"></path>
+                </svg>
+                <input
+                  id="ev-date" type="date" class="input input--icon input--native" formControlName="date" [min]="dateMin()"
+                  [class.input--error]="showError(schedule.controls.date)"
+                  [attr.aria-invalid]="showError(schedule.controls.date)"
+                />
+              </div>
+              @if (showError(schedule.controls.date)) {
+                <span class="field__error">{{ errorMessage(schedule.controls.date) }}</span>
+              }
+            </div>
+          </div>
+
+          <div class="grid grid--2">
+            <div class="field">
+              <label class="field__label" for="ev-start">Heure de début <span class="req">*</span></label>
+              <div class="input-icon">
+                <svg class="input-icon__svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                <input
+                  id="ev-start" type="time" class="input input--icon input--native" formControlName="startTime"
+                  [class.input--error]="showError(schedule.controls.startTime)"
+                  [attr.aria-invalid]="showError(schedule.controls.startTime)"
+                />
+              </div>
+              @if (showError(schedule.controls.startTime)) {
+                <span class="field__error">{{ errorMessage(schedule.controls.startTime) }}</span>
+              }
+            </div>
+
+            <div class="field">
+              <label class="field__label" for="ev-end">Heure de fin</label>
+              <div class="input-icon">
+                <svg class="input-icon__svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                <input
+                  id="ev-end" type="time" class="input input--icon input--native" formControlName="endTime"
+                  [class.input--error]="showTimeRangeError()"
+                  [attr.aria-invalid]="showTimeRangeError()"
+                />
+              </div>
+              @if (showTimeRangeError()) {
+                <span class="field__error">L'heure de fin doit être après l'heure de début.</span>
+              }
+            </div>
+          </div>
+
+          <fieldset class="choices">
+            <legend class="field__label">Format <span class="req">*</span></legend>
+            <div class="choices__grid">
+              <label class="choice">
+                <input type="radio" class="choice__input" formControlName="format" value="online" />
+                <span class="choice__card">
+                  <span class="choice__icon">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="2" y1="12" x2="22" y2="12"></line>
+                      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                    </svg>
+                  </span>
+                  <span class="choice__title">En ligne</span>
+                  <span class="choice__state">
+                    <span class="choice__dot"></span>
+                    {{ schedule.controls.format.value === 'online' ? 'Sélectionné' : 'Sélectionner' }}
+                  </span>
+                </span>
+              </label>
+
+              <label class="choice">
+                <input type="radio" class="choice__input" formControlName="format" value="onsite" />
+                <span class="choice__card">
+                  <span class="choice__icon">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                      <path d="M12 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"></path>
+                    </svg>
+                  </span>
+                  <span class="choice__title">Présentiel</span>
+                  <span class="choice__state">
+                    <span class="choice__dot"></span>
+                    {{ schedule.controls.format.value === 'onsite' ? 'Sélectionné' : 'Sélectionner' }}
+                  </span>
+                </span>
+              </label>
+            </div>
+            @if (showError(schedule.controls.format)) {
+              <span class="field__error">Choisissez le format de votre événement.</span>
+            }
+          </fieldset>
+
+          @if (schedule.controls.format.value === 'onsite') {
+            <div class="subsection">
+              <h3 class="subsection__title">Lieu de l'événement</h3>
+
+              <div class="field">
+                <label class="field__label" for="ev-venue">Nom du lieu <span class="req">*</span></label>
+                <input
+                  id="ev-venue" type="text" class="input" formControlName="venueName"
+                  placeholder="Exemple : Centre de conférence"
+                  [class.input--error]="showError(schedule.controls.venueName)"
+                  [attr.aria-invalid]="showError(schedule.controls.venueName)"
+                />
+                @if (showError(schedule.controls.venueName)) {
+                  <span class="field__error">{{ errorMessage(schedule.controls.venueName) }}</span>
+                }
+              </div>
+
+              <div class="field">
+                <label class="field__label" for="ev-address">Adresse <span class="req">*</span></label>
+                <input
+                  id="ev-address" type="text" class="input" formControlName="address" placeholder="Adresse"
+                  [class.input--error]="showError(schedule.controls.address)"
+                  [attr.aria-invalid]="showError(schedule.controls.address)"
+                />
+                @if (showError(schedule.controls.address)) {
+                  <span class="field__error">{{ errorMessage(schedule.controls.address) }}</span>
+                }
+              </div>
+
+              <div class="grid grid--2">
+                <div class="field">
+                  <label class="field__label" for="ev-city">Ville <span class="req">*</span></label>
+                  <input
+                    id="ev-city" type="text" class="input" formControlName="city" placeholder="Dakar"
+                    [class.input--error]="showError(schedule.controls.city)"
+                    [attr.aria-invalid]="showError(schedule.controls.city)"
+                  />
+                  @if (showError(schedule.controls.city)) {
+                    <span class="field__error">{{ errorMessage(schedule.controls.city) }}</span>
+                  }
+                </div>
+
+                <div class="field">
+                  <label class="field__label" for="ev-room">Salle</label>
+                  <input id="ev-room" type="text" class="input" formControlName="room" placeholder="Salle A" />
+                </div>
+              </div>
+            </div>
+          } @else if (schedule.controls.format.value === 'online') {
+            <div class="subsection">
+              <h3 class="subsection__title">Accès en ligne</h3>
+
+              <div class="field">
+                <label class="field__label" for="ev-platform">Plateforme <span class="req">*</span></label>
+                <select
+                  id="ev-platform" class="input select" formControlName="platform"
+                  [class.input--error]="showError(schedule.controls.platform)"
+                  [attr.aria-invalid]="showError(schedule.controls.platform)"
+                >
+                  <option value="" disabled>Sélectionner une plateforme</option>
+                  @for (p of withCurrent(platforms, schedule.controls.platform.value); track p) {
+                    <option [value]="p">{{ p }}</option>
+                  }
+                </select>
+                @if (showError(schedule.controls.platform)) {
+                  <span class="field__error">{{ errorMessage(schedule.controls.platform) }}</span>
+                }
+              </div>
+
+              <div class="field">
+                <label class="field__label" for="ev-link">Lien de participation</label>
+                <input
+                  id="ev-link" type="url" class="input" formControlName="link" placeholder="https://..."
+                  [class.input--error]="showError(schedule.controls.link)"
+                  [attr.aria-invalid]="showError(schedule.controls.link)"
+                />
+                @if (showError(schedule.controls.link)) {
+                  <span class="field__error">{{ errorMessage(schedule.controls.link) }}</span>
+                } @else {
+                  <span class="field__hint">Vous pourrez l'ajouter plus tard, avant le début de l'événement.</span>
+                }
+              </div>
+            </div>
+          }
+        </section>
+
+        <!-- ======================= 03 · PARTICIPATION ======================= -->
+        <section class="step" [hidden]="step() !== 2" formGroupName="participation" aria-labelledby="step-title-2">
+          <h2 class="step__title" id="step-title-2"><span class="step__num">03</span> Participation</h2>
+
+          <fieldset class="choices">
+            <legend class="field__label">Type d'événement <span class="req">*</span></legend>
+            <div class="choices__grid">
+              <label class="choice">
+                <input type="radio" class="choice__input" formControlName="type" value="free" />
+                <span class="choice__card">
+                  <span class="choice__icon">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M20 12v10H4V12"></path><path d="M2 7h20v5H2z"></path><path d="M12 22V7"></path>
+                      <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"></path>
+                      <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"></path>
+                    </svg>
+                  </span>
+                  <span class="choice__title">Gratuit</span>
+                  <span class="choice__state">
+                    <span class="choice__dot"></span>
+                    {{ participation.controls.type.value === 'free' ? 'Sélectionné' : 'Sélectionner' }}
+                  </span>
+                </span>
+              </label>
+
+              <label class="choice">
+                <input type="radio" class="choice__input" formControlName="type" value="paid" />
+                <span class="choice__card">
+                  <span class="choice__icon">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                      <line x1="1" y1="10" x2="23" y2="10"></line>
+                    </svg>
+                  </span>
+                  <span class="choice__title">Payant</span>
+                  <span class="choice__state">
+                    <span class="choice__dot"></span>
+                    {{ participation.controls.type.value === 'paid' ? 'Sélectionné' : 'Sélectionner' }}
+                  </span>
+                </span>
+              </label>
+            </div>
+            @if (registered() > 0) {
+              <span class="field__hint">Le type ne peut plus être modifié : des participants sont déjà inscrits.</span>
+            }
+          </fieldset>
+
+          <fieldset class="options">
+            <legend class="field__label">Capacité <span class="req">*</span></legend>
+
+            <label class="option">
+              <input type="radio" class="option__input" formControlName="capacityMode" value="limited" />
+              <span class="option__box">
+                <span class="option__radio"></span>
+                <span class="option__text">Capacité limitée</span>
+              </span>
+            </label>
+
+            <label class="option">
+              <input type="radio" class="option__input" formControlName="capacityMode" value="unlimited" />
+              <span class="option__box">
+                <span class="option__radio"></span>
+                <span class="option__text">Capacité illimitée</span>
+              </span>
+            </label>
+
+            @if (showError(participation.controls.capacityMode)) {
+              <span class="field__error">Choisissez une option de capacité.</span>
+            }
+          </fieldset>
+
+          @if (participation.controls.capacityMode.value === 'limited') {
+            <div class="field">
+              <label class="field__label" for="ev-capacity">Nombre maximum de participants <span class="req">*</span></label>
+              <input
+                id="ev-capacity" type="number" min="1" step="1" inputmode="numeric" class="input input--short"
+                formControlName="capacity" placeholder="Ex : 100"
+                [class.input--error]="showError(participation.controls.capacity)"
+                [attr.aria-invalid]="showError(participation.controls.capacity)"
+              />
+              @if (showError(participation.controls.capacity)) {
+                <span class="field__error">{{ errorMessage(participation.controls.capacity) }}</span>
+              } @else if (registered() > 0) {
+                <span class="field__hint">Minimum : {{ registered() }} (inscrits actuels).</span>
+              }
+            </div>
+
+            @if (capacityLimit(); as limit) {
+              <p class="note note--info">
+                Votre événement pourra accueillir au maximum <strong>{{ limit }}</strong>
+                participant{{ limit > 1 ? 's' : '' }}.
+              </p>
+            }
+          } @else if (participation.controls.capacityMode.value === 'unlimited') {
+            <div class="note note--info note--infinite">
+              <span class="note__symbol" aria-hidden="true">∞</span>
+              <div>
+                <strong>Capacité illimitée</strong>
+                <p>Les inscriptions resteront ouvertes sans limite de participants.</p>
+              </div>
+            </div>
+          }
+        </section>
+
+        <!-- ======================= 04 · TICKETS ======================= -->
+        <section class="step" [hidden]="step() !== 3" aria-labelledby="step-title-3">
+          <h2 class="step__title" id="step-title-3"><span class="step__num">04</span> Tickets</h2>
+
+          @if (!isPaid()) {
+            <div class="note note--success note--big">
+              <span class="note__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><path d="M22 4L12 14.01l-3-3"></path>
+                </svg>
+              </span>
+              <div>
+                <strong>Votre événement est gratuit.</strong>
+                <p>Les participants pourront s'inscrire sans paiement.</p>
+              </div>
+            </div>
+          } @else {
+            <div class="tickets__head">
+              <p class="tickets__help">Gérez vos types de tickets, leur prix et leur nombre de places.</p>
+              <button type="button" class="btn btn--outline btn--sm" (click)="addTicket()" [disabled]="editingTicket() !== null">
+                + Ajouter un ticket
+              </button>
+            </div>
+
+            @if (capacityLimit(); as limit) {
+              <p class="note" [class.note--error]="overCapacity()">
+                Places allouées : <strong>{{ seatsAllocated() }}</strong> / {{ limit }}
+              </p>
+            }
+
+            <ng-template #ticketEditor>
+              <div class="ticket ticket--editing" [formGroup]="ticketForm">
+                <div class="field">
+                  <label class="field__label" for="tk-name">Nom du ticket <span class="req">*</span></label>
+                  <input
+                    id="tk-name" type="text" class="input" formControlName="name" maxlength="40" placeholder="Exemple : Standard"
+                    [class.input--error]="showError(ticketForm.controls.name)"
+                  />
+                  @if (showError(ticketForm.controls.name)) {
+                    <span class="field__error">{{ errorMessage(ticketForm.controls.name) }}</span>
+                  }
+                </div>
+
+                <div class="grid grid--2">
+                  <div class="field">
+                    <label class="field__label" for="tk-price">Prix <span class="req">*</span></label>
+                    <div class="input-suffix">
+                      <input
+                        id="tk-price" type="number" min="1" step="1" inputmode="numeric" class="input" formControlName="price" placeholder="5000"
+                        [class.input--error]="showError(ticketForm.controls.price)"
+                      />
+                      <span class="input-suffix__text">FCFA</span>
+                    </div>
+                    @if (showError(ticketForm.controls.price)) {
+                      <span class="field__error">{{ errorMessage(ticketForm.controls.price) }}</span>
+                    }
+                  </div>
+
+                  <div class="field">
+                    <label class="field__label" for="tk-seats">Places disponibles <span class="req">*</span></label>
+                    <input
+                      id="tk-seats" type="number" min="1" step="1" inputmode="numeric" class="input" formControlName="seats" placeholder="80"
+                      [class.input--error]="showError(ticketForm.controls.seats)"
+                    />
+                    @if (showError(ticketForm.controls.seats)) {
+                      <span class="field__error">{{ errorMessage(ticketForm.controls.seats) }}</span>
+                    } @else if (editingSold() > 0) {
+                      <span class="field__hint">{{ editingSold() }} déjà vendu{{ editingSold() > 1 ? 's' : '' }} : minimum {{ editingSold() }} places.</span>
+                    }
+                  </div>
+                </div>
+
+                <div class="field">
+                  <label class="field__label" for="tk-desc">Description</label>
+                  <input
+                    id="tk-desc" type="text" class="input" formControlName="description" maxlength="200"
+                    placeholder="Accès standard à l'événement"
+                  />
+                </div>
+
+                <div class="ticket__actions">
+                  <button type="button" class="btn btn--ghost btn--sm" (click)="cancelTicketEdit()">Annuler</button>
+                  <button type="button" class="btn btn--solid btn--sm" (click)="saveTicket()">Enregistrer le ticket</button>
+                </div>
+              </div>
+            </ng-template>
+
+            <div class="tickets">
+              @for (t of tickets(); track t.id) {
+                @if (editingTicket() === t.id) {
+                  <ng-container [ngTemplateOutlet]="ticketEditor" />
+                } @else {
+                  <article class="ticket">
+                    <header class="ticket__head">
+                      <h3 class="ticket__name">{{ t.name }}</h3>
+                      <span class="ticket__price">{{ formatPrice(t.price) }}</span>
+                    </header>
+                    <ul class="ticket__meta">
+                      <li>
+                        <span><strong>{{ t.seats }}</strong> place{{ t.seats > 1 ? 's' : '' }}</span>
+                        @if (t.sold > 0) {
+                          <span class="ticket__sold">{{ t.sold }} vendu{{ t.sold > 1 ? 's' : '' }}</span>
+                        }
+                      </li>
+                      @if (t.description) {
+                        <li>{{ t.description }}</li>
+                      }
+                    </ul>
+                    <div class="ticket__actions">
+                      <button type="button" class="link-btn" (click)="editTicket(t)" [disabled]="editingTicket() !== null">Modifier</button>
+                      <button
+                        type="button" class="link-btn link-btn--danger" (click)="deleteTicket(t)"
+                        [disabled]="editingTicket() !== null || t.sold > 0"
+                        [attr.title]="t.sold > 0 ? 'Suppression impossible : des tickets ont déjà été vendus' : null"
+                      >
+                        Supprimer
+                      </button>
+                    </div>
+                  </article>
+                }
+              }
+
+              @if (editingTicket() === 'new') {
+                <ng-container [ngTemplateOutlet]="ticketEditor" />
+              }
+
+              @if (tickets().length === 0 && editingTicket() === null) {
+                <div class="tickets__empty">
+                  <p>Aucun ticket pour le moment.</p>
+                  <button type="button" class="btn btn--solid btn--sm" (click)="addTicket()">Ajouter votre premier ticket</button>
+                </div>
+              }
+            </div>
+
+            @if (ticketsIssue(); as issue) {
+              @if (wasAttempted(3) || overCapacity()) {
+                <p class="note note--error" role="alert">{{ issue }}</p>
+              }
+            }
+          }
+        </section>
+
+        <!-- ======================= 05 · DESCRIPTION ======================= -->
+        <section class="step" [hidden]="step() !== 4" formGroupName="description" aria-labelledby="step-title-4">
+          <h2 class="step__title" id="step-title-4"><span class="step__num">05</span> Description</h2>
+
+          <div class="field">
+            <span class="field__label" id="desc-label">Description complète <span class="req">*</span></span>
+
+            <div class="editor" [class.editor--error]="showError(description.controls.full)">
+              <div class="editor__toolbar" role="toolbar" aria-label="Mise en forme">
+                <button type="button" class="tool" [class.tool--active]="activeFormats().bold" [attr.aria-pressed]="activeFormats().bold" aria-label="Gras" title="Gras" (mousedown)="$event.preventDefault()" (click)="format('bold')"><strong>B</strong></button>
+                <button type="button" class="tool" [class.tool--active]="activeFormats().italic" [attr.aria-pressed]="activeFormats().italic" aria-label="Italique" title="Italique" (mousedown)="$event.preventDefault()" (click)="format('italic')"><em>I</em></button>
+                <button type="button" class="tool" [class.tool--active]="activeFormats().underline" [attr.aria-pressed]="activeFormats().underline" aria-label="Souligné" title="Souligné" (mousedown)="$event.preventDefault()" (click)="format('underline')"><span class="tool__u">U</span></button>
+                <span class="tool__sep" aria-hidden="true"></span>
+                <button type="button" class="tool" [class.tool--active]="activeFormats().ul" [attr.aria-pressed]="activeFormats().ul" aria-label="Liste à puces" title="Liste à puces" (mousedown)="$event.preventDefault()" (click)="format('insertUnorderedList')">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                    <path d="M9 6h12"></path><path d="M9 12h12"></path><path d="M9 18h12"></path>
+                    <path d="M4 6h.01"></path><path d="M4 12h.01"></path><path d="M4 18h.01"></path>
+                  </svg>
+                </button>
+                <button type="button" class="tool" [class.tool--active]="activeFormats().ol" [attr.aria-pressed]="activeFormats().ol" aria-label="Liste numérotée" title="Liste numérotée" (mousedown)="$event.preventDefault()" (click)="format('insertOrderedList')">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M10 6h11"></path><path d="M10 12h11"></path><path d="M10 18h11"></path>
+                    <path d="M4 6h1v4"></path><path d="M4 10h2"></path>
+                    <path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"></path>
+                  </svg>
+                </button>
+                <button type="button" class="tool" [class.tool--active]="linkOpen()" aria-label="Insérer un lien" title="Insérer un lien" (mousedown)="$event.preventDefault()" (click)="openLink()">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                  </svg>
+                </button>
+              </div>
+
+              @if (linkOpen()) {
+                <div class="editor__link">
+                  <input
+                    #linkInput type="url" class="input input--sm" placeholder="https://..." aria-label="Adresse du lien"
+                    (keydown.enter)="$event.preventDefault(); applyLink(linkInput)"
+                  />
+                  <button type="button" class="btn btn--solid btn--sm" (click)="applyLink(linkInput)">Appliquer</button>
+                  <button type="button" class="btn btn--ghost btn--sm" (click)="closeLink()">Annuler</button>
+                  @if (linkError(); as linkErr) {
+                    <span class="field__error">{{ linkErr }}</span>
+                  }
+                </div>
+              }
+
+              <div
+                #editor class="editor__content rich" contenteditable="true" role="textbox" aria-multiline="true"
+                aria-labelledby="desc-label" data-placeholder="Décrivez votre événement..."
+                [class.is-invalid]="showError(description.controls.full)"
+                (input)="onEditorInput()" (blur)="onEditorBlur()" (paste)="onPaste($event)"
+              ></div>
+            </div>
+
+            @if (showError(description.controls.full)) {
+              <span class="field__error">{{ errorMessage(description.controls.full) }}</span>
+            }
+          </div>
+
+          <div class="field">
+            <label class="field__label" for="ev-notes">Ce que les participants doivent savoir</label>
+            <textarea
+              id="ev-notes" class="input textarea" rows="4" formControlName="notes" maxlength="2000"
+              placeholder="Informations complémentaires..."
+            ></textarea>
+            <span class="field__hint">{{ description.controls.notes.value.length }} / 2000</span>
+          </div>
+        </section>
+
+        <!-- ======================= 06 · APERÇU ======================= -->
+        <section class="step" [hidden]="step() !== 5" aria-labelledby="step-title-5">
+          <h2 class="step__title" id="step-title-5"><span class="step__num">06</span> Aperçu de votre événement</h2>
+
+          @if (invalidSteps(); as issues) {
+            @if (issues.length > 0) {
+              <div class="notice notice--warn" role="alert">
+                <div>
+                  <strong>
+                    {{ status() === 'draft' ? 'Pour publier, complétez :' : 'Informations à corriger :' }}
+                  </strong>
+                  <ul class="notice__list">
+                    @for (i of issues; track i) {
+                      <li><button type="button" class="link-btn" (click)="goTo(i)">{{ steps[i].label }}</button></li>
+                    }
+                  </ul>
+                </div>
+              </div>
+            }
+          }
+
+          <div class="review">
+            <header class="review__head"><h3>Modifications</h3></header>
+            @if (changedSteps().length === 0) {
+              <p class="review__empty">Aucune modification pour le moment.</p>
+            } @else {
+              <ul class="changes">
+                @for (i of changedSteps(); track i) {
+                  <li>
+                    <span>{{ steps[i].label }}</span>
+                    <button type="button" class="link-btn" (click)="goTo(i)">Voir</button>
+                  </li>
+                }
+              </ul>
+            }
+
+            @if (showNotify()) {
+              <label class="check">
+                <input type="checkbox" [checked]="notifyParticipants()" (change)="onNotifyChange($event)" />
+                <span>
+                  Prévenir par e-mail les {{ registered() }} participants inscrits de ce changement de date, d'horaire, de format ou de lieu.
+                </span>
+              </label>
+            }
+          </div>
+
+          <article class="preview">
+            <div class="preview__cover">
+              @if (cover(); as c) {
+                <img [src]="c.url" alt="" />
+              } @else {
+                <span class="preview__placeholder" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                    <path d="M21 15l-5-5L5 21"></path>
+                  </svg>
+                </span>
+              }
+              @if (summary().formatLabel) {
+                <span class="preview__badge">{{ summary().formatLabel }}</span>
+              }
+            </div>
+
+            <div class="preview__body">
+              <div class="preview__tags">
+                @if (summary().category) {
+                  <span class="tag">{{ summary().category }}</span>
+                }
+                <span class="tag tag--accent">{{ summary().typeLabel }}</span>
+              </div>
+              <h3 class="preview__title">{{ summary().title || "Titre de l'événement" }}</h3>
+              @if (summary().intro) {
+                <p class="preview__intro">{{ summary().intro }}</p>
+              }
+              <ul class="preview__meta">
+                @if (summary().dateLabel) {
+                  <li>{{ summary().dateLabel }}@if (summary().timeLabel) { · {{ summary().timeLabel }} }</li>
+                }
+                @if (summary().format === 'onsite' && summary().venue) {
+                  <li>{{ summary().venue }}@if (summary().address) { , {{ summary().address }} }</li>
+                } @else if (summary().format === 'online' && summary().platform) {
+                  <li>En ligne sur {{ summary().platform }}</li>
+                }
+                <li>{{ summary().capacityLabel }}</li>
+              </ul>
+            </div>
+          </article>
+
+          <div class="review">
+            <header class="review__head">
+              <h3>Date &amp; lieu</h3>
+              <button type="button" class="link-btn" (click)="goTo(1)">Modifier</button>
+            </header>
+            <dl class="review__list">
+              <div class="review__row"><dt>Date</dt><dd>{{ summary().dateLabel || '—' }}</dd></div>
+              <div class="review__row"><dt>Horaires</dt><dd>{{ summary().timeLabel || '—' }}</dd></div>
+              <div class="review__row"><dt>Format</dt><dd>{{ summary().formatLabel || '—' }}</dd></div>
+              @if (summary().format === 'onsite') {
+                <div class="review__row"><dt>Lieu</dt><dd>{{ summary().venue || '—' }}</dd></div>
+                <div class="review__row"><dt>Adresse</dt><dd>{{ summary().address || '—' }}</dd></div>
+                @if (summary().room) {
+                  <div class="review__row"><dt>Salle</dt><dd>{{ summary().room }}</dd></div>
+                }
+              } @else if (summary().format === 'online') {
+                <div class="review__row"><dt>Plateforme</dt><dd>{{ summary().platform || '—' }}</dd></div>
+                <div class="review__row"><dt>Lien</dt><dd class="review__break">{{ summary().link || 'À ajouter plus tard' }}</dd></div>
+              }
+            </dl>
+          </div>
+
+          <div class="review">
+            <header class="review__head">
+              <h3>Participation &amp; tickets</h3>
+              <button type="button" class="link-btn" (click)="goTo(2)">Modifier</button>
+            </header>
+            <dl class="review__list">
+              <div class="review__row"><dt>Type</dt><dd>{{ summary().typeLabel }}</dd></div>
+              <div class="review__row"><dt>Capacité</dt><dd>{{ summary().capacityLabel }}</dd></div>
+            </dl>
+            @if (isPaid()) {
+              <ul class="review__tickets">
+                @for (t of tickets(); track t.id) {
+                  <li>
+                    <strong>{{ t.name }}</strong>
+                    <span>{{ formatPrice(t.price) }} · {{ t.seats }} place{{ t.seats > 1 ? 's' : '' }}@if (t.sold > 0) { · {{ t.sold }} vendu{{ t.sold > 1 ? 's' : '' }} }</span>
+                  </li>
+                } @empty {
+                  <li class="review__empty">Aucun ticket défini.</li>
+                }
+              </ul>
+              <button type="button" class="link-btn" (click)="goTo(3)">Modifier les tickets</button>
+            } @else {
+              <p class="review__empty">Événement gratuit : inscription sans paiement.</p>
+            }
+          </div>
+
+          <div class="review">
+            <header class="review__head">
+              <h3>Description</h3>
+              <button type="button" class="link-btn" (click)="goTo(4)">Modifier</button>
+            </header>
+            @if (summary().descriptionHtml) {
+              <div class="rich" [innerHTML]="summary().descriptionHtml"></div>
+            } @else {
+              <p class="review__empty">Aucune description.</p>
+            }
+            @if (summary().notes) {
+              <h4 class="review__sub">À savoir avant de venir</h4>
+              <p class="review__notes">{{ summary().notes }}</p>
+            }
+          </div>
+
+          <div class="danger">
+            <div>
+              <h3 class="danger__title">Zone de danger</h3>
+              @if (canDelete()) {
+                <p class="danger__text">Supprimer cet événement est définitif et ne peut pas être annulé.</p>
+              } @else {
+                <p class="danger__text">Cet événement compte déjà des inscriptions : il ne peut pas être supprimé.</p>
+              }
+            </div>
+            <button type="button" class="btn btn--danger btn--sm" [disabled]="!canDelete()" (click)="confirmDelete.set(true)">
+              Supprimer l'événement
+            </button>
+          </div>
+        </section>
+      </form>
+
+      <!-- ======================= ACTIONS ======================= -->
+      <footer class="panel__footer">
+        @if (step() > 0) {
+          <button type="button" class="btn btn--ghost panel__prev" (click)="prev()" [disabled]="saving() !== null">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+            Précédent
+          </button>
+        }
+
+        @if (hasChanges()) {
+          <button type="button" class="link-btn link-btn--muted panel__draft" (click)="resetChanges()" [disabled]="saving() !== null">
+            Annuler les modifications
+          </button>
+        }
+
+        @if (step() < 5) {
+          <button type="button" class="btn btn--outline" (click)="next()">
+            Continuer
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+          </button>
+        }
+
+        @if (status() === 'draft' && step() === 5) {
+          <button type="button" class="btn btn--outline" (click)="save(true)" [disabled]="saving() !== null">
+            @if (saving() === 'publish') {
+              <span class="spinner spinner--dark" aria-hidden="true"></span> Publication...
+            } @else {
+              Publier l'événement
+            }
+          </button>
+        }
+
+        <button type="button" class="btn btn--solid" (click)="save()" [disabled]="saving() !== null || !hasChanges()">
+          @if (saving() === 'save') {
+            <span class="spinner" aria-hidden="true"></span> Enregistrement...
+          } @else {
+            Enregistrer les modifications
+          }
+        </button>
+      </footer>
+    </section>
+  </div>
+</div>
+
+<!-- Confirmation de suppression -->
+@if (confirmDelete()) {
+  <div class="modal" (click)="confirmDelete.set(false)">
+    <div
+      class="modal__dialog"
+      role="alertdialog" aria-modal="true"
+      aria-labelledby="evt-delete-title" aria-describedby="evt-delete-text"
+      (click)="$event.stopPropagation()"
+    >
+      <span class="modal__icon">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <path d="M12 9v4"></path><path d="M12 17h.01"></path>
+        </svg>
+      </span>
+      <h2 id="evt-delete-title" class="modal__title">Supprimer cet événement ?</h2>
+      <p id="evt-delete-text" class="modal__text">
+        « {{ eventTitle() }} » sera définitivement supprimé. Cette action est irréversible.
+      </p>
+      <div class="modal__actions">
+        <button type="button" class="btn btn--outline" (click)="confirmDelete.set(false)" [disabled]="deleting()">Annuler</button>
+        <button type="button" class="btn btn--danger" (click)="deleteEvent()" [disabled]="deleting()">
+          @if (deleting()) {
+            <span class="spinner" aria-hidden="true"></span> Suppression...
+          } @else {
+            Supprimer
+          }
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Notification -->
+@if (toast(); as t) {
+  <div class="toast" [attr.data-kind]="t.kind" role="status" aria-live="polite">{{ t.text }}</div>
+}
