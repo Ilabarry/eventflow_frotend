@@ -142,8 +142,7 @@
                     </div>
                     <a
                       class="btn btn--primary mini__action"
-                      routerLink="/events_detail"
-                      [queryParams]="{ id: card.eventId }"
+                      [routerLink]="['/events', card.eventId]"
                       [attr.aria-label]="'Voir l\'événement ' + card.title"
                     >
                       Voir

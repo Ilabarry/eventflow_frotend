@@ -175,8 +175,7 @@
                   <!-- Actions -->
                   <a
                     class="btn btn--event card__action-event"
-                    routerLink="/events_detail"
-                    [queryParams]="{ id: card.eventId }"
+                    [routerLink]="['/events', card.eventId]"
                   >
                     Voir l'événement
                   </a>
