@@ -1,0 +1,231 @@
+<section class="events" aria-labelledby="events-title">
+  <!-- ============================ BANNIÈRE ============================ -->
+  <header class="hero">
+    <svg class="hero__wave" viewBox="0 0 400 120" preserveAspectRatio="none" aria-hidden="true">
+      <defs>
+        <linearGradient id="evtHeroWave" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#8B7CF6" />
+          <stop offset="1" stop-color="#22C7D6" />
+        </linearGradient>
+      </defs>
+      <path
+        d="M0 90 C 50 20, 110 110, 180 60 S 300 0, 400 40"
+        fill="none"
+        stroke="url(#evtHeroWave)"
+        stroke-width="2.5"
+        vector-effect="non-scaling-stroke"
+      />
+    </svg>
+
+    <div class="hero__content">
+      <h1 id="events-title" class="hero__title">Découvrir les événements</h1>
+      <p class="hero__text">Explorez et inscrivez-vous aux événements qui vous inspirent.</p>
+    </div>
+
+    <svg class="hero__illustration" viewBox="0 0 120 120" fill="none" aria-hidden="true">
+      <defs>
+        <linearGradient id="evtHeroCal" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#8B7CF6" />
+          <stop offset="1" stop-color="#22C7D6" />
+        </linearGradient>
+      </defs>
+      <rect x="14" y="22" width="92" height="84" rx="14" fill="rgba(255,255,255,0.08)" stroke="url(#evtHeroCal)" stroke-width="2.5" />
+      <path d="M14 46h92" stroke="url(#evtHeroCal)" stroke-width="2.5" />
+      <path d="M38 12v20M82 12v20" stroke="url(#evtHeroCal)" stroke-width="4" stroke-linecap="round" />
+      <circle cx="36" cy="64" r="4" fill="rgba(255,255,255,0.75)" />
+      <circle cx="60" cy="64" r="4" fill="rgba(255,255,255,0.75)" />
+      <circle cx="84" cy="64" r="4" fill="rgba(255,255,255,0.75)" />
+      <circle cx="36" cy="86" r="4" fill="rgba(255,255,255,0.75)" />
+      <circle cx="60" cy="86" r="4" fill="rgba(255,255,255,0.75)" />
+      <circle cx="84" cy="86" r="7" fill="url(#evtHeroCal)" />
+    </svg>
+  </header>
+
+  <!-- ============================ FILTRES ============================ -->
+  <section class="toolbar" aria-label="Recherche et filtres">
+    <div class="search">
+      <svg class="search__icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <circle cx="11" cy="11" r="8"></circle>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+      </svg>
+      <input
+        type="search"
+        class="search__input"
+        placeholder="Rechercher un événement, une ville..."
+        aria-label="Rechercher un événement"
+        [value]="searchTerm()"
+        (input)="onSearchInput($event)"
+      />
+    </div>
+
+    <div class="filters">
+      <select class="select" [class.select--active]="selectedCategory() !== 'all'" aria-label="Catégorie" (change)="onCategoryChange($event)">
+        <option value="all" [selected]="selectedCategory() === 'all'">Catégorie</option>
+        @for (c of categories(); track c.id) {
+          <option [value]="c.name" [selected]="selectedCategory() === c.name">{{ c.name }}</option>
+        }
+      </select>
+
+      <select class="select" [class.select--active]="selectedFormat() !== 'all'" aria-label="Format" (change)="onFormatChange($event)">
+        @for (f of formatOptions; track f.value) {
+          <option [value]="f.value" [selected]="selectedFormat() === f.value">{{ f.label }}</option>
+        }
+      </select>
+
+      <select class="select" [class.select--active]="selectedPrice() !== 'all'" aria-label="Prix" (change)="onPriceChange($event)">
+        @for (p of priceOptions; track p.value) {
+          <option [value]="p.value" [selected]="selectedPrice() === p.value">{{ p.label }}</option>
+        }
+      </select>
+
+      <select class="select" [class.select--active]="selectedDate() !== 'all'" aria-label="Date" (change)="onDateChange($event)">
+        @for (d of dateOptions; track d.value) {
+          <option [value]="d.value" [selected]="selectedDate() === d.value">{{ d.label }}</option>
+        }
+      </select>
+
+      @if (hasActiveFilters()) {
+        <button type="button" class="filters__reset" (click)="resetFilters()">Réinitialiser</button>
+      }
+
+      <button type="button" class="order-btn" (click)="toggleOrdering()" [attr.aria-label]="ordering() === '-start_at' ? 'Trier par date croissante' : 'Trier par date décroissante'">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          @if (ordering() === '-start_at') {
+            <path d="M3 6h18M6 12h12M10 18h4"></path>
+          } @else {
+            <path d="M3 18h18M6 12h12M10 6h4"></path>
+          }
+        </svg>
+        {{ ordering() === '-start_at' ? 'Plus récents' : 'Plus proches' }}
+      </button>
+    </div>
+  </section>
+
+  <!-- ============================ RÉSULTATS ============================ -->
+  <p class="results" aria-live="polite">
+    {{ totalCount() }} événement{{ totalCount() > 1 ? 's' : '' }}
+  </p>
+
+  @switch (loadState()) {
+    @case ('loading') {
+      <div class="grid" aria-busy="true" aria-label="Chargement des événements">
+        @for (i of [1, 2, 3, 4, 5, 6]; track i) {
+          <div class="card card--skeleton">
+            <span class="sk sk--img"></span>
+            <span class="sk sk--sm"></span>
+            <span class="sk sk--lg"></span>
+            <span class="sk"></span>
+            <span class="sk sk--md"></span>
+          </div>
+        }
+      </div>
+    }
+
+    @case ('error') {
+      <section class="state">
+        <span class="state__icon state__icon--danger">
+          <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <path d="M12 9v4"></path><path d="M12 17h.01"></path>
+          </svg>
+        </span>
+        <h2 class="state__title">Impossible de charger les événements</h2>
+        <p class="state__text">Vérifiez votre connexion puis réessayez.</p>
+        <button type="button" class="btn btn--solid" (click)="retry()">Réessayer</button>
+      </section>
+    }
+
+    @default {
+      @if (upcomingEvents().length === 0) {
+        <section class="state">
+            <span class="state__icon">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            </span>
+            <h2 class="state__title">
+            {{ events().length === 0 ? 'Aucun événement pour le moment' : 'Aucun événement à venir' }}
+            </h2>
+            <p class="state__text">
+            {{ events().length === 0
+                ? 'De nouveaux événements seront bientôt disponibles.'
+                : 'Les événements passés ne sont plus affichés. Revenez bientôt pour découvrir les prochains.' }}
+            </p>
+            @if (hasActiveFilters()) {
+            <button type="button" class="btn btn--outline" (click)="resetFilters()">Réinitialiser les filtres</button>
+            }
+        </section>
+        } @else {
+        <div class="grid">
+          @for (e of upcomingEvents(); track e.id) {
+            <article class="card">
+              <a [routerLink]="['/events', e.id]" class="card__media" [attr.aria-label]="'Voir ' + e.title">
+                <img [src]="eventImage(e)" [alt]="''" loading="lazy" />
+                <span class="card__badge" [class.card__badge--online]="e.format === 'ONLINE'" [class.card__badge--hybrid]="e.format === 'HYBRID'">
+                  {{ formatLabel(e.format) }}
+                </span>
+              </a>
+
+              <div class="card__body">
+                <span class="card__date">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="3" y="5" width="18" height="16" rx="2"></rect>
+                    <path d="M3 10h18M8 3v4M16 3v4"></path>
+                  </svg>
+                  {{ formatDate(e.start_at) }}
+                </span>
+
+                <h3 class="card__title">
+                  <a [routerLink]="['/events', e.id]">{{ e.title }}</a>
+                </h3>
+
+                <p class="card__meta">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                    <circle cx="12" cy="10" r="3"></circle>
+                  </svg>
+                  {{ e.city || 'Lieu à préciser' }}
+                </p>
+
+                <p class="card__desc">{{ e.short_description }}</p>
+
+                <span class="card__tag">{{ e.category.name }}</span>
+
+                <footer class="card__foot">
+                  <span class="card__price" [class.card__price--paid]="e.participation_type === 'PAID'">
+                    {{ priceLabel(e) }}
+                  </span>
+                  <a [routerLink]="['/events', e.id]" class="card__btn" aria-label="Voir les détails">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                      <polyline points="12 5 19 12 12 19"></polyline>
+                    </svg>
+                  </a>
+                </footer>
+              </div>
+            </article>
+          }
+        </div>
+
+        @if (totalPages() > 1) {
+          <nav class="pagination" aria-label="Pagination">
+            <button type="button" class="pagination__btn" aria-label="Page précédente" [disabled]="currentPage() === 1" (click)="goToPage(currentPage() - 1)">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+            </button>
+
+            @for (page of pages(); track page) {
+              <button type="button" class="pagination__btn" [class.pagination__btn--active]="page === currentPage()" [attr.aria-current]="page === currentPage() ? 'page' : null" (click)="goToPage(page)">
+                {{ page }}
+              </button>
+            }
+
+            <button type="button" class="pagination__btn" aria-label="Page suivante" [disabled]="currentPage() === totalPages()" (click)="goToPage(currentPage() + 1)">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M9 18l6-6-6-6"></path></svg>
+            </button>
+          </nav>
+        }
+      }
+    }
+  }
+</section>

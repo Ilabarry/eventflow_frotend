@@ -25,6 +25,11 @@ export class ParticipantSidebarComponent {
       icon: ['M3 3h7v7H3z', 'M14 3h7v7h-7z', 'M14 14h7v7h-7z', 'M3 14h7v7H3z'],
     },
     {
+      label: 'Evenments',
+      path: 'evenements',
+      icon: ['M3 3h7v7H3z', 'M14 3h7v7h-7z', 'M14 14h7v7h-7z', 'M3 14h7v7H3z'],
+    },
+    {
       label: 'Mes inscriptions',
       path: 'inscriptions',
       icon: [
@@ -45,11 +50,6 @@ export class ParticipantSidebarComponent {
       label: 'Mes Attestations',
       path: 'attestations',
       icon: ['M12 15a7 7 0 1 0 0-14 7 7 0 0 0 0 14z', 'M8.21 13.89L7 23l5-3 5 3-1.21-9.12'],
-    },
-    {
-      label: 'Mon Profil',
-      path: 'profil',
-      icon: ['M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2', 'M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z'],
     },
     {
       label: 'Notifications',

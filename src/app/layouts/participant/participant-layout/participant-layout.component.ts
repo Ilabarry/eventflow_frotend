@@ -1,4 +1,4 @@
-import { Component, DestroyRef, HostListener, effect, inject, signal } from '@angular/core';
+import { Component, DestroyRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 import { Router, RouterOutlet } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -28,20 +28,18 @@ export class ParticipantLayoutComponent {
   readonly sidebarOpen = signal(false);
 
   // ✅ Données réactives depuis AuthService
-  readonly userName = signal('');
-  readonly avatarUrl = signal<string | null>(null);
+  readonly userName = computed(() => {
+    const user = this.authService.currentUser();
+    return user?.full_name || user?.first_name || 'Participant';
+  });
+
+  readonly avatarUrl = computed(() => this.authService.currentUser()?.profile_picture ?? null);
+
   readonly notificationCount = signal(0);
-  readonly messageCount = signal(0); // pas d'endpoint → icône désactivée dans le HTML
+  readonly messageCount = signal(0);
 
   constructor() {
-    // Synchronisation du nom et de l'avatar depuis le signal currentUser
-    effect(() => {
-      const user = this.authService.currentUser();
-      this.userName.set(user?.full_name || user?.first_name || 'Participant');
-      this.avatarUrl.set(user?.profile_picture ?? null);
-    });
-
-    // Compteur de notifications rafraîchi toutes les 60 s
+    // Compteur de notifications
     interval(60_000)
       .pipe(
         startWith(0),
@@ -56,7 +54,7 @@ export class ParticipantLayoutComponent {
         this.notificationCount.set(res.data?.unread_count ?? 0);
       });
 
-    // Bloque le scroll quand le drawer mobile est ouvert
+    // Bloque le scroll quand le drawer mobile est ouvert (pas d'écriture de signal)
     effect(() => {
       this.document.body.style.overflow = this.sidebarOpen() ? 'hidden' : '';
     });

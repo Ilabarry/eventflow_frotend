@@ -35,6 +35,7 @@ import { roleGuard } from './core/guards/role.guard';
 import { Role } from './core/models/user.model';
 import { OrganizerProfileComponent } from './features/organizer/profil/profil.component';
 import { AboutComponent } from './features/public/about/about.component';
+import { ParticipantEventsComponent } from './features/participant/evenements/evenements.component';
 
 export const routes: Routes = [
   { path: 'register', component: RegisterComponent },
@@ -85,6 +86,7 @@ export const routes: Routes = [
     children: [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       { path: 'dashboard', component: ParticipantDashboardComponent },
+      { path: 'evenements', component: ParticipantEventsComponent },
       { path: 'inscriptions', component: ParticipantRegistrationsComponent },
       { path: 'tickets', component: ParticipantTicketsComponent },
       { path: 'attestations', component: ParticipantCertificatesComponent },

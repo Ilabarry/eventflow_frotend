@@ -81,7 +81,7 @@ export interface CreateEventPayload {
  * Les noms des propriétés respectent le contrat JSON de Django.
  */
 
-export type BackendEventFormat = 'ONLINE' | 'IN_PERSON';
+export type BackendEventFormat = 'ONLINE' | 'IN_PERSON' | 'HYBRID';
 
 export type BackendParticipationType = 'FREE' | 'PAID';
 
