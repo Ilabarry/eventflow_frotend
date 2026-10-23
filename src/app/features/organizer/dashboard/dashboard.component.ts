@@ -244,12 +244,7 @@ export class OrganizerDashboardComponent implements OnInit, AfterViewInit {
           this.stats.set(this.buildStats(data));
           this.upcomingEvents.set(data.upcoming_events.map((e) => this.toUpcomingEvent(e)));
           this.activities.set(data.recent_registrations.map((r) => this.toActivity(r)));
-          console.log('[Dashboard DEBUG] activities:', this.activities());
-
-          this.loading.set(false);
-          console.info(
-            `[Dashboard] ${data.summary.total_events} événements | ${data.summary.total_registrations} inscriptions`,
-          );
+          
         },
         error: (err) => {
           this.loading.set(false);

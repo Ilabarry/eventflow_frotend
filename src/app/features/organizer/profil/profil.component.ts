@@ -1,4 +1,3 @@
-import { NgTemplateOutlet } from '@angular/common';
 import {
   Component, DestroyRef, ElementRef, HostListener, computed, effect, inject, signal,
 } from '@angular/core';
@@ -14,6 +13,7 @@ import { NotificationService } from '../../../core/services/notification.service
 import { ProfileApiService } from '../../../core/services/profile-api.service';
 import { User } from '../../../core/models/user.model';
 import { ChangePasswordPayload } from '../../../core/models/auth.model';
+import { NgTemplateOutlet } from '@angular/common';
 
 type SectionKey = 'infos' | 'securite';
 type LoadState = 'loading' | 'ready' | 'error';
