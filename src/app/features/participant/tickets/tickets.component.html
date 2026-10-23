@@ -1,1 +1,238 @@
-<p>tickets works!</p>
+<section class="tickets" aria-labelledby="tickets-title">
+  <!-- ============================================================
+       BANDEAU : titre, onglets de statut, recherche
+       ============================================================ -->
+  <header class="hero">
+    <svg class="hero__flow" viewBox="0 0 400 140" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+      <path d="M0 120 C 60 60, 110 40, 170 70 S 280 120, 330 50 S 380 10, 400 18" class="hero__flow-line" />
+      <path d="M0 132 C 80 90, 140 80, 200 100 S 300 130, 400 70" class="hero__flow-line hero__flow-line--soft" />
+    </svg>
+
+    <div class="hero__content">
+      <h1 id="tickets-title" class="hero__title">Mes tickets</h1>
+      <p class="hero__subtitle">Retrouvez vos tickets et accédez à vos événements.</p>
+
+      <div class="hero__toolbar">
+        <div class="filters" role="group" aria-label="Filtrer par statut de ticket">
+          @for (filter of statusFilters; track filter.label) {
+            <button
+              type="button"
+              class="filters__chip"
+              [class.filters__chip--active]="activeStatus() === filter.value"
+              [attr.aria-pressed]="activeStatus() === filter.value"
+              (click)="selectStatus(filter.value)"
+            >
+              {{ filter.label }}
+            </button>
+          }
+        </div>
+
+        <div class="search">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <circle cx="11" cy="11" r="7" />
+            <path d="m20 20-3.5-3.5" />
+          </svg>
+          <input
+            class="search__input"
+            type="search"
+            placeholder="Rechercher un ticket par référence…"
+            aria-label="Rechercher un ticket par sa référence"
+            autocomplete="off"
+            [value]="searchTerm()"
+            (input)="onSearchInput($event)"
+          />
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============================================================
+       CONTENU : chargement, erreur, vide ou liste
+       ============================================================ -->
+  <div aria-live="polite" [attr.aria-busy]="loadState() === 'loading'">
+    @switch (loadState()) {
+      @case ('loading') {
+        <ul class="list" aria-hidden="true">
+          @for (placeholder of [1, 2]; track placeholder) {
+            <li class="skeleton"></li>
+          }
+        </ul>
+      }
+
+      @case ('error') {
+        <div class="state" role="alert">
+          <p class="state__title">Impossible de charger vos tickets.</p>
+          <p class="state__text">Vérifiez votre connexion internet, puis réessayez.</p>
+          <button type="button" class="btn btn--primary" (click)="retry()">Réessayer</button>
+        </div>
+      }
+
+      @default {
+        @if (cards().length === 0) {
+          <div class="state">
+            @if (hasActiveFilter()) {
+              <p class="state__title">Aucun ticket ne correspond à votre recherche.</p>
+              <button type="button" class="btn btn--primary" (click)="resetFilters()">Voir tous mes tickets</button>
+            } @else {
+              <p class="state__title">Vous n'avez encore aucun ticket.</p>
+              <p class="state__text">Un ticket est émis quand votre inscription à un événement est confirmée.</p>
+              <a class="btn btn--primary" routerLink="/events">Découvrir les événements</a>
+            }
+          </div>
+        } @else {
+          <p class="tickets__count">{{ totalCount() }} ticket{{ totalCount() > 1 ? 's' : '' }}</p>
+
+          <ul class="list">
+            @for (card of cards(); track card.id) {
+              <li>
+                <article class="card" [class.card--inactive]="!card.isValid" [attr.aria-labelledby]="'ticket-' + card.id">
+                  <div class="card__media" aria-hidden="true">
+                    <span>EVENT</span><span class="card__accent">FLOW</span>
+                  </div>
+
+                  <div class="card__body">
+                    <div class="card__head">
+                      <span class="card__brand" aria-hidden="true">EVENT<span class="card__accent">FLOW</span></span>
+                      <span [class]="'badge badge--' + card.statusTone">
+                        <span class="badge__dot" aria-hidden="true"></span>{{ card.statusLabel }}
+                      </span>
+                    </div>
+
+                    <h2 class="card__title" [id]="'ticket-' + card.id">{{ card.eventTitle }}</h2>
+                    <p class="card__type">
+                      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M13 2 4 14h7l-1 8 9-12h-7z" />
+                      </svg>
+                      Ticket {{ card.ticketTypeName }}
+                    </p>
+
+                    <ul class="meta">
+                      @if (card.whenLabel) {
+                        <li class="meta__item">
+                          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <rect x="3" y="5" width="18" height="16" rx="2" />
+                            <path d="M3 10h18M8 3v4M16 3v4" />
+                          </svg>
+                          <time [attr.datetime]="card.startIso">{{ card.whenLabel }}</time>
+                        </li>
+                      }
+                      @if (card.placeLabel) {
+                        <li class="meta__item">
+                          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            @if (card.isOnline) {
+                              <rect x="3" y="4" width="18" height="12" rx="2" />
+                              <path d="M8 20h8M12 16v4" />
+                            } @else {
+                              <path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z" />
+                              <circle cx="12" cy="10" r="2.5" />
+                            }
+                          </svg>
+                          <span>{{ card.placeLabel }}</span>
+                        </li>
+                      }
+                      @if (holderName()) {
+                        <li class="meta__item">
+                          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <circle cx="12" cy="8" r="4" />
+                            <path d="M4 21a8 8 0 0 1 16 0" />
+                          </svg>
+                          <span>{{ holderName() }}</span>
+                        </li>
+                      }
+                    </ul>
+
+                    <p class="card__reference">Référence : {{ card.reference }}</p>
+
+                    @if (card.qrImage) {
+                      <button type="button" class="btn btn--ticket card__action" (click)="openTicket(card)">
+                        Afficher le ticket
+                      </button>
+                    }
+                  </div>
+
+                  <!-- QR code : visible seulement pour un ticket valide -->
+                  <div class="card__qr">
+                    @if (card.qrImage) {
+                      <!-- Doublon du bouton « Afficher le ticket » : retiré du clavier et des lecteurs d'écran -->
+                      <button type="button" class="card__qr-btn" tabindex="-1" aria-hidden="true" (click)="openTicket(card)">
+                        <img [src]="card.qrImage" alt="" width="120" height="120" />
+                      </button>
+                    } @else {
+                      <p class="card__qr-off">
+                        {{ card.isValid ? 'QR code indisponible' : 'Ticket ' + card.statusLabel.toLowerCase() }}
+                      </p>
+                    }
+                  </div>
+                </article>
+              </li>
+            }
+          </ul>
+
+          <!-- Pagination -->
+          @if (totalPages() > 1) {
+            <nav class="pagination" aria-label="Pagination des tickets">
+              <button
+                type="button"
+                class="pagination__btn"
+                aria-label="Page précédente"
+                [disabled]="currentPage() === 1"
+                (click)="goToPage(currentPage() - 1)"
+              >
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19 12H5m6-6-6 6 6 6" /></svg>
+              </button>
+
+              <ol class="pagination__pages">
+                @for (page of pages(); track page) {
+                  <li>
+                    <button
+                      type="button"
+                      class="pagination__btn"
+                      [class.pagination__btn--active]="page === currentPage()"
+                      [attr.aria-current]="page === currentPage() ? 'page' : null"
+                      [attr.aria-label]="'Page ' + page"
+                      (click)="goToPage(page)"
+                    >
+                      {{ page }}
+                    </button>
+                  </li>
+                }
+              </ol>
+
+              <p class="pagination__summary">Page {{ currentPage() }} sur {{ totalPages() }}</p>
+
+              <button
+                type="button"
+                class="pagination__btn"
+                aria-label="Page suivante"
+                [disabled]="currentPage() === totalPages()"
+                (click)="goToPage(currentPage() + 1)"
+              >
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14m-6-6 6 6-6 6" /></svg>
+              </button>
+            </nav>
+          }
+        }
+      }
+    }
+  </div>
+
+  <!-- ============================================================
+       FENÊTRE : QR code en grand, à présenter à l'entrée
+       ============================================================ -->
+  <dialog #qrDialog class="dialog" aria-labelledby="dialog-title" (click)="onDialogClick($event)" (close)="openedTicket.set(null)">
+    @if (openedTicket(); as ticket) {
+      <div class="dialog__panel">
+        <button type="button" class="dialog__close" aria-label="Fermer" (click)="closeTicket()">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
+        <h2 id="dialog-title" class="dialog__title">{{ ticket.eventTitle }}</h2>
+        <p class="dialog__text">Ticket {{ ticket.ticketTypeName }}@if (ticket.whenLabel) { · {{ ticket.whenLabel }} }</p>
+        @if (ticket.qrImage) {
+          <img class="dialog__qr" [src]="ticket.qrImage" [alt]="'QR code du ticket ' + ticket.reference" width="320" height="320" />
+        }
+        <p class="dialog__reference">{{ ticket.reference }}</p>
+        <p class="dialog__text">Présentez ce QR code à l'entrée de l'événement.</p>
+      </div>
+    }
+  </dialog>
+</section>
