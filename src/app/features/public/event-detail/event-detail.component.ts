@@ -138,7 +138,12 @@ readonly isAuthenticated = computed(() => this.authService.isAuthenticated());
     const e = this.detail;
     if (!e) return;
 
-    // 1. Non connecté → redirection login
+    console.log('[EventDetail] register() — participation_type:', e.participation_type);
+  console.log('[EventDetail] register() — ticketOptions:', this.ticketOptions);
+  console.log('[EventDetail] register() — selectedTicketId:', this.selectedTicketId);
+  console.log('[EventDetail] register() — isPaid:', e.participation_type === 'PAID');
+
+    // 1. Non connecté → login
     if (!this.isAuthenticated()) {
       void this.router.navigate(['/login'], {
         queryParams: { returnUrl: `/events/${e.id}` },
@@ -149,13 +154,13 @@ readonly isAuthenticated = computed(() => this.authService.isAuthenticated());
     // 2. Mauvais rôle
     if (!this.canRegister()) {
       this.notification.warning(
-        'Seuls les comptes participants peuvent s\'inscrire à un événement.',
+        "Seuls les comptes participants peuvent s'inscrire à un événement.",
         'Action non autorisée',
       );
       return;
     }
 
-    // 3. Déjà complet
+    // 3. Complet
     if (this.ctaState === 'full') {
       this.notification.error('Cet événement est complet.', 'Inscription impossible');
       return;
@@ -167,9 +172,10 @@ readonly isAuthenticated = computed(() => this.authService.isAuthenticated());
       return;
     }
 
-    // 5. Construire le payload
-    const ticketTypeId = e.participation_type === 'PAID' ? this.selectedTicketId : null;
-    if (e.participation_type === 'PAID' && !ticketTypeId) {
+    // 5. Ticket requis (PAID)
+    const isPaid = e.participation_type === 'PAID';
+    const ticketTypeId = isPaid ? this.selectedTicketId : null;
+    if (isPaid && !ticketTypeId) {
       this.notification.warning('Choisissez un type de ticket avant de continuer.', 'Ticket requis');
       return;
     }
@@ -190,26 +196,39 @@ readonly isAuthenticated = computed(() => this.authService.isAuthenticated());
           this.registered.set(true);
           this.logger.info('Inscription créée', { eventId: e.id });
 
-          if (e.participation_type === 'FREE') {
+          const registration = res.data;
+          if (!registration) {
+            this.notification.error('Réponse serveur invalide.');
+            return;
+          }
+
+          if (isPaid) {
+            // → page de paiement
             this.notification.success(
-              'Inscription confirmée. Retrouvez-la dans « Mes inscriptions ».',
+              'Inscription enregistrée. Finalisez le paiement pour recevoir votre ticket.',
+              'Inscription en attente',
+            );
+            void this.router.navigate([
+              '/participant/inscriptions',
+              registration.id,
+              'paiement',
+            ]);
+          } else {
+            // FREE → tickets immédiats
+            this.notification.success(
+              'Inscription confirmée. Votre ticket est disponible.',
               'Vous êtes inscrit !',
             );
-            void this.router.navigate(['/participant/inscriptions']);
-          } else {
-            this.notification.success(
-              'Inscription en attente. Finalisez le paiement pour recevoir votre ticket.',
-              'Inscription enregistrée',
-            );
-            void this.router.navigate(['/participant/inscriptions'], {
-              queryParams: { pay: res.data?.id },
-            });
+            void this.router.navigate(['/participant/tickets']);
           }
         },
         error: (err) => {
           this.registering.set(false);
-          const code = err?.error?.errors?.event_id?.[0] || err?.error?.message;
-          this.registrationError.set(code || 'L\'inscription a échoué.');
+          const code =
+            err?.error?.errors?.event_id?.[0] ||
+            err?.error?.errors?.ticket_type_id?.[0] ||
+            err?.error?.message;
+          this.registrationError.set(code || "L'inscription a échoué.");
           this.notification.httpError(err);
         },
       });
@@ -249,6 +268,12 @@ readonly isAuthenticated = computed(() => this.authService.isAuthenticated());
         this.detail = data;
         this.info = this.buildInfo(data);
         this.ticketOptions = this.buildTickets(data);
+        // 🔍 DEBUG
+console.log('[EventDetail] format:', data.format);
+console.log('[EventDetail] participation_type:', data.participation_type);
+console.log('[EventDetail] ticket_types (bruts):', data.ticket_types);
+console.log('[EventDetail] ticketOptions (mappés):', this.ticketOptions);
+console.log('[EventDetail] selectedTicketId initial:', this.selectedTicketId);
         this.selectedTicketId = this.ticketOptions.find((t) => t.remaining !== 0)?.id ?? null;
         this.state = 'ready';
         this.applySeo(data);
@@ -338,18 +363,27 @@ readonly isAuthenticated = computed(() => this.authService.isAuthenticated());
   }
 
   private buildTickets(e: EventDetail): TicketOption[] {
-    return (e.ticket_types ?? [])
-      .filter((t) => t.is_active !== false)
+    console.log('[EventDetail] buildTickets — ticket_types:', e.ticket_types);
+    const result = (e.ticket_types ?? [])
+      .filter((t) => {
+        const active = t.is_active !== false;
+        if (!active) console.warn('[EventDetail] ticket inactif ignoré:', t.id, t.name);
+        return active;
+      })
       .map((t) => {
         const quantity = t.quantity ?? null;
+        const remaining = quantity === null ? null : Math.max(quantity - (t.sold_count ?? 0), 0);
+        console.log(`[EventDetail] ticket ${t.name}: quantity=${quantity}, sold=${t.sold_count}, remaining=${remaining}`);
         return {
           id: String(t.id),
           name: t.name,
           priceLabel: this.ticketPrice(t),
           description: t.description ?? '',
-          remaining: quantity === null ? null : Math.max(quantity - (t.sold_count ?? 0), 0),
+          remaining,
         };
       });
+    console.log('[EventDetail] buildTickets — résultat:', result);
+    return result;
   }
 
   private ticketPrice(t: EventTicketType): string {
@@ -420,7 +454,13 @@ readonly isAuthenticated = computed(() => this.authService.isAuthenticated());
   }
 
   selectTicket(option: TicketOption): void {
-    if (option.remaining !== 0) this.selectedTicketId = option.id;
+    console.log('[EventDetail] selectTicket cliqué:', option);
+    if (option.remaining !== 0) {
+      this.selectedTicketId = option.id;
+      console.log('[EventDetail] selectedTicketId mis à jour:', this.selectedTicketId);
+    } else {
+      console.warn('[EventDetail] ticket épuisé, sélection refusée');
+    }
   }
 
   /* ------------------------------------------------------------------

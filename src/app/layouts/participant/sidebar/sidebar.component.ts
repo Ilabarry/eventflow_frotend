@@ -52,6 +52,11 @@ export class ParticipantSidebarComponent {
       icon: ['M12 15a7 7 0 1 0 0-14 7 7 0 0 0 0 14z', 'M8.21 13.89L7 23l5-3 5 3-1.21-9.12'],
     },
     {
+      label: 'Mes Mresences',
+      path: 'presences',
+      icon: ['M12 15a7 7 0 1 0 0-14 7 7 0 0 0 0 14z', 'M8.21 13.89L7 23l5-3 5 3-1.21-9.12'],
+    },
+    {
       label: 'Notifications',
       path: 'notifications',
       icon: ['M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9', 'M13.73 21a2 2 0 0 1-3.46 0'],

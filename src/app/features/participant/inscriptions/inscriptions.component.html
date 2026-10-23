@@ -154,6 +154,14 @@
                       <span class="badge__dot" aria-hidden="true"></span>
                       {{ card.statusLabel }}
                     </span>
+                    @if (card.statusTone === 'warning') {
+                      <a
+                        class="btn btn--primary"
+                        [routerLink]="['/participant/inscriptions', card.id, 'paiement']"
+                      >
+                        Payer maintenant
+                      </a>
+                    }
                   </div>
 
                   <!-- Date d'inscription et référence -->

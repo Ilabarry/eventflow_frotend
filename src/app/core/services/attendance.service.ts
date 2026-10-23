@@ -37,16 +37,26 @@ export interface AttendanceDto {
   updated_at: string;
 }
 
+/** Ligne de /api/attendance/me/ (MyAttendanceSerializer). */
+export interface MyAttendanceDto {
+  id: string;
+  status: 'PRESENT' | 'ABSENT';
+  checked_in_at: string | null;
+  check_in_method: 'MANUAL' | 'QR_CODE' | null;
+  registration_reference: string;
+  event_id: string;
+  event_title: string;
+  event_start_at: string;
+  event_end_at: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AttendanceService {
   private readonly http = inject(HttpClient);
   private readonly BASE = `${environment.apiUrl}/attendance`;
   private readonly EVENTS_BASE = `${environment.apiUrl}/events`;
 
-  /**
-   * GET /api/events/{eventId}/attendance/
-   * Liste d'accueil : inscriptions CONFIRMED avec statut de présence.
-   */
+  /** GET /api/events/{eventId}/attendance/ */
   listByEvent(
     eventId: string,
     page = 1,
@@ -58,6 +68,21 @@ export class AttendanceService {
 
     return this.http.get<ApiResponse<PaginatedResponse<EventAttendanceRowDto>>>(
       `${this.EVENTS_BASE}/${eventId}/attendance/`,
+      { params },
+    );
+  }
+
+  /** GET /api/attendance/me/ */
+  listMine(
+    page = 1,
+    pageSize = 20,
+  ): Observable<ApiResponse<PaginatedResponse<MyAttendanceDto>>> {
+    const params = new HttpParams()
+      .set('page', page.toString())
+      .set('page_size', pageSize.toString());
+
+    return this.http.get<ApiResponse<PaginatedResponse<MyAttendanceDto>>>(
+      `${this.BASE}/me/`,
       { params },
     );
   }

@@ -1,0 +1,573 @@
+// ==================================================================
+// Page « Mes tickets » (participant)
+//
+// Couleurs et polices : variables globales --evf-* de src/styles.scss.
+// Boutons : .btn / .btn--primary globaux, seulement ajustés ici.
+// ==================================================================
+
+$bp-tablet: 960px;
+$bp-mobile: 640px;
+
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--c-border, var(--evf-border, #E2E8F0));
+  border-top-color: var(--c-violet, var(--evf-violet, #6C5CE7));
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+:host {
+  display: block;
+  font-family: var(--evf-font-body);
+  color: var(--evf-dark);
+}
+
+.tickets {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 1100px;
+
+  &__count {
+    margin: 0 0 12px;
+    font-size: 0.9rem;
+    color: var(--evf-text-muted);
+  }
+}
+
+// ==================================================================
+// BANDEAU (même style que « Mes inscriptions »)
+// ==================================================================
+.hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+  padding: 24px 28px;
+  color: #fff;
+  background: linear-gradient(120deg, var(--evf-dark), #1e1b4b 55%, var(--evf-violet-dark));
+
+  &__flow {
+    position: absolute;
+    inset: 0 0 0 auto;
+    width: 55%;
+    height: 100%;
+    pointer-events: none;
+  }
+
+  &__flow-line {
+    fill: none;
+    stroke: var(--evf-violet);
+    stroke-width: 5;
+    stroke-linecap: round;
+
+    &--soft {
+      stroke: var(--evf-cyan);
+      stroke-width: 2;
+      opacity: 0.6;
+    }
+  }
+
+  &__content {
+    position: relative;
+  }
+
+  &__title {
+    margin: 0;
+    font: 800 clamp(1.4rem, 2.5vw, 1.8rem) var(--evf-font-heading);
+    text-transform: uppercase;
+    background: linear-gradient(90deg, #a29bfe, var(--evf-cyan));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  &__subtitle {
+    margin: 4px 0 18px;
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.85);
+  }
+
+  &__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+}
+
+.filters {
+  display: flex;
+  gap: 10px;
+
+  &__chip {
+    min-height: 40px;
+    padding: 6px 20px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--evf-surface);
+    color: var(--evf-dark);
+    font: 600 0.95rem var(--evf-font-body);
+    white-space: nowrap;
+    cursor: pointer;
+
+    &--active {
+      background: var(--evf-violet);
+      color: #fff;
+    }
+  }
+}
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 1 300px;
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: 10px;
+  background: var(--evf-surface);
+  color: var(--evf-text-muted);
+
+  &:focus-within {
+    outline: 3px solid var(--evf-cyan);
+    outline-offset: 2px;
+  }
+
+  &__input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    font: 0.95rem var(--evf-font-body);
+    color: var(--evf-dark);
+
+    &:focus-visible {
+      outline: none; // le cadre est porté par .search:focus-within
+    }
+  }
+}
+
+.icon {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+// ==================================================================
+// CARTES : affiche | informations | QR code
+// ==================================================================
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr) 160px;
+  gap: 20px;
+  padding: 16px;
+  border: 1px solid var(--evf-border);
+  border-radius: 14px;
+  background: var(--evf-surface);
+
+  // Ticket utilisé, expiré ou annulé : visuellement en retrait
+  &--inactive &__media {
+    filter: grayscale(1);
+    opacity: 0.6;
+  }
+
+  &__media {
+    display: grid;
+    place-content: center;
+    grid-auto-flow: column;
+    align-self: start;
+    aspect-ratio: 4 / 3;
+    border-radius: 10px;
+    font: 800 1rem var(--evf-font-heading);
+    color: var(--evf-violet-dark);
+    background: linear-gradient(135deg, #ede9fe, #cffafe);
+  }
+
+  &__accent {
+    color: var(--evf-cyan);
+  }
+
+  &__body {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  &__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+  }
+
+  &__brand {
+    font: 800 0.95rem var(--evf-font-heading);
+    color: var(--evf-violet-dark);
+  }
+
+  &__title {
+    margin: 0;
+    font: 700 1.05rem / 1.3 var(--evf-font-heading);
+    text-transform: uppercase;
+    overflow-wrap: anywhere;
+  }
+
+  &__type {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  &__reference {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--evf-text-muted);
+    overflow-wrap: anywhere;
+  }
+
+  &__action {
+    margin-top: 4px;
+    min-width: 240px;
+  }
+
+  // Zone du QR, en pointillés comme sur la maquette
+  &__qr {
+    display: grid;
+    place-items: center;
+    padding: 12px;
+    border: 1px dashed var(--evf-border);
+    border-radius: 10px;
+  }
+
+  &__qr-btn {
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: zoom-in;
+
+    img {
+      display: block;
+      width: 120px;
+      height: auto;
+    }
+  }
+
+  &__qr-off {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--evf-text-muted);
+    text-align: center;
+  }
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  &__item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    color: #334155;
+  }
+}
+
+// Badge de statut : texte + pastille, la couleur n'est jamais le seul indice
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 12px 3px 6px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+
+  &__dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  &--success { background: #dcfce7; color: #15803d; }
+  &--info { background: #dbeafe; color: #1d4ed8; }
+  &--neutral { background: #f1f5f9; color: #475569; }
+  &--danger { background: #fee2e2; color: #b91c1c; }
+}
+
+.btn {
+  min-height: 38px;
+  padding: 8px 18px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+
+  &--ticket {
+    background: linear-gradient(90deg, #7fe3ec, #b9a8f7);
+    color: var(--evf-dark);
+  }
+}
+
+// ==================================================================
+// ÉTATS : chargement, erreur, vide
+// ==================================================================
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 48px 24px;
+  border: 1px dashed var(--evf-border);
+  border-radius: 14px;
+  background: var(--evf-surface);
+  text-align: center;
+
+  &__title {
+    margin: 0;
+    font: 700 1.05rem var(--evf-font-heading);
+  }
+
+  &__text {
+    margin: 0 0 8px;
+    color: var(--evf-text-muted);
+  }
+}
+
+.skeleton {
+  height: 170px;
+  border-radius: 14px;
+  background: linear-gradient(90deg, #eef2f7 25%, #e2e8f0 50%, #eef2f7 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.2s infinite;
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}
+
+// ==================================================================
+// PAGINATION : numéros sur grand écran, « Page x sur y » sur mobile
+// ==================================================================
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 24px;
+
+  &__pages {
+    display: flex;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__btn {
+    display: grid;
+    place-items: center;
+    min-width: 40px;
+    height: 40px;
+    border: 1px solid var(--evf-border);
+    border-radius: 10px;
+    background: var(--evf-surface);
+    font: 600 0.95rem var(--evf-font-body);
+    cursor: pointer;
+
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.4;
+    }
+
+    &--active {
+      background: var(--evf-violet);
+      color: #fff;
+    }
+  }
+
+  &__summary {
+    display: none;
+    margin: 0 8px;
+    color: var(--evf-text-muted);
+  }
+}
+
+// ==================================================================
+// FENÊTRE DU QR CODE (élément natif <dialog>)
+// ==================================================================
+.dialog {
+  width: min(400px, calc(100% - 32px));
+  padding: 0;
+  border: 0;
+  border-radius: 16px;
+
+  &::backdrop {
+    background: rgba(17, 24, 39, 0.6);
+  }
+
+  &__panel {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 28px 20px 20px;
+    text-align: center;
+  }
+
+  &__close {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    cursor: pointer;
+  }
+
+  &__title {
+    margin: 0 32px;
+    font: 700 1.1rem / 1.3 var(--evf-font-heading);
+  }
+
+  &__text {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--evf-text-muted);
+  }
+
+  &__qr {
+    width: min(280px, 100%);
+    height: auto;
+    margin: 8px 0;
+  }
+
+  &__reference {
+    margin: 0;
+    font: 700 1rem var(--evf-font-heading);
+    letter-spacing: 0.04em;
+  }
+}
+
+// ==================================================================
+// RESPONSIVE
+// ==================================================================
+@media (max-width: $bp-tablet) {
+  .hero__toolbar {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+  }
+
+  .search {
+    flex-basis: auto;
+  }
+
+  .card {
+    grid-template-columns: 120px minmax(0, 1fr) 140px;
+    gap: 16px;
+  }
+}
+
+@media (max-width: $bp-mobile) {
+  .hero {
+    padding: 20px 16px;
+
+    &__flow {
+      width: 100%;
+      opacity: 0.5;
+    }
+  }
+
+  // Les onglets défilent horizontalement au lieu de passer à la ligne
+  .filters {
+    overflow-x: auto;
+    margin: 0 -16px;
+    padding: 2px 16px 6px;
+    scrollbar-width: none;
+
+    &__chip {
+      min-height: 44px;
+    }
+  }
+
+  .search {
+    min-height: 44px;
+  }
+
+  // Carte empilée : l'affiche (sans image réelle) est masquée, le QR passe dessous
+  .card {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 14px;
+
+    &__media {
+      display: none;
+    }
+
+    &__action {
+      align-self: stretch;
+      min-width: 0;
+    }
+  }
+
+  .btn,
+  .pagination__btn {
+    min-height: 44px;
+  }
+
+  .pagination__pages {
+    display: none;
+  }
+
+  .pagination__summary {
+    display: block;
+  }
+}

@@ -1,0 +1,53 @@
+<section class="pres" aria-labelledby="pres-title">
+  <header class="hero">
+    <svg class="hero__flow" viewBox="0 0 400 140" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0 120 C 60 60, 110 40, 170 70 S 280 120, 330 50 S 380 10, 400 18" class="hero__flow-line" />
+      <path d="M0 132 C 80 90, 140 80, 200 100 S 300 130, 400 70" class="hero__flow-line hero__flow-line--soft" />
+    </svg>
+    <div class="hero__content">
+      <h1 id="pres-title" class="hero__title">Mes présences</h1>
+      <p class="hero__subtitle">Vos participations enregistrées à la porte de chaque événement.</p>
+    </div>
+  </header>
+
+  @switch (loadState()) {
+    @case ('loading') {
+      <div class="state"><span class="spinner"></span> Chargement…</div>
+    }
+    @case ('error') {
+      <div class="state state--error">
+        <p>Impossible de charger vos présences.</p>
+        <a routerLink="/participant/dashboard" class="btn btn--solid">Retour</a>
+      </div>
+    }
+    @default {
+      @if (items().length === 0) {
+        <div class="state">
+          <p>Vous n'avez encore aucune présence enregistrée.</p>
+          <p class="state__text">Votre présence est enregistrée par l'organisateur le jour de l'événement.</p>
+          <a routerLink="/events" class="btn btn--solid">Découvrir les événements</a>
+        </div>
+      } @else {
+        <ul class="list">
+          @for (a of items(); track a.id) {
+            <li>
+              <article class="card">
+                <div class="card__body">
+                  <h2 class="card__title">{{ a.event_title }}</h2>
+                  <p class="card__meta">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M3 10h18M8 3v4M16 3v4"></path></svg>
+                    {{ whenLabel(a.event_start_at) }}
+                  </p>
+                  <p class="card__ref">Réf. inscription : {{ a.registration_reference }}</p>
+                </div>
+                <span [class]="'badge badge--' + statusTone(a.status)">
+                  <span class="badge__dot"></span> {{ statusLabel(a.status) }}
+                </span>
+              </article>
+            </li>
+          }
+        </ul>
+      }
+    }
+  }
+</section>

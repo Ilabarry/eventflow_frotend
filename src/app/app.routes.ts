@@ -36,6 +36,8 @@ import { Role } from './core/models/user.model';
 import { OrganizerProfileComponent } from './features/organizer/profil/profil.component';
 import { AboutComponent } from './features/public/about/about.component';
 import { ParticipantEventsComponent } from './features/participant/evenements/evenements.component';
+import { ParticipantPaiementComponent } from './features/participant/paiement/paiement.component';
+import { ParticipantPresencesComponent } from './features/participant/presences/presences.component';
 
 export const routes: Routes = [
   { path: 'register', component: RegisterComponent },
@@ -88,7 +90,9 @@ export const routes: Routes = [
       { path: 'dashboard', component: ParticipantDashboardComponent },
       { path: 'evenements', component: ParticipantEventsComponent },
       { path: 'inscriptions', component: ParticipantRegistrationsComponent },
+      { path: 'inscriptions/:registrationId/paiement', component: ParticipantPaiementComponent },
       { path: 'tickets', component: ParticipantTicketsComponent },
+       { path: 'presences', component: ParticipantPresencesComponent },
       { path: 'attestations', component: ParticipantCertificatesComponent },
       { path: 'profil', component: ParticipantProfileComponent },
       { path: 'notifications', component: ParticipantNotificationsComponent },

@@ -27,6 +27,23 @@
   box-sizing: border-box;
 }
 
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--c-border, var(--evf-border, #E2E8F0));
+  border-top-color: var(--c-violet, var(--evf-violet, #6C5CE7));
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 button {
   font: inherit;
   color: inherit;
