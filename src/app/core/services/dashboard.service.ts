@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../models/api-response.model';
+import { EventFormat, EventStatus } from '../models/event.model';
 
 /* ------------------------------------------------------------------
    DTOs — alignés sur les serializers backend
@@ -97,6 +98,52 @@ export interface OrganizerStatisticsDto {
 }
 
 /* ------------------------------------------------------------------
+   Dashboard participant — GET /api/dashboard/participant/
+   (ParticipantDashboardSerializer)
+   ------------------------------------------------------------------ */
+
+export interface ParticipantSummaryDto {
+  total_registrations: number;
+  pending_registrations: number;
+  confirmed_registrations: number;
+  cancelled_registrations: number;
+  upcoming_events: number;
+  completed_events: number;
+  attended_events: number;
+}
+
+/** ParticipantDashboardEventSerializer : pas d'image ni de catégorie. */
+export interface ParticipantDashboardEventDto {
+  id: string;
+  title: string;
+  start_at: string;
+  end_at: string;
+  format: EventFormat;
+  venue_name: string;
+  address: string;
+  city: string;
+  room: string;
+  online_platform: string;
+  status: EventStatus;
+}
+
+export interface ParticipantDashboardRegistrationDto {
+  id: string;
+  reference: string;
+  status: 'PENDING' | 'CONFIRMED' | 'CANCELLED';
+  registered_at: string;
+  event: ParticipantDashboardEventDto;
+  access_url: string | null;
+}
+
+export interface ParticipantDashboardDto {
+  summary: ParticipantSummaryDto;
+  /** Triées par date de début, 5 au maximum, événements à venir seulement. */
+  upcoming_registrations: ParticipantDashboardRegistrationDto[];
+  recent_registrations: ParticipantDashboardRegistrationDto[];
+}
+
+/* ------------------------------------------------------------------
    Périodes côté frontend
    ------------------------------------------------------------------ */
 export type ChartPeriod = 'last_30_days' | 'last_6_months' | 'last_12_months';
@@ -109,6 +156,11 @@ export class DashboardService {
   /** GET /api/dashboard/organizer/ */
   getOrganizerDashboard(): Observable<ApiResponse<OrganizerDashboardDto>> {
     return this.http.get<ApiResponse<OrganizerDashboardDto>>(`${this.BASE}/organizer/`);
+  }
+
+  /** GET /api/dashboard/participant/ */
+  getParticipantDashboard(): Observable<ApiResponse<ParticipantDashboardDto>> {
+    return this.http.get<ApiResponse<ParticipantDashboardDto>>(`${this.BASE}/participant/`);
   }
 
   /** GET /api/dashboard/organizer/statistics/?period=… */
@@ -132,4 +184,4 @@ export class DashboardService {
       { params },
     );
   }
-}
+}
