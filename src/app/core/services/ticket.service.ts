@@ -17,6 +17,8 @@ export interface MyTicketDto {
   used_at: string | null;
   event_id: string;
   event_title: string;
+  /** URL complète de l'affiche de l'événement, ou null. */
+  event_cover_image: string | null;
   ticket_type_name: string;
 }
 

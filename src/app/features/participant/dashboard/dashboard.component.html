@@ -51,7 +51,11 @@
           @if (nextEvent(); as next) {
             <article class="next" aria-labelledby="next-event-title">
               <div class="next__media" aria-hidden="true">
-                <span>EVENT</span><span class="next__media-accent">FLOW</span>
+                @if (next.coverImage) {
+                  <img [src]="next.coverImage" alt="" width="440" height="275" decoding="async" />
+                } @else {
+                  <span>EVENT</span><span class="next__media-accent">FLOW</span>
+                }
               </div>
 
               <div class="next__body">
@@ -131,7 +135,11 @@
                 <li>
                   <article class="mini" [attr.aria-labelledby]="'mini-' + card.registrationId">
                     <div class="mini__media" aria-hidden="true">
-                      <span>EVENT</span><span class="next__media-accent">FLOW</span>
+                      @if (card.coverImage) {
+                        <img [src]="card.coverImage" alt="" width="220" height="220" loading="lazy" decoding="async" />
+                      } @else {
+                        <span>EVENT</span><span class="next__media-accent">FLOW</span>
+                      }
                     </div>
                     <div class="mini__body">
                       <h3 class="mini__title" [id]="'mini-' + card.registrationId">{{ card.title }}</h3>

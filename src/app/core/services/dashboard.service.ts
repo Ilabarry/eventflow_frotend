@@ -112,10 +112,12 @@ export interface ParticipantSummaryDto {
   attended_events: number;
 }
 
-/** ParticipantDashboardEventSerializer : pas d'image ni de catégorie. */
+/** ParticipantDashboardEventSerializer (pas de catégorie). */
 export interface ParticipantDashboardEventDto {
   id: string;
   title: string;
+  /** URL complète de l'affiche, ou null si l'événement n'en a pas. */
+  cover_image: string | null;
   start_at: string;
   end_at: string;
   format: EventFormat;
@@ -184,4 +186,4 @@ export class DashboardService {
       { params },
     );
   }
-}
+}

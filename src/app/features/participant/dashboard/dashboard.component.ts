@@ -32,6 +32,7 @@ interface EventCard {
   registrationId: string;
   eventId: string;
   title: string;
+  coverImage: string | null;
   startIso: string;
   whenLabel: string;
   isOnline: boolean;
@@ -68,6 +69,7 @@ function toEventCard(item: ParticipantDashboardRegistrationDto): EventCard {
     registrationId: item.id,
     eventId: event.id,
     title: event.title,
+    coverImage: event.cover_image,
     startIso: event.start_at,
     whenLabel: `${DATE_FORMAT.format(start)} · ${TIME_FORMAT.format(start).replace(':', 'h')}`,
     isOnline,

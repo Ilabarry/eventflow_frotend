@@ -86,8 +86,12 @@
             @for (card of cards(); track card.id) {
               <li>
                 <article class="card" [class.card--inactive]="!card.isValid" [attr.aria-labelledby]="'ticket-' + card.id">
-                  <div class="card__media" aria-hidden="true">
-                    <span>EVENT</span><span class="card__accent">FLOW</span>
+                  <div class="card__media" [class.card__media--empty]="!card.coverImage" aria-hidden="true">
+                    @if (card.coverImage) {
+                      <img [src]="card.coverImage" alt="" width="360" height="270" loading="lazy" decoding="async" />
+                    } @else {
+                      <span>EVENT</span><span class="card__accent">FLOW</span>
+                    }
                   </div>
 
                   <div class="card__body">
