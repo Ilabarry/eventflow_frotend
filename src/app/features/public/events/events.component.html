@@ -1,7 +1,6 @@
-
 <div class="events-page" id="home">
   <main>
-    <!-- Bannière principale -->
+    <!-- ============================ BANNIÈRE ============================ -->
     <section class="hero content-width" aria-labelledby="hero-title">
       <div class="hero-copy">
         <span class="eyebrow">
@@ -17,8 +16,18 @@
         <p>Explorez les événements qui correspondent à vos envies.</p>
 
         <div class="hero-stats" aria-label="Les avantages EVENTFLOW">
-          <span><span class="tiny-check">✓</span> Des événements variés</span>
-          <span><span class="tiny-check">✓</span> Une expérience simple</span>
+          <span>
+            <span class="tiny-check" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg>
+            </span>
+            Des événements variés
+          </span>
+          <span>
+            <span class="tiny-check" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg>
+            </span>
+            Une expérience simple
+          </span>
         </div>
       </div>
 
@@ -31,7 +40,14 @@
         <div class="hero-image-shade"></div>
 
         <div class="floating-card floating-card-top">
-          <span class="floating-icon purple-icon" aria-hidden="true">▦</span>
+          <span class="floating-icon purple-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+          </span>
           <span>
             <strong>Conférences</strong>
             <small>Networking professionnel</small>
@@ -39,7 +55,11 @@
         </div>
 
         <div class="floating-card floating-card-bottom">
-          <span class="floating-icon cyan-icon" aria-hidden="true">★</span>
+          <span class="floating-icon cyan-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+            </svg>
+          </span>
           <span>
             <strong>Des expériences</strong>
             <small>uniques</small>
@@ -48,7 +68,7 @@
       </div>
     </section>
 
-    <!-- Recherche et filtres rapides -->
+    <!-- ============================ RECHERCHE ============================ -->
     <section class="search-section content-width" aria-label="Rechercher des événements">
       <div class="search-panel">
         <form class="search-row" (submit)="$event.preventDefault(); onFiltersChanged()">
@@ -74,6 +94,7 @@
               <circle cx="10.8" cy="10.8" r="6.8"></circle>
               <path d="m16 16 4.2 4.2"></path>
             </svg>
+            <span class="search-button-text">Rechercher</span>
           </button>
         </form>
 
@@ -137,42 +158,42 @@
       </div>
     </section>
 
-    <!-- Liste et filtres latéraux -->
-    <section
-      class="listing-section content-width"
-      id="events"
-      aria-labelledby="events-title"
-    >
+    <!-- ============================ LISTE + FILTRES ============================ -->
+    <section class="listing-section content-width" id="events" aria-labelledby="events-title">
       <details class="filters-panel" open>
         <summary>
-          <span class="summary-filter-icon" aria-hidden="true">☷</span>
+          <span class="summary-filter-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M4 21v-7"></path><path d="M4 10V3"></path>
+              <path d="M12 21v-9"></path><path d="M12 8V3"></path>
+              <path d="M20 21v-5"></path><path d="M20 12V3"></path>
+              <path d="M1 14h6"></path><path d="M9 8h6"></path><path d="M17 16h6"></path>
+            </svg>
+          </span>
           Filtres
-          <span class="summary-chevron" aria-hidden="true">⌄</span>
+          @if (selectedCategories.length + selectedFormats.length + selectedPrices.length + selectedDates.length > 0) {
+            <span class="summary-count">
+              {{ selectedCategories.length + selectedFormats.length + selectedPrices.length + selectedDates.length }}
+            </span>
+          }
+          <span class="summary-chevron" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg>
+          </span>
         </summary>
 
         <div class="filters-content">
-          <div class="filters-title-row">
-            <div class="filters-title">
-              <span class="filters-title-icon" aria-hidden="true">☷</span>
-              <h2>Filtrer</h2>
-            </div>
-
-            <button class="clear-filters" type="button" (click)="resetFilters()">
-              Réinitialiser
-            </button>
-          </div>
-
           <fieldset class="filter-group">
             <legend>Catégorie</legend>
             @for (category of categories; track category.id) {
               <label class="check-row">
                 <input
+                  class="check-input"
                   type="checkbox"
                   [checked]="selectedCategories.includes(category.name)"
                   (change)="toggleFilter('categories', category.name, $event)"
                 />
                 <span class="custom-checkbox" aria-hidden="true"></span>
-                <span>{{ category.name }}</span>
+                <span class="check-label">{{ category.name }}</span>
               </label>
             }
           </fieldset>
@@ -182,12 +203,13 @@
             @for (format of formats; track format.value) {
               <label class="check-row">
                 <input
+                  class="check-input"
                   type="checkbox"
                   [checked]="selectedFormats.includes(format.value)"
                   (change)="toggleFilter('formats', format.value, $event)"
                 />
                 <span class="custom-checkbox" aria-hidden="true"></span>
-                <span>{{ format.label }}</span>
+                <span class="check-label">{{ format.label }}</span>
               </label>
             }
           </fieldset>
@@ -197,12 +219,13 @@
             @for (price of priceOptions; track price.value) {
               <label class="check-row">
                 <input
+                  class="check-input"
                   type="checkbox"
                   [checked]="selectedPrices.includes(price.value)"
                   (change)="toggleFilter('prices', price.value, $event)"
                 />
                 <span class="custom-checkbox" aria-hidden="true"></span>
-                <span>{{ price.label }}</span>
+                <span class="check-label">{{ price.label }}</span>
               </label>
             }
           </fieldset>
@@ -212,12 +235,13 @@
             @for (date of dateOptions; track date.value) {
               <label class="check-row">
                 <input
+                  class="check-input"
                   type="checkbox"
                   [checked]="selectedDates.includes(date.value)"
                   (change)="toggleFilter('dates', date.value, $event)"
                 />
                 <span class="custom-checkbox" aria-hidden="true"></span>
-                <span>{{ date.label }}</span>
+                <span class="check-label">{{ date.label }}</span>
               </label>
             }
           </fieldset>
@@ -241,7 +265,7 @@
           </div>
 
           <label class="sort-control">
-            <span>Trier par :</span>
+            <span>Trier par</span>
             <select
               name="sort-events"
               [(ngModel)]="sortBy"
@@ -255,12 +279,26 @@
         </div>
 
         @if (isLoading) {
-          <div class="empty-state" role="status" aria-live="polite">
-            <h3>Chargement des événements…</h3>
-            <p>Nous récupérons les événements disponibles.</p>
+          <div class="event-grid" role="status" aria-live="polite" aria-busy="true">
+            <span class="sr-only">Chargement des événements…</span>
+            @for (item of [1, 2, 3, 4, 5, 6]; track item) {
+              <div class="skeleton-card" aria-hidden="true">
+                <span class="skeleton skeleton-image"></span>
+                <span class="skeleton skeleton-line skeleton-line-sm"></span>
+                <span class="skeleton skeleton-line skeleton-line-lg"></span>
+                <span class="skeleton skeleton-line"></span>
+                <span class="skeleton skeleton-line skeleton-line-md"></span>
+              </div>
+            }
           </div>
         } @else if (errorMessage) {
-          <div class="empty-state" role="alert">
+          <div class="empty-state empty-state-error" role="alert">
+            <span class="empty-state-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                <path d="M12 9v4"></path><path d="M12 17h.01"></path>
+              </svg>
+            </span>
             <h3>Impossible de charger les événements</h3>
             <p>{{ errorMessage }}</p>
             <button class="button-primary" type="button" (click)="loadEvents()">
@@ -281,6 +319,7 @@
                     [src]="getEventImage(event)"
                     [alt]="'Image de l’événement ' + event.title"
                     loading="lazy"
+                    (error)="$any($event.target).style.display = 'none'"
                   />
 
                   <span
@@ -294,15 +333,22 @@
 
                 <div class="event-card-body">
                   <span class="event-date">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path>
+                      <path d="M16 2v4"></path><path d="M8 2v4"></path><path d="M3 10h18"></path>
+                    </svg>
                     {{ formatEventDate(event.start_at) }}
                   </span>
 
                   <h3>{{ event.title }}</h3>
 
                   <p class="event-location">
-                    <span aria-hidden="true">⌖</span>
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                      <circle cx="12" cy="10" r="3"></circle>
+                    </svg>
                     {{ event.city || 'Lieu à préciser' }}
-                    <span aria-hidden="true">·</span>
+                    <span class="dot-sep" aria-hidden="true">·</span>
                     {{ formatLabel(event.format) }}
                   </p>
 
@@ -311,7 +357,7 @@
                   </p>
 
                   <p class="event-category">
-                    {{ event.category.name }}
+                    <span class="tag">{{ event.category.name }}</span>
                   </p>
 
                   <div class="event-card-footer">
@@ -328,7 +374,9 @@
                       (click)="openEvent(event)"
                       [attr.aria-label]="'Afficher les détails de ' + event.title"
                     >
-                      +
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M5 12h14"></path><path d="M12 5l7 7-7 7"></path>
+                      </svg>
                     </button>
                   </div>
                 </div>
@@ -337,7 +385,12 @@
           </div>
         } @else {
           <div class="empty-state">
-            <span class="empty-state-icon" aria-hidden="true">⌕</span>
+            <span class="empty-state-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <circle cx="10.8" cy="10.8" r="6.8"></circle>
+                <path d="m16 16 4.2 4.2"></path>
+              </svg>
+            </span>
             <h3>Aucun événement trouvé</h3>
             <p>Modifiez votre recherche ou retirez quelques filtres.</p>
             <button class="button-primary" type="button" (click)="resetFilters()">
@@ -356,7 +409,7 @@
               [disabled]="currentPage === 1"
               (click)="goToPage(currentPage - 1)"
             >
-              ‹
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
             </button>
 
             @for (page of pageNumbers; track page) {
@@ -378,37 +431,49 @@
               [disabled]="currentPage === totalPages"
               (click)="goToPage(currentPage + 1)"
             >
-              ›
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"></path></svg>
             </button>
           </nav>
         }
       </div>
     </section>
 
-    <!-- Parcours EVENTFLOW -->
+    <!-- ============================ COMMENT ÇA MARCHE ============================ -->
     <section class="flow-strip content-width" id="how-it-works" aria-label="Comment ça marche">
       <div class="flow-step">
-        <span>01</span>
-        <strong>Découvrez</strong>
-        <small>Trouvez ce qui vous inspire.</small>
+        <span class="flow-number">01</span>
+        <span class="flow-text">
+          <strong>Découvrez</strong>
+          <small>Trouvez ce qui vous inspire.</small>
+        </span>
       </div>
       <span class="flow-connector" aria-hidden="true"></span>
       <div class="flow-step">
-        <span>02</span>
-        <strong>Inscrivez-vous</strong>
-        <small>Réservez votre place facilement.</small>
+        <span class="flow-number">02</span>
+        <span class="flow-text">
+          <strong>Inscrivez-vous</strong>
+          <small>Réservez votre place facilement.</small>
+        </span>
       </div>
       <span class="flow-connector" aria-hidden="true"></span>
       <div class="flow-step">
-        <span>03</span>
-        <strong>Participez</strong>
-        <small>Vivez de nouvelles expériences.</small>
+        <span class="flow-number">03</span>
+        <span class="flow-text">
+          <strong>Participez</strong>
+          <small>Vivez de nouvelles expériences.</small>
+        </span>
       </div>
     </section>
 
-    <!-- Appel à l'action organisateur -->
+    <!-- ============================ APPEL À L'ACTION ORGANISATEUR ============================ -->
     <section class="organizer-cta content-width" id="create-event">
-      <div class="cta-calendar" aria-hidden="true">＋</div>
+      <div class="cta-calendar" aria-hidden="true">
+        <svg viewBox="0 0 24 24">
+          <path d="M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path>
+          <path d="M16 2v4"></path><path d="M8 2v4"></path><path d="M3 10h18"></path>
+          <path d="M12 14v4"></path><path d="M10 16h4"></path>
+        </svg>
+      </div>
       <div class="cta-copy">
         <h2>VOUS ORGANISEZ UN ÉVÉNEMENT ?</h2>
         <p>Publiez votre événement sur EVENTFLOW.</p>
@@ -418,12 +483,15 @@
         type="button"
         (click)="showNavigationNotice('Créer un événement')"
       >
-        Créer un événement <span aria-hidden="true">→</span>
+        Créer un événement
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M5 12h14"></path><path d="M12 5l7 7-7 7"></path>
+        </svg>
       </button>
     </section>
   </main>
 
-  <!-- Fenêtre de détail -->
+  <!-- ============================ DÉTAIL D'UN ÉVÉNEMENT ============================ -->
   @if (selectedEvent; as event) {
     <div
       class="modal-backdrop"
@@ -443,17 +511,17 @@
           aria-label="Fermer les détails"
           (click)="closeEvent()"
         >
-          ×
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M18 6L6 18"></path><path d="M6 6l12 12"></path>
+          </svg>
         </button>
 
-        <img
-          [src]="getEventImage(event)"
-          [alt]="'Image de l’événement ' + event.title"
-        />
-
-        <div class="modal-content">
-          <span class="event-date">{{ formatEventDate(event.start_at) }}</span>
-
+        <div class="modal-media">
+          <img
+            [src]="getEventImage(event)"
+            [alt]="'Image de l’événement ' + event.title"
+            (error)="$any($event.target).style.display = 'none'"
+          />
           <span
             class="format-badge modal-format"
             [class.online-badge]="event.format === 'ONLINE'"
@@ -461,26 +529,63 @@
           >
             {{ formatLabel(event.format) }}
           </span>
+        </div>
+
+        <div class="modal-content">
+          <div class="modal-tags">
+            <span class="tag">{{ event.category.name }}</span>
+            <span
+              class="price-badge"
+              [class.paid-price]="event.participation_type === 'PAID'"
+            >
+              {{ formatPrice(event) }}
+            </span>
+          </div>
 
           <h2>{{ event.title }}</h2>
-          <p class="modal-category">
-            {{ event.category.name }} · {{ event.city || 'Lieu à préciser' }}
-          </p>
-          <p>{{ event.short_description }}</p>
-          <p class="modal-price">{{ formatPrice(event) }}</p>
+
+          <ul class="modal-meta">
+            <li>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path>
+                <path d="M16 2v4"></path><path d="M8 2v4"></path><path d="M3 10h18"></path>
+              </svg>
+              {{ formatEventDate(event.start_at) }}
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                <circle cx="12" cy="10" r="3"></circle>
+              </svg>
+              {{ event.city || 'Lieu à préciser' }}
+              <span class="dot-sep" aria-hidden="true">·</span>
+              {{ formatLabel(event.format) }}
+            </li>
+          </ul>
+
+          <p class="modal-description">{{ event.short_description }}</p>
 
           <p class="modal-note">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M12 16v-4"></path><path d="M12 8h.01"></path>
+            </svg>
             Les informations présentées proviennent des données publiques
             disponibles pour cet événement.
           </p>
 
-          <button
-            class="button-primary modal-done"
-            type="button"
-            (click)="closeEvent()"
-          >
-            Fermer
-          </button>
+          <div class="modal-actions">
+            <button class="button-ghost" type="button" (click)="closeEvent()">
+              Fermer
+            </button>
+            <button
+              class="button-primary"
+              type="button"
+              (click)="showNavigationNotice('S’inscrire à cet événement')"
+            >
+              S’inscrire
+            </button>
+          </div>
         </div>
       </section>
     </div>
@@ -495,7 +600,9 @@
         aria-label="Fermer le message"
         (click)="clearNavigationNotice()"
       >
-        ×
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M18 6L6 18"></path><path d="M6 6l12 12"></path>
+        </svg>
       </button>
     </div>
   }

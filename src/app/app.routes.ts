@@ -33,6 +33,7 @@ import { OrganizerEditEventComponent } from './features/organizer/modifier-evene
 import { authGuard } from './core/guards/auth.guard';
 import { roleGuard } from './core/guards/role.guard';
 import { Role } from './core/models/user.model';
+import { OrganizerProfileComponent } from './features/organizer/profil/profil.component';
 
 export const routes: Routes = [
   { path: 'register', component: RegisterComponent },
@@ -64,6 +65,7 @@ export const routes: Routes = [
       { path: 'statistiques', component: OrganizerStatistiquesComponent },
       { path: 'notifications', component: OrganizerNotificationsComponent },
       { path: 'creer-evenement', component: OrganizerCreateEventComponent },
+      { path: 'profile', component: OrganizerProfileComponent },
       {
         path: 'evenements/:id/modifier',
         component: OrganizerEditEventComponent,

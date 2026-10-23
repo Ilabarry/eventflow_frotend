@@ -1,1 +1,660 @@
-<p>profil works!</p>
+<div class="pf">
+  <!-- ============================ BANNIÈRE ============================ -->
+  <section class="hero">
+    <svg class="hero__wave" viewBox="0 0 400 120" preserveAspectRatio="none" aria-hidden="true">
+      <defs>
+        <linearGradient id="pfHeroWave" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#8B7CF6" />
+          <stop offset="1" stop-color="#22C7D6" />
+        </linearGradient>
+      </defs>
+      <path d="M0 90 C 50 20, 110 110, 180 60 S 300 0, 400 40" fill="none" stroke="url(#pfHeroWave)" stroke-width="2.5" vector-effect="non-scaling-stroke" />
+    </svg>
+
+    <div class="hero__content">
+      <h1 class="hero__title">Mon profil</h1>
+      <p class="hero__text">Gérez vos informations, votre organisation et vos espaces.</p>
+    </div>
+  </section>
+
+  @switch (loadState()) {
+    @case ('loading') {
+      <div class="skeleton" aria-busy="true" aria-label="Chargement du profil">
+        <div class="skeleton__side">
+          <span class="sk sk--avatar"></span>
+          <span class="sk sk--title"></span>
+          <span class="sk"></span>
+          <span class="sk"></span>
+          <span class="sk"></span>
+        </div>
+        <div class="skeleton__main">
+          <span class="sk sk--title"></span>
+          <span class="sk sk--block"></span>
+          <span class="sk sk--block"></span>
+          <span class="sk sk--block sk--tall"></span>
+        </div>
+      </div>
+    }
+
+    @case ('error') {
+      <section class="state">
+        <span class="state__icon state__icon--danger">
+          <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <path d="M12 9v4"></path><path d="M12 17h.01"></path>
+          </svg>
+        </span>
+        <h2 class="state__title">Impossible de charger votre profil</h2>
+        <p class="state__text">Vérifiez votre connexion puis réessayez.</p>
+        <button type="button" class="btn btn--solid" (click)="load()">Réessayer</button>
+      </section>
+    }
+
+    @default {
+      @if (data(); as d) {
+        <!-- Champ image réutilisable : photo de profil et logo -->
+        <ng-template #imageField let-kind>
+          <div class="upload">
+            <input
+              #file type="file" class="sr-only" tabindex="-1"
+              accept="image/jpeg,image/png,image/webp" (change)="onImageInput(kind, $event)"
+            />
+            <span class="upload__preview" [class.upload__preview--round]="kind === 'avatar'">
+              @if (image(kind); as img) {
+                <img [src]="img.url" alt="" />
+              } @else if (kind === 'avatar') {
+                <span class="upload__initials">{{ identity()?.initials }}</span>
+              } @else {
+                <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"></path>
+                  <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                </svg>
+              }
+            </span>
+            <div class="upload__body">
+              <p class="upload__title">{{ kind === 'avatar' ? 'Photo de profil' : "Logo de l'organisation" }}</p>
+              <p class="upload__hint">JPG, PNG ou WEBP · 2 Mo maximum</p>
+              <div class="upload__actions">
+                <button type="button" class="btn btn--outline btn--sm" (click)="file.click()">
+                  {{ image(kind) ? 'Changer' : 'Ajouter' }}
+                </button>
+                @if (image(kind)) {
+                  <button type="button" class="link-btn link-btn--danger" (click)="removeImage(kind)">Supprimer</button>
+                }
+              </div>
+              @if (imageErrorOf(kind); as err) {
+                <span class="field__error">{{ err }}</span>
+              }
+            </div>
+          </div>
+        </ng-template>
+
+        <div class="pf__layout">
+          <!-- ============================ IDENTITÉ + NAVIGATION ============================ -->
+          <aside class="side">
+            @if (identity(); as i) {
+              <div class="id">
+                <span class="avatar">
+                  @if (i.avatar) {
+                    <img [src]="i.avatar" alt="" />
+                  } @else {
+                    {{ i.initials }}
+                  }
+                </span>
+                <div class="id__text">
+                  <p class="id__name">{{ i.name }}</p>
+                  <p class="id__org">{{ i.org }}</p>
+                  <p class="id__email">{{ i.email }}</p>
+                  <ul class="roles" aria-label="Espaces actifs">
+                    <li class="role role--org">Organisateur</li>
+                    @if (participant()) {
+                      <li class="role role--part">Participant</li>
+                    }
+                  </ul>
+                </div>
+              </div>
+            }
+
+            <nav class="nav" aria-label="Sections du profil">
+              @for (s of sections; track s.key) {
+                <button
+                  type="button" class="nav__item"
+                  [attr.aria-current]="section() === s.key ? 'page' : null"
+                  (click)="setSection(s.key)"
+                >
+                  <span class="nav__icon">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      @for (p of s.icon; track p) {
+                        <path [attr.d]="p"></path>
+                      }
+                    </svg>
+                  </span>
+                  <span class="nav__text">
+                    <span class="nav__label">{{ s.label }}</span>
+                    <span class="nav__hint">{{ s.hint }}</span>
+                  </span>
+                  @if (sectionDirty(s.key)) {
+                    <span class="nav__dot" title="Modifications non enregistrées"></span>
+                    <span class="sr-only">(modifications non enregistrées)</span>
+                  }
+                </button>
+              }
+            </nav>
+          </aside>
+
+          <!-- ============================ CONTENU ============================ -->
+          <div class="content">
+            <!-- ======================= INFORMATIONS PERSONNELLES ======================= -->
+            <section class="panel" [hidden]="section() !== 'infos'" aria-labelledby="pf-title-infos">
+              <header class="panel__head">
+                <h2 class="panel__title" id="pf-title-infos">Informations personnelles</h2>
+                <p class="panel__sub">
+                  @if (participant()) {
+                    Ces informations sont partagées entre votre espace organisateur et votre espace participant.
+                  } @else {
+                    Ces informations sont visibles par les participants de vos événements.
+                  }
+                </p>
+              </header>
+
+              @if (pendingEmail(); as pending) {
+                <div class="notice" role="status">
+                  <div>
+                    <strong>Changement d'adresse en attente</strong>
+                    <p>
+                      Un e-mail a été envoyé à <strong>{{ pending }}</strong>. Cliquez sur le lien qu'il contient pour confirmer.
+                      Jusqu'à là, vous continuez à vous connecter avec <strong>{{ d.email }}</strong>.
+                    </p>
+                  </div>
+                  <span class="notice__actions">
+                    <button type="button" class="link-btn" (click)="resendEmail()">Renvoyer l'e-mail</button>
+                    <button type="button" class="link-btn link-btn--muted" (click)="cancelPendingEmail()">Annuler le changement</button>
+                  </span>
+                </div>
+              }
+
+              <form class="form" [formGroup]="profileForm" (ngSubmit)="saveInfos()" novalidate>
+                <ng-container [ngTemplateOutlet]="imageField" [ngTemplateOutletContext]="{ $implicit: 'avatar' }" />
+
+                <div class="fields-2">
+                  <div class="field">
+                    <label class="field__label" for="pf-first">Prénom <span class="req">*</span></label>
+                    <input
+                      id="pf-first" type="text" class="input" formControlName="firstName" autocomplete="given-name"
+                      [class.input--error]="showError(profileForm.controls.firstName)"
+                      [attr.aria-invalid]="showError(profileForm.controls.firstName)"
+                    />
+                    @if (showError(profileForm.controls.firstName)) {
+                      <span class="field__error">{{ errorMessage(profileForm.controls.firstName) }}</span>
+                    }
+                  </div>
+
+                  <div class="field">
+                    <label class="field__label" for="pf-last">Nom <span class="req">*</span></label>
+                    <input
+                      id="pf-last" type="text" class="input" formControlName="lastName" autocomplete="family-name"
+                      [class.input--error]="showError(profileForm.controls.lastName)"
+                      [attr.aria-invalid]="showError(profileForm.controls.lastName)"
+                    />
+                    @if (showError(profileForm.controls.lastName)) {
+                      <span class="field__error">{{ errorMessage(profileForm.controls.lastName) }}</span>
+                    }
+                  </div>
+                </div>
+
+                <div class="fields-2">
+                  <div class="field">
+                    <label class="field__label" for="pf-email">Adresse e-mail <span class="req">*</span></label>
+                    <input
+                      id="pf-email" type="email" class="input" formControlName="email" autocomplete="email"
+                      [class.input--error]="showError(profileForm.controls.email)"
+                      [attr.aria-invalid]="showError(profileForm.controls.email)"
+                    />
+                    @if (showError(profileForm.controls.email)) {
+                      <span class="field__error">{{ errorMessage(profileForm.controls.email) }}</span>
+                    } @else {
+                      <span class="field__hint">Elle sert aussi à vous connecter. Un changement doit être confirmé par e-mail.</span>
+                    }
+                  </div>
+
+                  <div class="field">
+                    <label class="field__label" for="pf-phone">Téléphone</label>
+                    <input
+                      id="pf-phone" type="tel" class="input" formControlName="phone" autocomplete="tel" placeholder="77 123 45 67"
+                      [class.input--error]="showError(profileForm.controls.phone)"
+                      [attr.aria-invalid]="showError(profileForm.controls.phone)"
+                    />
+                    @if (showError(profileForm.controls.phone)) {
+                      <span class="field__error">{{ errorMessage(profileForm.controls.phone) }}</span>
+                    }
+                  </div>
+                </div>
+
+                <div class="fields-2">
+                  <div class="field">
+                    <label class="field__label" for="pf-city">Ville</label>
+                    <input id="pf-city" type="text" class="input" formControlName="city" autocomplete="address-level2" placeholder="Dakar" />
+                  </div>
+
+                  <div class="field">
+                    <label class="field__label" for="pf-country">Pays</label>
+                    <select id="pf-country" class="input select" formControlName="country" autocomplete="country-name">
+                      <option value="">Sélectionner un pays</option>
+                      @for (c of countries; track c) {
+                        <option [value]="c">{{ c }}</option>
+                      }
+                    </select>
+                  </div>
+                </div>
+
+                <div class="field">
+                  <label class="field__label" for="pf-bio">À propos de vous</label>
+                  <textarea
+                    id="pf-bio" class="input textarea" rows="3" formControlName="bio" maxlength="300"
+                    placeholder="Présentez-vous en quelques mots..."
+                  ></textarea>
+                  <span class="field__hint">{{ profileForm.controls.bio.value.length }} / 300</span>
+                </div>
+
+                <footer class="actions">
+                  @if (infosChanged()) {
+                    <button type="button" class="link-btn link-btn--muted" (click)="cancelInfos()" [disabled]="saving() === 'infos'">
+                      Annuler les modifications
+                    </button>
+                  }
+                  <button type="submit" class="btn btn--solid" [disabled]="!infosChanged() || saving() === 'infos'">
+                    @if (saving() === 'infos') {
+                      <span class="spinner" aria-hidden="true"></span> Enregistrement...
+                    } @else {
+                      Enregistrer
+                    }
+                  </button>
+                </footer>
+              </form>
+            </section>
+
+            <!-- ======================= ORGANISATION ======================= -->
+            <section class="panel" [hidden]="section() !== 'organisation'" aria-labelledby="pf-title-org">
+              <header class="panel__head">
+                <h2 class="panel__title" id="pf-title-org">Organisation</h2>
+                <p class="panel__sub">Ces informations apparaissent sur la page de vos événements.</p>
+              </header>
+
+              <form class="form" [formGroup]="orgForm" (ngSubmit)="saveOrg()" novalidate>
+                <ng-container [ngTemplateOutlet]="imageField" [ngTemplateOutletContext]="{ $implicit: 'logo' }" />
+
+                <div class="fields-2">
+                  <div class="field">
+                    <label class="field__label" for="pf-org-name">Nom de l'organisation <span class="req">*</span></label>
+                    <input
+                      id="pf-org-name" type="text" class="input" formControlName="name" autocomplete="organization"
+                      [class.input--error]="showError(orgForm.controls.name)"
+                      [attr.aria-invalid]="showError(orgForm.controls.name)"
+                    />
+                    @if (showError(orgForm.controls.name)) {
+                      <span class="field__error">{{ errorMessage(orgForm.controls.name) }}</span>
+                    }
+                  </div>
+
+                  <div class="field">
+                    <label class="field__label" for="pf-org-type">Type <span class="req">*</span></label>
+                    <select
+                      id="pf-org-type" class="input select" formControlName="type"
+                      [class.input--error]="showError(orgForm.controls.type)"
+                      [attr.aria-invalid]="showError(orgForm.controls.type)"
+                    >
+                      <option value="" disabled>Sélectionner un type</option>
+                      @for (t of orgTypes; track t.value) {
+                        <option [value]="t.value">{{ t.label }}</option>
+                      }
+                    </select>
+                    @if (showError(orgForm.controls.type)) {
+                      <span class="field__error">{{ errorMessage(orgForm.controls.type) }}</span>
+                    }
+                  </div>
+                </div>
+
+                <div class="field">
+                  <label class="field__label" for="pf-org-web">Site web</label>
+                  <input
+                    id="pf-org-web" type="url" class="input" formControlName="website" placeholder="https://..." autocomplete="url"
+                    [class.input--error]="showError(orgForm.controls.website)"
+                    [attr.aria-invalid]="showError(orgForm.controls.website)"
+                  />
+                  @if (showError(orgForm.controls.website)) {
+                    <span class="field__error">{{ errorMessage(orgForm.controls.website) }}</span>
+                  }
+                </div>
+
+                <div class="field">
+                  <label class="field__label" for="pf-org-desc">Description</label>
+                  <textarea
+                    id="pf-org-desc" class="input textarea" rows="4" formControlName="description" maxlength="500"
+                    placeholder="Présentez votre organisation, vos valeurs, vos types d'événements..."
+                  ></textarea>
+                  <span class="field__hint">{{ orgForm.controls.description.value.length }} / 500</span>
+                </div>
+
+                <fieldset class="group">
+                  <legend class="group__title">Réseaux sociaux</legend>
+                  @for (s of socials; track s.key) {
+                    <div class="field">
+                      <label class="field__label" [for]="'pf-soc-' + s.key">{{ s.label }}</label>
+                      <input
+                        [id]="'pf-soc-' + s.key" type="url" class="input" [formControlName]="s.key" [placeholder]="s.placeholder"
+                        [class.input--error]="showError(orgForm.get(s.key))"
+                        [attr.aria-invalid]="showError(orgForm.get(s.key))"
+                      />
+                      @if (showError(orgForm.get(s.key))) {
+                        <span class="field__error">{{ errorMessage(orgForm.get(s.key)) }}</span>
+                      }
+                    </div>
+                  }
+                </fieldset>
+
+                <footer class="actions">
+                  @if (orgChanged()) {
+                    <button type="button" class="link-btn link-btn--muted" (click)="cancelOrg()" [disabled]="saving() === 'org'">
+                      Annuler les modifications
+                    </button>
+                  }
+                  <button type="submit" class="btn btn--solid" [disabled]="!orgChanged() || saving() === 'org'">
+                    @if (saving() === 'org') {
+                      <span class="spinner" aria-hidden="true"></span> Enregistrement...
+                    } @else {
+                      Enregistrer
+                    }
+                  </button>
+                </footer>
+              </form>
+            </section>
+
+            <!-- ======================= MES ESPACES ======================= -->
+            <section class="panel" [hidden]="section() !== 'comptes'" aria-labelledby="pf-title-spaces">
+              <header class="panel__head">
+                <h2 class="panel__title" id="pf-title-spaces">Mes espaces</h2>
+                <p class="panel__sub">
+                  Un seul compte, deux espaces : organisez vos propres événements et participez à ceux des autres,
+                  avec les mêmes identifiants.
+                </p>
+              </header>
+
+              <div class="spaces">
+                <!-- Espace organisateur -->
+                <article class="space space--current">
+                  <header class="space__head">
+                    <span class="space__icon" data-tone="violet">
+                      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path>
+                        <path d="M16 2v4"></path><path d="M8 2v4"></path><path d="M3 10h18"></path>
+                      </svg>
+                    </span>
+                    <div>
+                      <h3 class="space__title">Espace organisateur</h3>
+                      <span class="chip chip--green">Espace actuel</span>
+                    </div>
+                  </header>
+                  <p class="space__text">Créez et gérez vos événements, vos tickets et vos participants.</p>
+                  <ul class="space__facts">
+                    <li><span>Organisation</span><strong>{{ d.org.name }}</strong></li>
+                    <li><span>Membre depuis le</span><strong>{{ formatDate(d.memberSince) }}</strong></li>
+                  </ul>
+                  <a class="btn btn--outline btn--block" routerLink="/organisateur/dashboard">Aller au tableau de bord</a>
+                </article>
+
+                <!-- Espace participant -->
+                <article class="space" [attr.data-state]="participant() ? 'active' : 'inactive'">
+                  <header class="space__head">
+                    <span class="space__icon" data-tone="cyan">
+                      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"></path>
+                        <path d="M13 5v2"></path><path d="M13 11v2"></path><path d="M13 17v2"></path>
+                      </svg>
+                    </span>
+                    <div>
+                      <h3 class="space__title">Espace participant</h3>
+                      @if (participant()) {
+                        <span class="chip chip--green">Activé</span>
+                      } @else {
+                        <span class="chip chip--gray">Non activé</span>
+                      }
+                    </div>
+                  </header>
+
+                  @if (participant(); as p) {
+                    <p class="space__text">Inscrivez-vous aux événements, retrouvez vos tickets et vos attestations.</p>
+
+                    <ul class="mini">
+                      <li><strong>{{ p.registrations }}</strong><span>Inscriptions</span></li>
+                      <li><strong>{{ p.upcoming }}</strong><span>À venir</span></li>
+                      <li><strong>{{ p.tickets }}</strong><span>Tickets</span></li>
+                    </ul>
+
+                    <p class="space__since">Activé le {{ formatDate(p.since) }}</p>
+
+                    <a class="btn btn--solid btn--block" routerLink="/participant/dashboard">Ouvrir l'espace participant</a>
+
+                    <button type="button" class="link-btn link-btn--danger space__off" [disabled]="!canLeaveParticipant()" (click)="openModal('deactivate')">
+                      Désactiver mon compte participant
+                    </button>
+                    @if (!canLeaveParticipant()) {
+                      <p class="field__hint">
+                        Annulez d'abord vos {{ p.upcoming }} inscription{{ p.upcoming > 1 ? 's' : '' }} à venir
+                        pour pouvoir le désactiver.
+                      </p>
+                    }
+                  } @else {
+                    <p class="space__text">Participez aux événements d'autres organisateurs sans créer un nouveau compte.</p>
+                    <ul class="benefits">
+                      <li>Même e-mail et même mot de passe, rien de nouveau à retenir</li>
+                      <li>Vos tickets et attestations réunis au même endroit</li>
+                      <li>Vous passez d'un espace à l'autre en un clic</li>
+                    </ul>
+                    <button type="button" class="btn btn--solid btn--block" (click)="activateParticipant()" [disabled]="saving() === 'participant'">
+                      @if (saving() === 'participant') {
+                        <span class="spinner" aria-hidden="true"></span> Activation...
+                      } @else {
+                        Activer mon compte participant
+                      }
+                    </button>
+                  }
+                </article>
+              </div>
+
+              <p class="note">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path>
+                </svg>
+                <span>
+                  Vos informations personnelles et votre mot de passe sont communs aux deux espaces.
+                  Pour les modifier, rendez-vous dans
+                  <button type="button" class="link-btn" (click)="setSection('infos')">Informations personnelles</button>
+                  ou <button type="button" class="link-btn" (click)="setSection('securite')">Sécurité</button>.
+                </span>
+              </p>
+            </section>
+
+            <!-- ======================= SÉCURITÉ ======================= -->
+            <section class="panel" [hidden]="section() !== 'securite'" aria-labelledby="pf-title-security">
+              <header class="panel__head">
+                <h2 class="panel__title" id="pf-title-security">Sécurité</h2>
+                <p class="panel__sub">{{ passwordChanged() }}.</p>
+              </header>
+
+              <form class="form" [formGroup]="passwordForm" (ngSubmit)="savePassword()" novalidate>
+                <h3 class="subtitle">Changer de mot de passe</h3>
+
+                @for (f of pwFields; track f.key) {
+                  <div class="field">
+                    <label class="field__label" [for]="f.id">{{ f.label }} <span class="req">*</span></label>
+                    <div class="pw">
+                      <input
+                        [id]="f.id" class="input" [formControlName]="f.key"
+                        [type]="showPw()[f.key] ? 'text' : 'password'" [attr.autocomplete]="f.autocomplete"
+                        [class.input--error]="!!pwError(f.key)" [attr.aria-invalid]="!!pwError(f.key)"
+                      />
+                      <button
+                        type="button" class="pw__eye"
+                        [attr.aria-label]="showPw()[f.key] ? 'Masquer le mot de passe' : 'Afficher le mot de passe'"
+                        [attr.aria-pressed]="showPw()[f.key]" (click)="togglePw(f.key)"
+                      >
+                        @if (showPw()[f.key]) {
+                          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"></path>
+                            <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path>
+                            <path d="M1 1l22 22"></path>
+                          </svg>
+                        } @else {
+                          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>
+                          </svg>
+                        }
+                      </button>
+                    </div>
+
+                    @if (pwError(f.key); as msg) {
+                      <span class="field__error">{{ msg }}</span>
+                    }
+
+                    @if (f.key === 'next') {
+                      <div class="meter" [attr.data-level]="strength().level" aria-live="polite">
+                        <span class="meter__bars" aria-hidden="true">
+                          <span></span><span></span><span></span><span></span>
+                        </span>
+                        @if (strength().label) {
+                          <span class="meter__label">Robustesse : {{ strength().label }}</span>
+                        }
+                      </div>
+                      <ul class="rules">
+                        @for (r of rules(); track r.label) {
+                          <li [class.rules__ok]="r.ok">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                              @if (r.ok) {
+                                <path d="M20 6L9 17l-5-5"></path>
+                              } @else {
+                                <circle cx="12" cy="12" r="3"></circle>
+                              }
+                            </svg>
+                            {{ r.label }}
+                          </li>
+                        }
+                      </ul>
+                    }
+                  </div>
+                }
+
+                <footer class="actions">
+                  <button type="submit" class="btn btn--solid" [disabled]="saving() === 'password'">
+                    @if (saving() === 'password') {
+                      <span class="spinner" aria-hidden="true"></span> Modification...
+                    } @else {
+                      Modifier le mot de passe
+                    }
+                  </button>
+                </footer>
+              </form>
+
+              <!-- Zone de danger -->
+              <div class="danger">
+                <div>
+                  <h3 class="danger__title">Zone de danger</h3>
+                  <p class="danger__text">
+                    Supprimer votre compte efface définitivement votre profil, vos événements et votre espace participant.
+                  </p>
+                  @if (deleteBlockers() > 0) {
+                    <p class="danger__warn">
+                      Vous avez {{ deleteBlockers() }} événement{{ deleteBlockers() > 1 ? 's' : '' }} à venir avec des inscrits.
+                      Annulez-{{ deleteBlockers() > 1 ? 'les' : 'le' }} avant de supprimer votre compte.
+                      <a routerLink="/organisateur/evenements">Voir mes événements</a>
+                    </p>
+                  }
+                </div>
+                <button type="button" class="btn btn--danger btn--sm" [disabled]="deleteBlockers() > 0" (click)="openModal('delete')">
+                  Supprimer mon compte
+                </button>
+              </div>
+            </section>
+          </div>
+        </div>
+      }
+    }
+  }
+</div>
+
+<!-- ============================ DÉSACTIVER LE COMPTE PARTICIPANT ============================ -->
+@if (modal() === 'deactivate') {
+  <div class="modal" (click)="closeModal()">
+    <div
+      class="modal__dialog"
+      role="alertdialog" aria-modal="true" aria-labelledby="pf-deact-title" aria-describedby="pf-deact-text"
+      (click)="$event.stopPropagation()"
+    >
+      <span class="modal__icon">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <path d="M12 9v4"></path><path d="M12 17h.01"></path>
+        </svg>
+      </span>
+      <h2 id="pf-deact-title" class="modal__title">Désactiver votre compte participant ?</h2>
+      <p id="pf-deact-text" class="modal__text">
+        Vous ne pourrez plus vous inscrire à des événements ni accéder à l'espace participant.
+        Vos inscriptions passées restent enregistrées et votre espace organisateur n'est pas affecté.
+        Vous pourrez le réactiver à tout moment.
+      </p>
+      <div class="modal__actions">
+        <button type="button" class="btn btn--outline" (click)="closeModal()" [disabled]="saving() === 'participant'">Garder mon compte</button>
+        <button type="button" class="btn btn--danger" (click)="confirmDeactivate()" [disabled]="saving() === 'participant'">
+          @if (saving() === 'participant') {
+            <span class="spinner" aria-hidden="true"></span> Désactivation...
+          } @else {
+            Désactiver
+          }
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ============================ SUPPRIMER LE COMPTE ============================ -->
+@if (modal() === 'delete') {
+  <div class="modal" (click)="closeModal()">
+    <div
+      class="modal__dialog"
+      role="alertdialog" aria-modal="true" aria-labelledby="pf-del-title" aria-describedby="pf-del-text"
+      (click)="$event.stopPropagation()"
+    >
+      <span class="modal__icon">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 6h18"></path>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+        </svg>
+      </span>
+      <h2 id="pf-del-title" class="modal__title">Supprimer définitivement votre compte ?</h2>
+      <p id="pf-del-text" class="modal__text">
+        Cette action est irréversible : votre profil, vos événements, vos tickets et votre espace participant seront supprimés.
+        Pour confirmer, tapez <strong>SUPPRIMER</strong> ci-dessous.
+      </p>
+      <input
+        #confirmInput type="text" class="input input--center" autocomplete="off" spellcheck="false"
+        placeholder="SUPPRIMER" aria-label="Tapez SUPPRIMER pour confirmer"
+        [value]="deleteConfirm()" (input)="deleteConfirm.set(confirmInput.value)"
+        (keydown.enter)="confirmDelete()"
+      />
+      <div class="modal__actions">
+        <button type="button" class="btn btn--outline" (click)="closeModal()" [disabled]="saving() === 'delete'">Annuler</button>
+        <button type="button" class="btn btn--danger" (click)="confirmDelete()" [disabled]="!deleteReady() || saving() === 'delete'">
+          @if (saving() === 'delete') {
+            <span class="spinner" aria-hidden="true"></span> Suppression...
+          } @else {
+            Supprimer mon compte
+          }
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ============================ NOTIFICATION ============================ -->
+@if (toast(); as t) {
+  <div class="toast" [attr.data-kind]="t.kind" role="status" aria-live="polite">{{ t.text }}</div>
+}
