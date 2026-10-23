@@ -1,14 +1,12 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
-import { Role } from '../models/user.model';
 
 /**
- * RoleGuard factory : protège une route selon le rôle.
- *
- * Exemple : { path: 'admin', canActivate: [roleGuard([Role.ADMINISTRATEUR])] }
+ * Guard de rôle : vérifie que l'utilisateur possède au moins un des rôles requis.
+ * Suppose que authGuard a déjà validé l'authentification.
  */
-export const roleGuard = (allowedRoles: Role[]): CanActivateFn => {
+export const roleGuard = (allowedRoles: string[]): CanActivateFn => {
   return () => {
     const authService = inject(AuthService);
     const router = inject(Router);
@@ -19,10 +17,10 @@ export const roleGuard = (allowedRoles: Role[]): CanActivateFn => {
       return false;
     }
 
-    const hasRole = user.roles.some((r) => allowedRoles.includes(r as Role));
+    const hasRole = user.roles.some((r) => allowedRoles.includes(r));
     if (hasRole) return true;
 
-    console.warn('[RoleGuard] Access denied — insufficient role');
+    console.warn(`[RoleGuard] Accès refusé — rôle requis: ${allowedRoles.join(', ')}`);
     router.navigate(['/']);
     return false;
   };
