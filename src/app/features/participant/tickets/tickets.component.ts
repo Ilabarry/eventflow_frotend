@@ -63,6 +63,7 @@ interface TicketCard {
   id: string;
   reference: string;
   eventTitle: string;
+  coverImage: string | null;
   ticketTypeName: string;
   statusLabel: string;
   statusTone: StatusTone;
@@ -92,6 +93,7 @@ function toCard(ticket: MyTicketDto, detail: TicketDetailDto | null, qrImage: st
     id: ticket.id,
     reference: ticket.reference,
     eventTitle: ticket.event_title,
+    coverImage: ticket.event_cover_image,
     ticketTypeName: ticket.ticket_type_name,
     statusLabel: status.label,
     statusTone: status.tone,
