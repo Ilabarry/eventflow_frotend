@@ -104,6 +104,20 @@ export class AuthService {
     return this.http
       .post<ApiResponse<LoginResponse>>(`${this.API_URL}/auth/login/`, payload)
       .pipe(
+        // ✅ Transforme le profile_picture en URL absolue AVANT de stocker
+        map((res) => {
+          if (!res.success || !res.data) return res;
+          return {
+            ...res,
+            data: {
+              ...res.data,
+              user: {
+                ...res.data.user,
+                profile_picture: this.absoluteMediaUrl(res.data.user.profile_picture),
+              },
+            },
+          };
+        }),
         tap((response) => {
           if (response.success && response.data) {
             this.handleAuthSuccess(response.data);
@@ -128,33 +142,47 @@ export class AuthService {
           return throwError(() => error);
         })
       );
-  }
+}
 
   // ------------------------------------------------------------------
   // DÉCONNEXION
   // ------------------------------------------------------------------
   logout(): void {
-    const refresh = this.getRefreshToken();
-    console.log('[AuthService] Logout attempt');
+  const refresh = this.getRefreshToken();
 
-    if (refresh) {
-      // Blacklister le refresh token côté backend
-      this.http
-        .post(`${this.API_URL}/auth/logout/`, { refresh })
-        .subscribe({
-          next: () => this.clearSession(),
-          error: () => this.clearSession(), // on nettoie même si le backend échoue
-        });
-    } else {
-      this.clearSession();
-    }
+  // ✅ Nettoyer AVANT l'appel réseau pour une UX réactive
+  this.clearSession();
+
+  // Puis blacklister le refresh token (best-effort, on ignore l'erreur)
+  if (refresh) {
+    this.http.post(`${this.API_URL}/auth/logout/`, { refresh }).subscribe({
+      error: (err) => console.warn('[AuthService] Logout backend failed', err.status),
+    });
   }
+}
 
   // ------------------------------------------------------------------
   // PROFIL
   // ------------------------------------------------------------------
+
   getMe(): Observable<ApiResponse<User>> {
-    return this.http.get<ApiResponse<User>>(`${this.API_URL}/users/me/`);
+    return this.http
+      .get<ApiResponse<User>>(`${this.API_URL}/users/me/`)
+      .pipe(
+        map((res) => ({
+          ...res,
+          data: res.data
+            ? { ...res.data, profile_picture: this.absoluteMediaUrl(res.data.profile_picture) }
+            : res.data,
+        })),
+      );
+  }
+
+  private absoluteMediaUrl(url: string | null): string | null {
+    if (!url) return null;
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    const backendOrigin = this.API_URL.replace(/\/api\/?$/, '');
+    return `${backendOrigin}${url.startsWith('/') ? url : '/' + url}`;
   }
 
   updateProfile(data: Partial<User>): Observable<ApiResponse<User>> {

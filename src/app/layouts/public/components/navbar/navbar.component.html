@@ -18,9 +18,6 @@
       <a routerLink="/events" routerLinkActive="active" class="navbar__link" (click)="closeMenu()">
         Événement
       </a>
-      <a routerLink="/how-it-works" routerLinkActive="active" class="navbar__link" (click)="closeMenu()">
-        Comment ça marche
-      </a>
       <a routerLink="/about" routerLinkActive="active" class="navbar__link" (click)="closeMenu()">
         À propos
       </a>
@@ -55,7 +52,6 @@
     <div class="navbar__mobile-menu" (click)="closeMenu()">
       <div class="navbar__mobile-content" (click)="$event.stopPropagation()">
         <a routerLink="/events" class="navbar__mobile-link" (click)="closeMenu()">Événement</a>
-        <a routerLink="/how-it-works" class="navbar__mobile-link" (click)="closeMenu()">Comment ça marche</a>
         <a routerLink="/about" class="navbar__mobile-link" (click)="closeMenu()">À propos</a>
         <a routerLink="/login" class="navbar__mobile-btn navbar__mobile-btn--primary" (click)="closeMenu()">
           Connexion

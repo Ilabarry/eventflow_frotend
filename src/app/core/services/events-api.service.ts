@@ -8,6 +8,7 @@ import { ApiResponse, PaginatedResponse } from '../models/api-response.model';
 import {
   BackendEvent,
   EventCategory,
+  EventDetail,
 } from '../models/event.model';
 import { AppLoggerService } from './app-logger.service';
 
@@ -89,5 +90,23 @@ export class EventsApiService {
     }
 
     this.logger.error(`${operation} : erreur inattendue.`);
+  }
+
+
+    /**
+   * Récupère le détail d'un événement public.
+   * À vérifier : l'identifiant utilisé par ton backend (id, slug ou uuid).
+   */
+  getEventById(id: string): Observable<ApiResponse<EventDetail>> {
+    const url = `${this.baseUrl}/events/${encodeURIComponent(id)}/`;
+
+    this.logger.debug('Chargement du détail d’un événement.');
+
+    return this.http.get<ApiResponse<EventDetail>>(url).pipe(
+      catchError((error: unknown) => {
+        this.logHttpError('Chargement du détail de l’événement', error);
+        return throwError(() => error);
+      }),
+    );
   }
 }

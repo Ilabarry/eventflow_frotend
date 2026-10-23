@@ -1,1 +1,369 @@
-<h1>Ma page d'acceuil</h1>
+<div class="home">
+  <!-- ============================ BANNIÈRE ============================ -->
+  <section class="hero content-width" aria-labelledby="home-title">
+    <div class="hero-copy">
+      <span class="eyebrow">
+        <span class="eyebrow-dot"></span>
+        Vivez l’événement autrement
+      </span>
+
+      <h1 id="home-title">
+        LE MONDE DES
+        <span>ÉVÉNEMENTS</span>
+        EN MOUVEMENT
+      </h1>
+
+      <p>
+        Découvrez, inscrivez-vous et participez aux événements qui vous inspirent,
+        près de chez vous ou en ligne.
+      </p>
+
+      <div class="hero-actions">
+        <a class="button-primary" routerLink="/events">
+          Voir les événements
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5l7 7-7 7"></path></svg>
+        </a>
+        <a class="hero-link" routerLink="/register">
+          Organisateur ? Créez vos événements
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5l7 7-7 7"></path></svg>
+        </a>
+      </div>
+
+      @if (totalCount > 0) {
+        <p class="hero-count">
+          <span class="hero-count-dot" aria-hidden="true"></span>
+          <strong>{{ totalCount }}</strong> événement{{ totalCount > 1 ? 's' : '' }} à découvrir
+        </p>
+      }
+    </div>
+
+    <div
+      class="hero-visual"
+      (mouseenter)="holdAutoplay()"
+      (mouseleave)="releaseAutoplay()"
+      (focusin)="holdAutoplay()"
+      (focusout)="releaseAutoplay()"
+    >
+      <div
+        class="slides"
+        role="group"
+        aria-roledescription="carrousel"
+        aria-label="Événements à la une"
+        aria-live="off"
+      >
+        @for (slide of heroSlides; track slide.key; let i = $index) {
+          <a
+            class="slide"
+            [class.slide-active]="i === activeSlide"
+            [routerLink]="slide.link"
+            [attr.aria-hidden]="i !== activeSlide"
+            [attr.tabindex]="i === activeSlide ? 0 : -1"
+            [attr.aria-label]="slide.title"
+          >
+            <img
+              [src]="slide.image"
+              alt=""
+              [attr.fetchpriority]="i === 0 ? 'high' : null"
+              [attr.loading]="i === 0 ? 'eager' : 'lazy'"
+            />
+            <span class="slide-shade"></span>
+            <span class="slide-caption">
+              <span class="slide-tag">{{ slide.tag }}</span>
+              <strong>{{ slide.title }}</strong>
+              <small>{{ slide.meta }}</small>
+            </span>
+          </a>
+        }
+      </div>
+
+      @if (heroSlides.length > 1) {
+        <div class="slider-controls">
+          <div class="dots" role="group" aria-label="Choisir un événement">
+            @for (slide of heroSlides; track slide.key; let i = $index) {
+              <button
+                type="button"
+                class="dot"
+                [class.dot-active]="i === activeSlide"
+                [attr.aria-label]="'Afficher l’événement ' + (i + 1)"
+                [attr.aria-current]="i === activeSlide ? 'true' : null"
+                (click)="goToSlide(i)"
+              ></button>
+            }
+          </div>
+
+          <button
+            type="button"
+            class="slider-pause"
+            [attr.aria-label]="autoplay ? 'Mettre le carrousel en pause' : 'Relancer le carrousel'"
+            (click)="toggleAutoplay()"
+          >
+            @if (autoplay) {
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+            } @else {
+              <svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            }
+          </button>
+        </div>
+      }
+    </div>
+  </section>
+
+  <!-- ============================ RECHERCHE ============================ -->
+  <section class="search-section content-width" aria-labelledby="search-title">
+    <div class="search-panel">
+      <svg class="search-wave" viewBox="0 0 400 120" preserveAspectRatio="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="homeWave" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#8B7CF6" />
+            <stop offset="1" stop-color="#22C7D6" />
+          </linearGradient>
+        </defs>
+        <path d="M0 95 C 60 30, 120 110, 190 62 S 310 6, 400 44" fill="none" stroke="url(#homeWave)" stroke-width="2.5" vector-effect="non-scaling-stroke" />
+      </svg>
+
+      <h2 id="search-title" class="search-title">Trouvez votre prochain événement</h2>
+
+      <form class="search-row" (submit)="$event.preventDefault(); search()">
+        <label class="search-input-wrap" for="home-search">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 4.2 4.2"></path></svg>
+          <input
+            id="home-search"
+            type="search"
+            name="home-search"
+            placeholder="Rechercher un événement, une ville..."
+            [(ngModel)]="searchQuery"
+            autocomplete="off"
+          />
+        </label>
+
+        <button class="search-button" type="submit">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 4.2 4.2"></path></svg>
+          <span class="search-button-text">Rechercher</span>
+        </button>
+      </form>
+
+      <div class="quick-filters">
+        <label class="select-wrap">
+          <span class="sr-only">Catégorie</span>
+          <select name="home-category" [(ngModel)]="selectedCategory">
+            <option value="all">Toutes les catégories</option>
+            @for (category of categories; track category.id) {
+              <option [value]="category.name">{{ category.name }}</option>
+            }
+          </select>
+        </label>
+
+        <label class="select-wrap">
+          <span class="sr-only">Date</span>
+          <select name="home-date" [(ngModel)]="selectedDate">
+            <option value="all">Toutes les dates</option>
+            @for (date of dateOptions; track date.value) {
+              <option [value]="date.value">{{ date.label }}</option>
+            }
+          </select>
+        </label>
+
+        <label class="select-wrap">
+          <span class="sr-only">Format</span>
+          <select name="home-format" [(ngModel)]="selectedFormat">
+            <option value="all">Tous les formats</option>
+            @for (format of formats; track format.value) {
+              <option [value]="format.value">{{ format.label }}</option>
+            }
+          </select>
+        </label>
+
+        <label class="select-wrap">
+          <span class="sr-only">Prix</span>
+          <select name="home-price" [(ngModel)]="selectedPrice">
+            <option value="all">Tous les prix</option>
+            @for (price of priceOptions; track price.value) {
+              <option [value]="price.value">{{ price.label }}</option>
+            }
+          </select>
+        </label>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ ÉVÉNEMENTS À LA UNE ============================ -->
+  <section class="section content-width" aria-labelledby="featured-title">
+    <header class="section-head">
+      <div>
+        <span class="section-kicker">À la une</span>
+        <h2 id="featured-title">Les prochains événements</h2>
+      </div>
+      <a class="section-link" routerLink="/events">
+        Voir tous
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5l7 7-7 7"></path></svg>
+      </a>
+    </header>
+
+    @if (isLoading) {
+      <div class="event-grid" role="status" aria-busy="true">
+        <span class="sr-only">Chargement des événements…</span>
+        @for (item of [1, 2, 3, 4]; track item) {
+          <div class="skeleton-card" aria-hidden="true">
+            <span class="skeleton skeleton-image"></span>
+            <span class="skeleton skeleton-line skeleton-line-sm"></span>
+            <span class="skeleton skeleton-line skeleton-line-lg"></span>
+            <span class="skeleton skeleton-line skeleton-line-md"></span>
+          </div>
+        }
+      </div>
+    } @else if (errorMessage) {
+      <div class="empty-state empty-state-error" role="alert">
+        <span class="empty-state-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <path d="M12 9v4"></path><path d="M12 17h.01"></path>
+          </svg>
+        </span>
+        <h3>Impossible de charger les événements</h3>
+        <p>{{ errorMessage }}</p>
+        <button class="button-primary" type="button" (click)="loadEvents()">Réessayer</button>
+      </div>
+    } @else if (featuredEvents.length > 0) {
+      <div class="event-grid">
+        @for (event of featuredEvents; track event.id) {
+          <article class="event-card">
+            <a class="event-image" [routerLink]="['/events', event.id]" [attr.aria-label]="'Voir ' + event.title">
+              <img
+                [src]="getEventImage(event)"
+                [alt]="''"
+                loading="lazy"
+                (error)="$any($event.target).style.display = 'none'"
+              />
+              <span
+                class="format-badge"
+                [class.online-badge]="event.format === 'ONLINE'"
+                [class.onsite-badge]="event.format === 'IN_PERSON'"
+              >
+                {{ formatLabel(event.format) }}
+              </span>
+            </a>
+
+            <div class="event-body">
+              <span class="event-date">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path>
+                  <path d="M16 2v4"></path><path d="M8 2v4"></path><path d="M3 10h18"></path>
+                </svg>
+                {{ formatShortDate(event.start_at) }}
+              </span>
+
+              <h3><a [routerLink]="['/events', event.id]">{{ event.title }}</a></h3>
+
+              <p class="event-location">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                  <circle cx="12" cy="10" r="3"></circle>
+                </svg>
+                {{ event.city || 'Lieu à préciser' }}
+              </p>
+
+              <div class="event-footer">
+                <span class="price-badge" [class.paid-price]="event.participation_type === 'PAID'">
+                  {{ formatPrice(event) }}
+                </span>
+                <a class="event-open" [routerLink]="['/events', event.id]" [attr.aria-label]="'Détails de ' + event.title">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5l7 7-7 7"></path></svg>
+                </a>
+              </div>
+            </div>
+          </article>
+        }
+      </div>
+    } @else {
+      <div class="empty-state">
+        <span class="empty-state-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 4.2 4.2"></path></svg>
+        </span>
+        <h3>Aucun événement pour le moment</h3>
+        <p>De nouveaux événements arrivent bientôt. Revenez nous voir !</p>
+      </div>
+    }
+  </section>
+
+  <!-- ============================ COMMENT ÇA MARCHE ============================ -->
+  <section class="how content-width" id="how-it-works" aria-labelledby="how-title">
+    <div class="how-intro">
+      <span class="section-kicker">Comment ça marche</span>
+      <h2 id="how-title">Simple, rapide et efficace</h2>
+      <p>De la découverte à la participation, tout se fait en quelques minutes.</p>
+      <a class="button-outline" routerLink="/how-it-works">En savoir plus</a>
+    </div>
+
+    <ol class="how-steps">
+      @for (step of steps; track step.title; let i = $index) {
+        <li class="how-step">
+          <span class="how-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              @for (d of step.icon; track d) {
+                <path [attr.d]="d"></path>
+              }
+            </svg>
+            <span class="how-number">{{ i + 1 }}</span>
+          </span>
+          <strong>{{ step.title }}</strong>
+          <small>{{ step.text }}</small>
+        </li>
+      }
+    </ol>
+  </section>
+
+  <!-- ============================ CATÉGORIES ============================ -->
+  @if (topCategories.length > 0) {
+    <section class="section content-width" aria-labelledby="categories-title">
+      <header class="section-head">
+        <div>
+          <span class="section-kicker">Explorer</span>
+          <h2 id="categories-title">Des événements pour chaque envie</h2>
+        </div>
+        <a class="section-link" routerLink="/events">
+          Voir toutes les catégories
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5l7 7-7 7"></path></svg>
+        </a>
+      </header>
+
+      <ul class="category-grid">
+        @for (category of topCategories; track category.id) {
+          <li>
+            <a class="category-card" routerLink="/events" [queryParams]="{ category: category.name }">
+              <span class="category-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  @for (d of categoryIcon(category.name); track d) {
+                    <path [attr.d]="d"></path>
+                  }
+                </svg>
+              </span>
+              <span class="category-name">{{ category.name }}</span>
+            </a>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+
+  <!-- ============================ ESPACE ORGANISATEUR ============================ -->
+  <section class="organizer-cta content-width" id="create-event">
+    <div class="cta-media" aria-hidden="true">
+      <img
+        src="https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=900&q=80"
+        alt=""
+        loading="lazy"
+      />
+    </div>
+
+    <div class="cta-copy">
+      <span class="cta-kicker">Espace organisateur</span>
+      <h2>Organisez des événements qui comptent</h2>
+      <p>Créez, publiez et gérez vos événements, vos tickets et vos participants depuis un seul endroit.</p>
+    </div>
+
+    <a class="cta-button" routerLink="/register">
+      Créer un événement
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5l7 7-7 7"></path></svg>
+    </a>
+  </section>
+</div>
