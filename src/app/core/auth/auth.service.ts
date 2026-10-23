@@ -104,6 +104,20 @@ export class AuthService {
     return this.http
       .post<ApiResponse<LoginResponse>>(`${this.API_URL}/auth/login/`, payload)
       .pipe(
+        // ✅ Transforme le profile_picture en URL absolue AVANT de stocker
+        map((res) => {
+          if (!res.success || !res.data) return res;
+          return {
+            ...res,
+            data: {
+              ...res.data,
+              user: {
+                ...res.data.user,
+                profile_picture: this.absoluteMediaUrl(res.data.user.profile_picture),
+              },
+            },
+          };
+        }),
         tap((response) => {
           if (response.success && response.data) {
             this.handleAuthSuccess(response.data);
@@ -128,7 +142,7 @@ export class AuthService {
           return throwError(() => error);
         })
       );
-  }
+}
 
   // ------------------------------------------------------------------
   // DÉCONNEXION
@@ -150,8 +164,25 @@ export class AuthService {
   // ------------------------------------------------------------------
   // PROFIL
   // ------------------------------------------------------------------
+
   getMe(): Observable<ApiResponse<User>> {
-    return this.http.get<ApiResponse<User>>(`${this.API_URL}/users/me/`);
+    return this.http
+      .get<ApiResponse<User>>(`${this.API_URL}/users/me/`)
+      .pipe(
+        map((res) => ({
+          ...res,
+          data: res.data
+            ? { ...res.data, profile_picture: this.absoluteMediaUrl(res.data.profile_picture) }
+            : res.data,
+        })),
+      );
+  }
+
+  private absoluteMediaUrl(url: string | null): string | null {
+    if (!url) return null;
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    const backendOrigin = this.API_URL.replace(/\/api\/?$/, '');
+    return `${backendOrigin}${url.startsWith('/') ? url : '/' + url}`;
   }
 
   updateProfile(data: Partial<User>): Observable<ApiResponse<User>> {

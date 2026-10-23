@@ -1,4 +1,4 @@
-import { Component, DestroyRef, HostListener, effect, inject, signal } from '@angular/core';
+import { Component, DestroyRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 import { Router, RouterOutlet } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -28,20 +28,22 @@ export class OrganizerLayoutComponent {
   readonly sidebarOpen = signal(false);
 
   // ✅ Données réactives depuis AuthService
-  readonly userName = signal('');
-  readonly avatarUrl = signal<string | null>(null);
+  /** Nom affiché dans la navbar (dérivé de l'utilisateur connecté) */
+  readonly userName = computed(() => {
+    const user = this.authService.currentUser();
+    return user?.full_name || user?.first_name || 'Utilisateur';
+  });
+
+  /** URL de l'avatar (dérivé de l'utilisateur connecté) */
+  readonly avatarUrl = computed(() => this.authService.currentUser()?.profile_picture ?? null);
+
+  // notificationCount et messageCount restent des signals modifiables
   readonly notificationCount = signal(0);
-  readonly messageCount = signal(0); // pas d'endpoint backend pour l'instant
+  readonly messageCount = signal(0);
 
   constructor() {
-    // Synchroniser userName et avatarUrl depuis le signal currentUser
-    effect(() => {
-      const user = this.authService.currentUser();
-      this.userName.set(user?.full_name || user?.first_name || 'Utilisateur');
-      this.avatarUrl.set(user?.profile_picture ?? null);
-    });
-
-    // Charger le compteur de notifications au montage puis toutes les 60 s
+    // ✅ Plus d'effect qui écrit dans des signaux
+    // Le compteur de notifications est chargé et mis à jour via interval
     interval(60_000)
       .pipe(
         startWith(0),
@@ -53,11 +55,10 @@ export class OrganizerLayoutComponent {
         takeUntilDestroyed(),
       )
       .subscribe((res) => {
-        const count = res.data?.unread_count ?? 0;
-        this.notificationCount.set(count);
+        this.notificationCount.set(res.data?.unread_count ?? 0);
       });
 
-    // Bloque le scroll quand le drawer mobile est ouvert
+    // Bloque le scroll quand le drawer mobile est ouvert (pas d'écriture de signal ici)
     effect(() => {
       this.document.body.style.overflow = this.sidebarOpen() ? 'hidden' : '';
     });

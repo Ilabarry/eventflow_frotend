@@ -1400,3 +1400,33 @@
   from { opacity: 0; transform: translate(-50%, 12px); }
   to { opacity: 1; transform: translate(-50%, 0); }
 }
+
+// À ajouter à la fin du fichier existant
+.spaces {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--evf-border);
+}
+
+.spaces__title {
+  margin: 0 0 0.75rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--evf-text-muted);
+}
+
+.spaces__link {
+  display: block;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.25rem;
+  border-radius: 8px;
+  color: var(--evf-violet);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.2s ease;
+
+  &:hover { background: rgba(108, 92, 231, 0.08); }
+}
