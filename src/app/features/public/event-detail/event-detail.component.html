@@ -290,12 +290,36 @@
               }
 
               @if (ctaState === 'open') {
-                <a class="button-primary button-block" routerLink="/login" [queryParams]="registerQuery">
-                  {{ ctaLabel }}
-                </a>
-                <p class="register-hint">
-                  Pas encore de compte ? <a routerLink="/register">Créez-en un gratuitement</a>
-                </p>
+                <button
+                  type="button"
+                  class="button-primary button-block"
+                  [disabled]="registering()"
+                  (click)="register()"
+                >
+                  @if (registering()) {
+                    <span class="spinner" aria-hidden="true"></span> Inscription...
+                  } @else if (isAuthenticated() && !canRegister()) {
+                    Réservé aux participants
+                  } @else if (registered()) {
+                    Voir mon inscription
+                  } @else {
+                    {{ ctaLabel }}
+                  }
+                </button>
+
+                @if (registrationError(); as err) {
+                  <p class="field__error" role="alert">{{ err }}</p>
+                }
+
+                @if (!isAuthenticated()) {
+                  <p class="register-hint">
+                    Pas encore de compte ? <a routerLink="/register">Créez-en un gratuitement</a>
+                  </p>
+                } @else if (!canRegister()) {
+                  <p class="register-hint">
+                    Votre compte ne permet pas de s'inscrire. <a routerLink="/participant/dashboard">Accéder à l'espace participant</a>
+                  </p>
+                }
               } @else {
                 <button class="button-primary button-block" type="button" disabled>{{ ctaLabel }}</button>
               }
@@ -397,7 +421,18 @@
             <strong>{{ priceLabel(e) }}</strong>
           </div>
           @if (ctaState === 'open') {
-            <a class="button-primary" routerLink="/login" [queryParams]="registerQuery">{{ ctaLabel }}</a>
+            <button
+              type="button"
+              class="button-primary"
+              [disabled]="registering()"
+              (click)="register()"
+            >
+              @if (registering()) {
+                <span class="spinner" aria-hidden="true"></span>
+              } @else {
+                {{ registered() ? 'Voir' : ctaLabel }}
+              }
+            </button>
           } @else {
             <button class="button-primary" type="button" disabled>{{ ctaLabel }}</button>
           }

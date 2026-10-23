@@ -91,4 +91,31 @@ export class RegistrationService {
       { params },
     );
   }
+
+  /** inscrire le participant connecté à un événement. */
+    create(
+      payload: CreateRegistrationPayload,
+    ): Observable<ApiResponse<CreateRegistrationDto>> {
+      return this.http.post<ApiResponse<CreateRegistrationDto>>(
+        `${this.BASE}/registrations/`,
+        payload,
+      );
+    }
+}
+
+/** Réponse de POST /api/registrations/ (RegistrationDetailSerializer). */
+export interface CreateRegistrationDto {
+  id: string;
+  reference: string;
+  status: ApiRegistrationStatus;
+  registered_at: string;
+  cancelled_at: string | null;
+  event: EventDto;
+  ticket_type_name: string | null;
+}
+
+/** Payload pour POST /api/registrations/. */
+export interface CreateRegistrationPayload {
+  event_id: string;
+  ticket_type_id?: string | null;
 }

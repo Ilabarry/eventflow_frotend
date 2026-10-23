@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, DestroyRef, OnDestroy, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, OnDestroy, OnInit, inject, signal, computed } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Meta, Title } from '@angular/platform-browser';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -8,6 +8,11 @@ import { Subscription } from 'rxjs';
 import { BackendEvent, EventDetail, EventTicketType } from '../../../core/models/event.model';
 import { AppLoggerService } from '../../../core/services/app-logger.service';
 import { EventsApiService } from '../../../core/services/events-api.service';
+
+import { AuthService } from '../../../core/auth/auth.service';
+import { NotificationService } from '../../../core/services/notification.service';
+import { RegistrationService, CreateRegistrationDto } from '../../../core/services/registration.service';
+import { Router } from '@angular/router';
 
 type DetailState = 'loading' | 'ready' | 'notfound' | 'error';
 type CtaState = 'open' | 'past' | 'full';
@@ -87,6 +92,25 @@ export class EventDetailComponent implements OnInit, OnDestroy {
   private copiedTimer?: ReturnType<typeof setTimeout>;
   private readonly initialTitle = this.title.getTitle();
 
+  private readonly authService = inject(AuthService);
+private readonly notification = inject(NotificationService);
+private readonly registrationService = inject(RegistrationService);
+private readonly router = inject(Router);
+
+/** État de l'inscription en cours */
+readonly registering = signal(false);
+readonly registered = signal(false);
+readonly registrationError = signal<string | null>(null);
+
+/** L'utilisateur connecté a-t-il le rôle participant ? */
+readonly canRegister = computed(() => {
+  const user = this.authService.currentUser();
+  return user?.roles?.includes('participant') ?? false;
+});
+
+/** Est-ce que l'utilisateur est connecté ? */
+readonly isAuthenticated = computed(() => this.authService.isAuthenticated());
+
   ngOnInit(): void {
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       const id = params.get('id') ?? '';
@@ -102,6 +126,93 @@ export class EventDetailComponent implements OnInit, OnDestroy {
     if (this.noticeTimer) clearTimeout(this.noticeTimer);
     if (this.copiedTimer) clearTimeout(this.copiedTimer);
     this.title.setTitle(this.initialTitle);
+  }
+
+  /**
+   * Déclenche l'inscription :
+   *  - Non connecté → redirection /login avec returnUrl
+   *  - Connecté non participant → toast d'erreur
+   *  - Connecté participant → POST /registrations/
+   */
+  register(): void {
+    const e = this.detail;
+    if (!e) return;
+
+    // 1. Non connecté → redirection login
+    if (!this.isAuthenticated()) {
+      void this.router.navigate(['/login'], {
+        queryParams: { returnUrl: `/events/${e.id}` },
+      });
+      return;
+    }
+
+    // 2. Mauvais rôle
+    if (!this.canRegister()) {
+      this.notification.warning(
+        'Seuls les comptes participants peuvent s\'inscrire à un événement.',
+        'Action non autorisée',
+      );
+      return;
+    }
+
+    // 3. Déjà complet
+    if (this.ctaState === 'full') {
+      this.notification.error('Cet événement est complet.', 'Inscription impossible');
+      return;
+    }
+
+    // 4. Déjà inscrit
+    if (this.registered()) {
+      void this.router.navigate(['/participant/inscriptions']);
+      return;
+    }
+
+    // 5. Construire le payload
+    const ticketTypeId = e.participation_type === 'PAID' ? this.selectedTicketId : null;
+    if (e.participation_type === 'PAID' && !ticketTypeId) {
+      this.notification.warning('Choisissez un type de ticket avant de continuer.', 'Ticket requis');
+      return;
+    }
+
+    // 6. Appel API
+    this.registering.set(true);
+    this.registrationError.set(null);
+
+    this.registrationService
+      .create({
+        event_id: e.id,
+        ticket_type_id: ticketTypeId,
+      })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (res) => {
+          this.registering.set(false);
+          this.registered.set(true);
+          this.logger.info('Inscription créée', { eventId: e.id });
+
+          if (e.participation_type === 'FREE') {
+            this.notification.success(
+              'Inscription confirmée. Retrouvez-la dans « Mes inscriptions ».',
+              'Vous êtes inscrit !',
+            );
+            void this.router.navigate(['/participant/inscriptions']);
+          } else {
+            this.notification.success(
+              'Inscription en attente. Finalisez le paiement pour recevoir votre ticket.',
+              'Inscription enregistrée',
+            );
+            void this.router.navigate(['/participant/inscriptions'], {
+              queryParams: { pay: res.data?.id },
+            });
+          }
+        },
+        error: (err) => {
+          this.registering.set(false);
+          const code = err?.error?.errors?.event_id?.[0] || err?.error?.message;
+          this.registrationError.set(code || 'L\'inscription a échoué.');
+          this.notification.httpError(err);
+        },
+      });
   }
 
   /* ------------------------------------------------------------------
@@ -306,13 +417,6 @@ export class EventDetailComponent implements OnInit, OnDestroy {
       case 'full': return 'Événement complet';
       default: return 'S’inscrire';
     }
-  }
-
-  /** TODO : remplacer par l'action d'inscription quand le parcours participant sera prêt */
-  get registerQuery(): Record<string, string> {
-    const query: Record<string, string> = { returnUrl: `/events/${this.eventId}` };
-    if (this.selectedTicketId) query['ticket'] = this.selectedTicketId;
-    return query;
   }
 
   selectTicket(option: TicketOption): void {
