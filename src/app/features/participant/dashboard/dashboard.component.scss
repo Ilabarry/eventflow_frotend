@@ -1,0 +1,449 @@
+// ==================================================================
+// Dashboard participant
+//
+// Couleurs et polices : variables globales --evf-* de src/styles.scss.
+// Boutons : .btn / .btn--primary globaux, seulement ajustés ici.
+// ==================================================================
+
+$bp-tablet: 960px;
+$bp-mobile: 640px;
+
+:host {
+  display: block;
+  font-family: var(--evf-font-body);
+  color: var(--evf-dark);
+}
+
+.dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 1100px;
+
+  &__content {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+}
+
+// ==================================================================
+// BANDEAU (même style que « Mes inscriptions »)
+// ==================================================================
+.hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+  padding: 24px 28px;
+  color: #fff;
+  background: linear-gradient(120deg, var(--evf-dark), #1e1b4b 55%, var(--evf-violet-dark));
+
+  &__flow {
+    position: absolute;
+    inset: 0 0 0 auto;
+    width: 55%;
+    height: 100%;
+    pointer-events: none;
+  }
+
+  &__flow-line {
+    fill: none;
+    stroke: var(--evf-violet);
+    stroke-width: 5;
+    stroke-linecap: round;
+
+    &--soft {
+      stroke: var(--evf-cyan);
+      stroke-width: 2;
+      opacity: 0.6;
+    }
+  }
+
+  &__content {
+    position: relative; // au-dessus de la vague
+  }
+
+  &__title {
+    margin: 0;
+    font: 800 clamp(1.4rem, 2.5vw, 1.8rem) var(--evf-font-heading);
+    color: #fff; // le h1 global est foncé
+    overflow-wrap: anywhere;
+  }
+
+  &__subtitle {
+    margin: 6px 0 0;
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.85);
+  }
+}
+
+// ==================================================================
+// BLOCS ET MÉTADONNÉES
+// ==================================================================
+.block__title {
+  margin: 0 0 12px;
+  font: 700 1.15rem var(--evf-font-heading);
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  &__item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    font-size: 0.85rem;
+  }
+}
+
+.icon {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+// Affiche par défaut : le dashboard backend ne renvoie pas d'image
+%media {
+  display: grid;
+  overflow: hidden;
+  place-content: center;
+  grid-auto-flow: column;
+  border-radius: 10px;
+  font: 800 1.1rem var(--evf-font-heading);
+  color: var(--evf-violet-dark);
+  background: linear-gradient(135deg, #ede9fe, #cffafe);
+}
+
+// ==================================================================
+// PROCHAIN ÉVÉNEMENT : affiche | infos | compte à rebours + ticket
+// ==================================================================
+.next {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 24px;
+  padding: 20px;
+  border-radius: 16px;
+  color: #fff;
+  background: linear-gradient(120deg, var(--evf-violet-dark), var(--evf-violet) 60%, #4fb3d9);
+  box-shadow: 0 12px 28px rgba(81, 69, 205, 0.25);
+
+  &__media {
+    @extend %media;
+    aspect-ratio: 16 / 10;
+  }
+
+  &__media-accent {
+    color: var(--evf-cyan);
+  }
+
+  &__body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  &__title {
+    margin: 0;
+    font: 700 clamp(1.15rem, 2vw, 1.5rem) / 1.25 var(--evf-font-heading);
+    color: #fff;
+    overflow-wrap: anywhere;
+  }
+
+  &__side {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    text-align: center;
+  }
+
+  &__pending {
+    max-width: 180px;
+    font-size: 0.85rem;
+  }
+}
+
+.badge {
+  padding: 6px 16px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+}
+
+// ==================================================================
+// COMPTEURS
+// ==================================================================
+.counters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.counter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  height: 100%;
+  padding: 20px 12px;
+  border-radius: 14px;
+  border-top: 5px solid var(--tone);
+  background: var(--evf-surface);
+  color: var(--evf-dark);
+  text-align: center;
+  text-decoration: none;
+  box-shadow: var(--evf-shadow-sm);
+  transition: box-shadow 0.2s, transform 0.2s;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--evf-shadow-lg);
+  }
+
+  &--success { --tone: var(--evf-success); }
+  &--violet { --tone: var(--evf-violet); }
+  &--neutral { --tone: var(--evf-text-muted); }
+
+  &__value {
+    font: 800 2rem var(--evf-font-heading);
+    color: var(--tone);
+  }
+
+  &__label {
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+}
+
+// ==================================================================
+// PROCHAINS ÉVÉNEMENTS
+// ==================================================================
+.others {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mini {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  grid-template-areas:
+    'media body'
+    'media action';
+  gap: 8px 16px;
+  height: 100%;
+  padding: 14px;
+  border: 1px solid var(--evf-border);
+  border-radius: 14px;
+  background: var(--evf-surface);
+
+  &__media {
+    @extend %media;
+    grid-area: media;
+    aspect-ratio: 1;
+    font-size: 0.8rem;
+  }
+
+  &__body {
+    grid-area: body;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+    color: var(--evf-text-muted);
+  }
+
+  &__title {
+    margin: 0 0 4px;
+    font: 700 1rem / 1.3 var(--evf-font-heading);
+    color: var(--evf-dark);
+    overflow-wrap: anywhere;
+  }
+
+  &__action {
+    grid-area: action;
+    justify-self: start;
+    align-self: end;
+  }
+}
+
+.discover {
+  align-self: flex-end;
+  padding: 8px 0;
+  font-weight: 600;
+  color: var(--evf-violet);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+// ==================================================================
+// BOUTONS (ajustements des .btn globaux)
+// ==================================================================
+.btn {
+  min-height: 40px;
+  padding: 8px 20px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+
+  // Bouton blanc sur la carte violette
+  &--light {
+    background: #fff;
+    color: var(--evf-violet-dark);
+  }
+}
+
+// ==================================================================
+// ÉTATS : chargement, erreur, vide
+// ==================================================================
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 40px 24px;
+  border: 1px dashed var(--evf-border);
+  border-radius: 14px;
+  background: var(--evf-surface);
+  text-align: center;
+
+  &__title {
+    margin: 0;
+    font: 700 1.05rem var(--evf-font-heading);
+  }
+
+  &__text {
+    margin: 0 0 8px;
+    color: var(--evf-text-muted);
+  }
+}
+
+.skeleton {
+  border-radius: 14px;
+  background: linear-gradient(90deg, #eef2f7 25%, #e2e8f0 50%, #eef2f7 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite linear;
+
+  &--next {
+    height: 180px;
+  }
+
+  &--counter {
+    height: 104px;
+  }
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+
+  .counter:hover {
+    transform: none;
+  }
+}
+
+// ==================================================================
+// RESPONSIVE
+// ==================================================================
+@media (max-width: $bp-tablet) {
+  // Tablette : affiche | infos, puis compte à rebours et bouton en dessous
+  .next {
+    grid-template-columns: 180px minmax(0, 1fr);
+
+    &__side {
+      grid-column: 1 / -1;
+      flex-direction: row;
+      justify-content: space-between;
+    }
+  }
+
+  .others {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: $bp-mobile) {
+  .hero {
+    padding: 20px;
+  }
+
+  .next {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+    padding: 16px;
+
+    &__media {
+      aspect-ratio: 16 / 6;
+    }
+
+    &__side {
+      flex-wrap: wrap;
+    }
+  }
+
+  // Les 3 compteurs restent sur une ligne, en plus compact
+  .counters {
+    gap: 10px;
+  }
+
+  .counter {
+    padding: 14px 6px;
+
+    &__value {
+      font-size: 1.5rem;
+    }
+
+    &__label {
+      font-size: 0.75rem;
+    }
+  }
+
+  .mini {
+    grid-template-columns: 80px minmax(0, 1fr);
+
+    &__media {
+      font-size: 0.6rem;
+    }
+  }
+
+  .btn {
+    min-height: 44px; // cible tactile
+  }
+
+  .discover {
+    align-self: stretch;
+    text-align: center;
+  }
+}

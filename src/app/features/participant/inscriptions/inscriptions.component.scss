@@ -1,0 +1,585 @@
+// ==================================================================
+// Page « Mes inscriptions » (participant)
+//
+// Couleurs et polices : variables globales --evf-* de src/styles.scss.
+// ==================================================================
+
+$bp-tablet: 960px;
+$bp-mobile: 640px;
+$bp-small: 400px;
+
+:host {
+  --violet: var(--evf-violet);
+  --violet-dark: var(--evf-violet-dark);
+  --cyan: var(--evf-cyan);
+  --dark: var(--evf-dark);
+  --surface: var(--evf-surface);
+  --text-secondary: var(--evf-text-muted);
+  --border: var(--evf-border);
+  --font-title: var(--evf-font-heading);
+  --font-body: var(--evf-font-body);
+
+  display: block;
+  font-family: var(--font-body);
+  color: var(--dark);
+}
+
+.registrations {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 1100px;
+}
+
+// ==================================================================
+// BANDEAU
+// ==================================================================
+.hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+  padding: 24px 28px;
+  color: #fff;
+  background: linear-gradient(120deg, var(--dark), #1e1b4b 55%, var(--violet-dark));
+
+  &__flow {
+    position: absolute;
+    inset: 0 0 0 auto;
+    width: 55%;
+    height: 100%;
+    pointer-events: none;
+  }
+
+  &__flow-line {
+    fill: none;
+    stroke: var(--violet);
+    stroke-width: 5;
+    stroke-linecap: round;
+
+    &--soft {
+      stroke: var(--cyan);
+      stroke-width: 2;
+      opacity: 0.6;
+    }
+  }
+
+  &__content {
+    position: relative; // au-dessus de la vague décorative
+  }
+
+  &__title {
+    margin: 0;
+    font-family: var(--font-title);
+    font-size: clamp(1.4rem, 2.5vw, 1.8rem);
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    background: linear-gradient(90deg, #a29bfe, var(--cyan));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  &__subtitle {
+    margin: 4px 0 18px;
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.85);
+  }
+
+  &__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+}
+
+// Onglets de statut
+.filters {
+  display: flex;
+  gap: 10px;
+
+  &__chip {
+    min-height: 40px;
+    padding: 6px 20px;
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--dark);
+    font: 600 0.95rem var(--font-body);
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 0.15s, color 0.15s;
+
+    &--active {
+      background: var(--violet);
+      color: #fff;
+    }
+  }
+}
+
+// Recherche
+.search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 1 300px;
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: 10px;
+  background: var(--surface);
+
+  &:focus-within {
+    outline: 3px solid var(--cyan);
+    outline-offset: 2px;
+  }
+
+  &__icon {
+    color: var(--text-secondary);
+  }
+
+  &__input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    font: 0.95rem var(--font-body);
+    color: var(--dark);
+
+    &:focus,
+    &:focus-visible {
+      outline: none; // le cadre est porté par .search:focus-within
+    }
+
+    &::placeholder {
+      color: var(--text-secondary);
+    }
+  }
+}
+
+// ==================================================================
+// LISTE ET CARTES
+// ==================================================================
+.registrations__count {
+  margin: 0 0 12px;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+// Bureau : affiche | informations | date d'inscription
+//          affiche | bouton événement | bouton ticket
+.card {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr) 240px;
+  grid-template-areas:
+    'media body  side'
+    'media event ticket';
+  column-gap: 24px;
+  row-gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  transition: box-shadow 0.2s;
+
+  &:hover {
+    box-shadow: 0 8px 24px rgba(17, 24, 39, 0.08);
+  }
+
+  &__media {
+    grid-area: media;
+    overflow: hidden;
+    border-radius: 10px;
+    aspect-ratio: 4 / 3;
+    align-self: start;
+    background: #e9e7fd;
+  }
+
+  &__image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  &__placeholder {
+    display: grid;
+    place-content: center;
+    grid-auto-flow: column;
+    height: 100%;
+    font: 800 1.1rem var(--font-title);
+    color: var(--violet-dark);
+    background: linear-gradient(135deg, #ede9fe, #cffafe);
+  }
+
+  &__body {
+    grid-area: body;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  &__eyebrow {
+    margin: 0;
+    font: 700 0.75rem var(--font-title);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--violet);
+  }
+
+  &__title {
+    margin: 0;
+    font: 700 1.1rem/1.3 var(--font-title);
+    text-transform: uppercase;
+    overflow-wrap: anywhere;
+  }
+
+  &__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__meta-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    color: #334155;
+  }
+
+  &__side {
+    grid-area: side;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    text-align: center;
+  }
+
+  &__registered {
+    margin: 0;
+    font-size: 0.95rem;
+  }
+
+  &__reference {
+    margin: 4px 0 0;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+  }
+
+  // Boutons fins comme sur la maquette : ils ne s'étirent pas sur la hauteur
+  &__action-event,
+  &__action-ticket {
+    align-self: end;
+    min-width: 220px;
+  }
+
+  &__action-event {
+    grid-area: event;
+    justify-self: start;
+  }
+
+  &__action-ticket {
+    grid-area: ticket;
+    justify-self: center;
+  }
+}
+
+.icon {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+// Badge de statut (texte + pastille : la couleur n'est jamais le seul indice)
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 14px 4px 6px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+
+  &__dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  &--success {
+    background: #dcfce7;
+    color: #15803d;
+  }
+
+  &--warning {
+    background: #fef3c7;
+    color: #b45309;
+  }
+
+  &--danger {
+    background: #fee2e2;
+    color: #b91c1c;
+  }
+}
+
+// ==================================================================
+// BOUTONS : on part de .btn / .btn--primary du style global (styles.scss)
+// et on ajuste seulement la taille et les dégradés de la maquette.
+// ==================================================================
+.btn {
+  min-height: 38px;
+  padding: 8px 18px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+
+  // Dégradé cyan → violet clair : le texte foncé garde un contraste lisible
+  &--event,
+  &--ticket {
+    background: linear-gradient(90deg, #7fe3ec, #b9a8f7);
+    color: var(--dark);
+  }
+}
+
+// ==================================================================
+// ÉTATS : chargement, erreur, vide
+// ==================================================================
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 48px 24px;
+  border: 1px dashed var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  text-align: center;
+
+  &__title {
+    margin: 0;
+    font: 700 1.05rem var(--font-title);
+  }
+
+  &__text {
+    margin: 0 0 8px;
+    color: var(--text-secondary);
+  }
+}
+
+.card--skeleton {
+  grid-template-areas: 'media body body';
+}
+
+.skeleton {
+  border-radius: 6px;
+  background: linear-gradient(90deg, #eef2f7 25%, #e2e8f0 50%, #eef2f7 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.2s infinite;
+
+  &--title {
+    width: 60%;
+    height: 20px;
+  }
+
+  &--line {
+    width: 80%;
+    height: 14px;
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+
+  .card,
+  .filters__chip {
+    transition: none;
+  }
+}
+
+// ==================================================================
+// PAGINATION : numéros sur grand écran, « Page x sur y » sur mobile
+// ==================================================================
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 24px;
+
+  &__pages {
+    display: flex;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__btn {
+    display: grid;
+    place-items: center;
+    min-width: 40px;
+    height: 40px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    font: 600 0.95rem var(--font-body);
+    cursor: pointer;
+
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.4;
+    }
+
+    &--active {
+      background: var(--violet);
+      color: #fff;
+    }
+  }
+
+  &__summary {
+    display: none;
+    margin: 0 8px;
+    color: var(--text-secondary);
+  }
+}
+
+// ==================================================================
+// TABLETTE (≤ 960 px) : affiche plus petite, date d'inscription
+// sous les informations, boutons sur une ligne
+// ==================================================================
+@media (max-width: $bp-tablet) {
+  .card {
+    grid-template-columns: 160px minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      'media body  body'
+      'media side  side'
+      'media event ticket';
+    column-gap: 16px;
+
+    &__side {
+      align-items: flex-start;
+      text-align: left;
+    }
+
+    &__action-event,
+    &__action-ticket {
+      justify-self: stretch;
+      min-width: 0;
+    }
+  }
+
+  .hero__toolbar {
+    flex-direction: column;
+    flex-wrap: nowrap; // en colonne, « wrap » élargirait les éléments au-delà du bandeau
+    align-items: stretch;
+  }
+
+  .search {
+    flex-basis: auto;
+  }
+}
+
+// ==================================================================
+// MOBILE (≤ 640 px) : carte empilée, onglets défilants
+// ==================================================================
+@media (max-width: $bp-mobile) {
+  .hero {
+    padding: 20px 16px;
+
+    &__flow {
+      width: 100%;
+      opacity: 0.5;
+    }
+  }
+
+  // Les onglets défilent horizontalement au lieu de passer à la ligne
+  .filters {
+    overflow-x: auto;
+    margin: 0 -16px;
+    padding: 2px 16px 6px;
+    scrollbar-width: none;
+
+    &__chip {
+      min-height: 44px; // cible tactile
+    }
+  }
+
+  .search {
+    min-height: 44px;
+  }
+
+  .card {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      'media media'
+      'body  body'
+      'side  side'
+      'event ticket';
+    padding: 12px;
+
+    &__media {
+      aspect-ratio: 16 / 9;
+    }
+  }
+
+  .btn,
+  .pagination__btn {
+    min-height: 44px;
+  }
+
+  .pagination__pages {
+    display: none;
+  }
+
+  .pagination__summary {
+    display: block;
+  }
+}
+
+// Très petits écrans : un bouton par ligne
+@media (max-width: $bp-small) {
+  .card {
+    grid-template-areas:
+      'media media'
+      'body  body'
+      'side  side'
+      'event event'
+      'ticket ticket';
+  }
+}

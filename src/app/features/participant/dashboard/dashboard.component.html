@@ -1,1 +1,164 @@
-<p>dashboard works!</p>
+<section class="dashboard" aria-labelledby="dashboard-title">
+  <!-- ============================================================
+       BANDEAU DE BIENVENUE
+       ============================================================ -->
+  <header class="hero">
+    <svg class="hero__flow" viewBox="0 0 400 140" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+      <path d="M0 120 C 60 60, 110 40, 170 70 S 280 120, 330 50 S 380 10, 400 18" class="hero__flow-line" />
+      <path d="M0 132 C 80 90, 140 80, 200 100 S 300 130, 400 70" class="hero__flow-line hero__flow-line--soft" />
+    </svg>
+
+    <div class="hero__content">
+      <h1 id="dashboard-title" class="hero__title">
+        Bonjour{{ firstName() ? ', ' + firstName() : '' }} <span aria-hidden="true">👋</span>
+      </h1>
+      <p class="hero__subtitle">Retrouvez vos événements et vos prochaines participations.</p>
+    </div>
+  </header>
+
+  <div class="dashboard__content" aria-live="polite" [attr.aria-busy]="loadState() === 'loading'">
+    @switch (loadState()) {
+      <!-- ============================================================
+           CHARGEMENT
+           ============================================================ -->
+      @case ('loading') {
+        <div class="skeleton skeleton--next" aria-hidden="true"></div>
+        <div class="counters" aria-hidden="true">
+          @for (placeholder of [1, 2, 3]; track placeholder) {
+            <div class="skeleton skeleton--counter"></div>
+          }
+        </div>
+      }
+
+      <!-- ============================================================
+           ERREUR
+           ============================================================ -->
+      @case ('error') {
+        <div class="state" role="alert">
+          <p class="state__title">Impossible de charger votre tableau de bord.</p>
+          <p class="state__text">Vérifiez votre connexion internet, puis réessayez.</p>
+          <button type="button" class="btn btn--primary" (click)="retry()">Réessayer</button>
+        </div>
+      }
+
+      @default {
+        <!-- ============================================================
+             PROCHAIN ÉVÉNEMENT
+             ============================================================ -->
+        <section class="block" aria-labelledby="next-title">
+          <h2 id="next-title" class="block__title">Prochain événement</h2>
+
+          @if (nextEvent(); as next) {
+            <article class="next" aria-labelledby="next-event-title">
+              <div class="next__media" aria-hidden="true">
+                <span>EVENT</span><span class="next__media-accent">FLOW</span>
+              </div>
+
+              <div class="next__body">
+                <h3 id="next-event-title" class="next__title">{{ next.title }}</h3>
+
+                <ul class="meta">
+                  <li class="meta__item">
+                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <rect x="3" y="5" width="18" height="16" rx="2" />
+                      <path d="M3 10h18M8 3v4M16 3v4" />
+                    </svg>
+                    <time [attr.datetime]="next.startIso">{{ next.whenLabel }}</time>
+                  </li>
+                  <li class="meta__item">
+                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      @if (next.isOnline) {
+                        <rect x="3" y="4" width="18" height="12" rx="2" />
+                        <path d="M8 20h8M12 16v4" />
+                      } @else {
+                        <path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z" />
+                        <circle cx="12" cy="10" r="2.5" />
+                      }
+                    </svg>
+                    <span>{{ next.placeLabel }}</span>
+                  </li>
+                  @if (next.ticketTypeName) {
+                    <li class="meta__item">
+                      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M3 8a2 2 0 0 0 0 4v4h18v-4a2 2 0 0 1 0-4V4H3z" />
+                      </svg>
+                      <span>Ticket {{ next.ticketTypeName }}</span>
+                    </li>
+                  }
+                </ul>
+              </div>
+
+              <div class="next__side">
+                <span class="badge">{{ next.countdownLabel }}</span>
+                @if (next.hasTicket) {
+                  <a class="btn btn--light" routerLink="/participant/tickets">Voir mon ticket</a>
+                } @else if (next.isPending) {
+                  <span class="next__pending">Inscription en attente de confirmation</span>
+                }
+              </div>
+            </article>
+          } @else {
+            <div class="state">
+              <p class="state__title">Aucun événement à venir pour le moment.</p>
+              <a class="btn btn--primary" routerLink="/events">Découvrir les événements</a>
+            </div>
+          }
+        </section>
+
+        <!-- ============================================================
+             COMPTEURS
+             ============================================================ -->
+        <ul class="counters" aria-label="Récapitulatif">
+          @for (counter of counters(); track counter.label) {
+            <li>
+              <a [class]="'counter counter--' + counter.tone" [routerLink]="counter.link">
+                <span class="counter__value">{{ formatCount(counter.value) }}</span>
+                <span class="counter__label">{{ counter.label }}</span>
+              </a>
+            </li>
+          }
+        </ul>
+
+        <!-- ============================================================
+             PROCHAINS ÉVÉNEMENTS
+             ============================================================ -->
+        @if (otherEvents().length > 0) {
+          <section class="block" aria-labelledby="others-title">
+            <h2 id="others-title" class="block__title">Prochains événements</h2>
+
+            <ul class="others">
+              @for (card of otherEvents(); track card.registrationId) {
+                <li>
+                  <article class="mini" [attr.aria-labelledby]="'mini-' + card.registrationId">
+                    <div class="mini__media" aria-hidden="true">
+                      <span>EVENT</span><span class="next__media-accent">FLOW</span>
+                    </div>
+                    <div class="mini__body">
+                      <h3 class="mini__title" [id]="'mini-' + card.registrationId">{{ card.title }}</h3>
+                      <p class="meta__item">
+                        <time [attr.datetime]="card.startIso">{{ card.whenLabel }}</time>
+                      </p>
+                      <p class="meta__item">{{ card.placeLabel }}</p>
+                    </div>
+                    <a
+                      class="btn btn--primary mini__action"
+                      routerLink="/events_detail"
+                      [queryParams]="{ id: card.eventId }"
+                      [attr.aria-label]="'Voir l\'événement ' + card.title"
+                    >
+                      Voir
+                    </a>
+                  </article>
+                </li>
+              }
+            </ul>
+          </section>
+        }
+
+        <a class="discover" routerLink="/events">
+          Découvrez de nouveaux événements <span aria-hidden="true">→</span>
+        </a>
+      }
+    }
+  </div>
+</section>
