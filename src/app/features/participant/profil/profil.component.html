@@ -1,236 +1,273 @@
 <section class="profile" aria-labelledby="profile-title">
-  <!-- ============================================================
-       BANDEAU
-       ============================================================ -->
+  <!-- ============================ BANNIÈRE ============================ -->
   <header class="hero">
-    <svg class="hero__flow" viewBox="0 0 400 140" preserveAspectRatio="none" aria-hidden="true" focusable="false">
-      <path d="M0 120 C 60 60, 110 40, 170 70 S 280 120, 330 50 S 380 10, 400 18" class="hero__flow-line" />
-      <path d="M0 132 C 80 90, 140 80, 200 100 S 300 130, 400 70" class="hero__flow-line hero__flow-line--soft" />
+    <svg class="hero__wave" viewBox="0 0 400 120" preserveAspectRatio="none" aria-hidden="true">
+      <defs>
+        <linearGradient id="pfHeroWave" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#8B7CF6" />
+          <stop offset="1" stop-color="#22C7D6" />
+        </linearGradient>
+      </defs>
+      <path
+        d="M0 90 C 50 20, 110 110, 180 60 S 300 0, 400 40"
+        fill="none"
+        stroke="url(#pfHeroWave)"
+        stroke-width="2.5"
+        vector-effect="non-scaling-stroke"
+      />
     </svg>
+
     <div class="hero__content">
       <h1 id="profile-title" class="hero__title">Mon profil</h1>
-      <p class="hero__subtitle">Gérez vos informations personnelles et votre compte.</p>
+      <p class="hero__text">Gérez vos informations personnelles et votre sécurité.</p>
     </div>
   </header>
 
   @if (user(); as currentUser) {
-    <!-- ============================================================
-         INFORMATIONS PERSONNELLES
-         ============================================================ -->
-    <section class="panel" aria-labelledby="info-title">
-      <h2 id="info-title" class="panel__title">Informations personnelles</h2>
-
-      <div class="info">
-        <div class="identity">
-          <p class="identity__name">{{ currentUser.full_name }}</p>
+    <div class="pf__layout">
+      <!-- ============================ IDENTITÉ ============================ -->
+      <aside class="side">
+        <div class="id">
           @if (currentUser.profile_picture) {
-            <img class="identity__avatar" [src]="currentUser.profile_picture" alt="" width="96" height="96" />
+            <img class="id__avatar" [src]="currentUser.profile_picture" alt="" />
           } @else {
-            <span class="identity__avatar identity__avatar--initials" aria-hidden="true">{{ initials() }}</span>
+            <span class="id__avatar id__avatar--initials" aria-hidden="true">{{ initials() }}</span>
           }
-          <span class="identity__role">{{ roleLabel() }}</span>
-        </div>
-
-        <form class="form" [formGroup]="profileForm" (ngSubmit)="saveProfile()" novalidate>
-          <div class="form__row">
-            <div class="field">
-              <label class="field__label" for="first_name">Prénom</label>
-              <input
-                id="first_name"
-                class="field__input"
-                type="text"
-                formControlName="first_name"
-                autocomplete="given-name"
-                [attr.maxlength]="nameMaxLength"
-                [attr.aria-invalid]="!!profileError('first_name')"
-                [attr.aria-describedby]="profileError('first_name') ? 'first_name-error' : null"
-                (input)="clearProfileServerError('first_name')"
-              />
-              @if (profileError('first_name'); as message) {
-                <p id="first_name-error" class="field__error">{{ message }}</p>
+          <div class="id__text">
+            <p class="id__name">{{ currentUser.full_name }}</p>
+            <p class="id__email">{{ currentUser.email }}</p>
+            <ul class="roles" aria-label="Rôles">
+              @for (role of currentUser.roles; track role) {
+                <li class="role">{{ roleLabelFor(role) }}</li>
               }
-            </div>
-
-            <div class="field">
-              <label class="field__label" for="last_name">Nom de famille</label>
-              <input
-                id="last_name"
-                class="field__input"
-                type="text"
-                formControlName="last_name"
-                autocomplete="family-name"
-                [attr.maxlength]="nameMaxLength"
-                [attr.aria-invalid]="!!profileError('last_name')"
-                [attr.aria-describedby]="profileError('last_name') ? 'last_name-error' : null"
-                (input)="clearProfileServerError('last_name')"
-              />
-              @if (profileError('last_name'); as message) {
-                <p id="last_name-error" class="field__error">{{ message }}</p>
-              }
-            </div>
-          </div>
-
-          <!-- L'e-mail sert d'identifiant : le backend ne permet pas de le modifier ici -->
-          <div class="field">
-            <label class="field__label" for="email">Adresse e-mail</label>
-            <input id="email" class="field__input" type="email" [value]="currentUser.email" readonly aria-describedby="email-hint" />
-            <p id="email-hint" class="field__hint">L'adresse e-mail ne peut pas être modifiée.</p>
-          </div>
-
-          <div class="field">
-            <label class="field__label" for="phone">Téléphone</label>
-            <input
-              id="phone"
-              class="field__input"
-              type="tel"
-              formControlName="phone"
-              autocomplete="tel"
-              inputmode="tel"
-              placeholder="+22997000000"
-              [attr.aria-invalid]="!!profileError('phone')"
-              [attr.aria-describedby]="profileError('phone') ? 'phone-error' : null"
-              (input)="clearProfileServerError('phone')"
-            />
-            @if (profileError('phone'); as message) {
-              <p id="phone-error" class="field__error">{{ message }}</p>
-            }
-          </div>
-
-          <div class="form__actions">
-            <button type="submit" class="btn btn--save" [disabled]="savingProfile() || profileForm.pristine">
-              {{ savingProfile() ? 'Enregistrement…' : 'Enregistrer les modifications' }}
-            </button>
-            @if (profileForm.dirty && !savingProfile()) {
-              <button type="button" class="btn btn--ghost" (click)="cancelProfile()">Annuler</button>
-            }
-          </div>
-        </form>
-      </div>
-    </section>
-
-    <!-- ============================================================
-         COMPTE
-         ============================================================ -->
-    <section class="panel" aria-labelledby="account-title">
-      <h2 id="account-title" class="panel__title">Compte</h2>
-      <dl class="rows">
-        <div class="rows__item">
-          <dt>Type de compte</dt>
-          <dd>{{ roleLabel() }}</dd>
-        </div>
-        <div class="rows__item">
-          <dt>Statut</dt>
-          <dd>
+            </ul>
             <span class="status" [class.status--off]="!currentUser.is_active">
               <span class="status__dot" aria-hidden="true"></span>
               {{ currentUser.is_active ? 'Compte actif' : 'Compte désactivé' }}
             </span>
-          </dd>
+          </div>
         </div>
-      </dl>
-    </section>
+      </aside>
 
-    <section class="panel" aria-labelledby="security-title">
-      <h2 id="security-title" class="panel__title">Sécurité</h2>
-      <div class="rows">
-        <div class="rows__item">
-          <span>Mot de passe</span>
-          <span class="rows__mask" aria-label="Mot de passe masqué">••••••••••</span>
-          <button type="button" class="btn btn--primary btn--small" (click)="openPasswordDialog()">Modifier</button>
-        </div>
-      </div>
-    </section>
+      <!-- ============================ CONTENU ============================ -->
+      <div class="content">
+        <!-- INFORMATIONS PERSONNELLES -->
+        <section class="panel" aria-labelledby="info-title">
+          <header class="panel__head">
+            <h2 id="info-title" class="panel__title">Informations personnelles</h2>
+            <p class="panel__sub">Ces informations vous identifient sur la plateforme.</p>
+          </header>
 
-    <!-- ============================================================
-         ZONE DE DANGER : pas encore de route backend de suppression
-         ============================================================ -->
-    <section class="danger" aria-labelledby="danger-title">
-      <div>
-        <h2 id="danger-title" class="danger__title">
-          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path d="M12 3 2 21h20zM12 10v5M12 18h.01" />
-          </svg>
-          Zone de danger
-        </h2>
-        <p id="danger-hint" class="danger__text">
-          La suppression de compte n'est pas encore disponible. Contactez l'administrateur de la plateforme.
-        </p>
+          <form class="form" [formGroup]="profileForm" (ngSubmit)="saveProfile()" novalidate>
+            <div class="fields-2">
+              <div class="field">
+                <label class="field__label" for="first_name">Prénom <span class="req">*</span></label>
+                <input
+                  id="first_name"
+                  class="input"
+                  type="text"
+                  formControlName="first_name"
+                  autocomplete="given-name"
+                  [attr.maxlength]="nameMaxLength"
+                  [class.input--error]="!!profileError('first_name')"
+                  [attr.aria-invalid]="!!profileError('first_name')"
+                  (input)="clearProfileServerError('first_name')"
+                />
+                @if (profileError('first_name'); as message) {
+                  <span class="field__error">{{ message }}</span>
+                }
+              </div>
+
+              <div class="field">
+                <label class="field__label" for="last_name">Nom <span class="req">*</span></label>
+                <input
+                  id="last_name"
+                  class="input"
+                  type="text"
+                  formControlName="last_name"
+                  autocomplete="family-name"
+                  [attr.maxlength]="nameMaxLength"
+                  [class.input--error]="!!profileError('last_name')"
+                  [attr.aria-invalid]="!!profileError('last_name')"
+                  (input)="clearProfileServerError('last_name')"
+                />
+                @if (profileError('last_name'); as message) {
+                  <span class="field__error">{{ message }}</span>
+                }
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="field__label" for="email">Adresse e-mail</label>
+              <input
+                id="email"
+                class="input"
+                type="email"
+                [value]="currentUser.email"
+                readonly
+              />
+              <span class="field__hint">L'adresse e-mail ne peut pas être modifiée.</span>
+            </div>
+
+            <div class="field">
+              <label class="field__label" for="phone">Téléphone <span class="req">*</span></label>
+              <input
+                id="phone"
+                class="input"
+                type="tel"
+                formControlName="phone"
+                autocomplete="tel"
+                inputmode="tel"
+                placeholder="+22997000000"
+                [class.input--error]="!!profileError('phone')"
+                [attr.aria-invalid]="!!profileError('phone')"
+                (input)="clearProfileServerError('phone')"
+              />
+              @if (profileError('phone'); as message) {
+                <span class="field__error">{{ message }}</span>
+              } @else {
+                <span class="field__hint">Format international (8 à 15 chiffres).</span>
+              }
+            </div>
+
+            <footer class="actions">
+              @if (profileForm.dirty && !savingProfile()) {
+                <button type="button" class="link-btn link-btn--muted" (click)="cancelProfile()">
+                  Annuler les modifications
+                </button>
+              }
+              <button type="submit" class="btn btn--solid" [disabled]="savingProfile() || profileForm.pristine">
+                @if (savingProfile()) {
+                  <span class="spinner" aria-hidden="true"></span> Enregistrement...
+                } @else {
+                  Enregistrer
+                }
+              </button>
+            </footer>
+          </form>
+        </section>
+
+        <!-- SÉCURITÉ -->
+        <section class="panel" aria-labelledby="security-title">
+          <header class="panel__head">
+            <h2 id="security-title" class="panel__title">Sécurité</h2>
+            <p class="panel__sub">Gérez votre mot de passe et la sécurité de votre compte.</p>
+          </header>
+
+          <div class="row">
+            <div class="row__label">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+              <div>
+                <strong>Mot de passe</strong>
+                <small>••••••••••</small>
+              </div>
+            </div>
+            <button type="button" class="btn btn--outline btn--sm" (click)="openPasswordDialog()">
+              Modifier
+            </button>
+          </div>
+        </section>
       </div>
-      <button type="button" class="btn btn--danger btn--small" disabled aria-describedby="danger-hint">
-        Supprimer mon compte
-      </button>
-    </section>
+    </div>
   } @else {
     <div class="state" aria-busy="true">
-      <p class="state__text">Chargement de votre profil…</p>
+      <span class="spinner" aria-hidden="true"></span>
+      Chargement de votre profil…
     </div>
   }
 
-  <!-- ============================================================
-       FENÊTRE : changement de mot de passe
-       ============================================================ -->
+  <!-- ============================ DIALOG MOT DE PASSE ============================ -->
   <dialog #passwordDialog class="dialog" aria-labelledby="password-title" (click)="onDialogClick($event)">
     <form class="dialog__panel" [formGroup]="passwordForm" (ngSubmit)="savePassword()" novalidate>
-      <h2 id="password-title" class="panel__title">Modifier le mot de passe</h2>
-      <p class="field__hint">Vous serez déconnecté après la modification.</p>
+      <header class="dialog__head">
+        <h2 id="password-title" class="panel__title">Modifier le mot de passe</h2>
+        <button type="button" class="dialog__close" aria-label="Fermer" (click)="closePasswordDialog()" [disabled]="savingPassword()">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </header>
+
+      <p class="dialog__hint">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M12 16v-4"></path><path d="M12 8h.01"></path>
+        </svg>
+        Vous serez déconnecté après la modification.
+      </p>
 
       <div class="field">
-        <label class="field__label" for="old_password">Mot de passe actuel</label>
+        <label class="field__label" for="old_password">Mot de passe actuel <span class="req">*</span></label>
         <input
           id="old_password"
-          class="field__input"
+          class="input"
           type="password"
           formControlName="old_password"
           autocomplete="current-password"
+          [class.input--error]="!!passwordError('old_password')"
           [attr.aria-invalid]="!!passwordError('old_password')"
           (input)="clearPasswordServerError('old_password')"
         />
         @if (passwordError('old_password'); as message) {
-          <p class="field__error">{{ message }}</p>
+          <span class="field__error">{{ message }}</span>
         }
       </div>
 
       <div class="field">
-        <label class="field__label" for="new_password">Nouveau mot de passe</label>
+        <label class="field__label" for="new_password">Nouveau mot de passe <span class="req">*</span></label>
         <input
           id="new_password"
-          class="field__input"
+          class="input"
           type="password"
           formControlName="new_password"
           autocomplete="new-password"
           [attr.minlength]="passwordMinLength"
+          [class.input--error]="!!passwordError('new_password')"
           [attr.aria-invalid]="!!passwordError('new_password')"
           (input)="clearPasswordServerError('new_password')"
         />
         @if (passwordError('new_password'); as message) {
-          <p class="field__error">{{ message }}</p>
+          <span class="field__error">{{ message }}</span>
+        } @else {
+          <span class="field__hint">
+            Au moins {{ passwordMinLength }} caractères, avec une minuscule, une majuscule et un chiffre.
+          </span>
         }
       </div>
 
       <div class="field">
-        <label class="field__label" for="new_password_confirm">Confirmer le nouveau mot de passe</label>
+        <label class="field__label" for="new_password_confirm">Confirmer <span class="req">*</span></label>
         <input
           id="new_password_confirm"
-          class="field__input"
+          class="input"
           type="password"
           formControlName="new_password_confirm"
           autocomplete="new-password"
+          [class.input--error]="!!passwordError('new_password_confirm')"
           [attr.aria-invalid]="!!passwordError('new_password_confirm')"
           (input)="clearPasswordServerError('new_password_confirm')"
         />
         @if (passwordError('new_password_confirm'); as message) {
-          <p class="field__error">{{ message }}</p>
+          <span class="field__error">{{ message }}</span>
         }
       </div>
 
-      <div class="form__actions">
-        <button type="submit" class="btn btn--save" [disabled]="savingPassword()">
-          {{ savingPassword() ? 'Modification…' : 'Modifier le mot de passe' }}
-        </button>
+      <footer class="dialog__foot">
         <button type="button" class="btn btn--ghost" [disabled]="savingPassword()" (click)="closePasswordDialog()">
           Annuler
         </button>
-      </div>
+        <button type="submit" class="btn btn--solid" [disabled]="savingPassword()">
+          @if (savingPassword()) {
+            <span class="spinner" aria-hidden="true"></span> Modification...
+          } @else {
+            Modifier le mot de passe
+          }
+        </button>
+      </footer>
     </form>
   </dialog>
 </section>

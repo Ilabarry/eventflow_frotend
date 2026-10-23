@@ -99,6 +99,10 @@ export class ParticipantProfileComponent {
     (this.user()?.roles ?? []).map((role) => ROLE_LABELS[role] ?? role).join(', '),
   );
 
+  roleLabelFor(role: string): string {
+    return ROLE_LABELS[role] ?? role;
+  }
+
   // --- Formulaire « Informations personnelles » ---------------------------
   readonly profileForm = this.formBuilder.group({
     first_name: ['', [Validators.required, Validators.maxLength(NAME_MAX_LENGTH)]],
