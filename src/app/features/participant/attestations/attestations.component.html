@@ -1,1 +1,167 @@
-<p>attestations works!</p>
+
+<main class="attestations-page">
+  <header class="page-banner">
+    <div class="banner-content">
+      <span class="eyebrow">ESPACE PARTICIPANT</span>
+      <h1>Mes attestations</h1>
+      <p>Retrouvez vos attestations de participation.</p>
+    </div>
+
+    <div class="banner-decoration" aria-hidden="true">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+  </header>
+
+  <section class="toolbar" aria-label="Filtres des attestations">
+    <div class="filter-tabs" role="group" aria-label="Statut">
+      <button
+        type="button"
+        [class.active]="filtreActif === 'TOUTES'"
+        [attr.aria-pressed]="filtreActif === 'TOUTES'"
+        (click)="changerFiltre('TOUTES')">
+        Toutes
+      </button>
+
+      <button
+        type="button"
+        [class.active]="filtreActif === 'DISPONIBLE'"
+        [attr.aria-pressed]="filtreActif === 'DISPONIBLE'"
+        (click)="changerFiltre('DISPONIBLE')">
+        Disponibles
+      </button>
+
+      <button
+        type="button"
+        [class.active]="filtreActif === 'EN_ATTENTE'"
+        [attr.aria-pressed]="filtreActif === 'EN_ATTENTE'"
+        (click)="changerFiltre('EN_ATTENTE')">
+        En attente
+      </button>
+    </div>
+
+    <label class="search-box">
+      <span aria-hidden="true">⌕</span>
+      <input
+        type="search"
+        [(ngModel)]="recherche"
+        placeholder="Rechercher une attestation"
+        aria-label="Rechercher par événement ou référence">
+    </label>
+  </section>
+
+  <section class="results-heading">
+    <div>
+      <span class="section-kicker">VOTRE ESPACE</span>
+      <h2>Mes documents</h2>
+      <p>
+        {{ attestationsFiltrees.length }}
+        attestation(s) affichée(s)
+      </p>
+    </div>
+
+    <button
+      type="button"
+      class="reset-button"
+      (click)="reinitialiserRecherche()">
+      Réinitialiser
+    </button>
+  </section>
+
+  <section
+    class="attestations-grid"
+    aria-label="Liste des attestations">
+
+    <article
+      class="attestation-card certificate-card"
+      *ngFor="let attestation of attestationsFiltrees; trackBy: trackById"
+      [class.pending-card]="attestation.statut === 'EN_ATTENTE'">
+
+      <ng-container *ngIf="attestation.statut === 'DISPONIBLE'; else pending">
+        <div class="certificate-topline">
+          <span class="brand-wordmark">
+            EVENT<span>FLOW</span>
+          </span>
+
+          <span class="status status-available">
+            <span aria-hidden="true">✓</span> DISPONIBLE
+          </span>
+        </div>
+
+        <div class="certificate-body">
+          <p class="event-name">{{ attestation.evenement }}</p>
+
+          <div class="certificate-title">
+            <span class="document-icon" aria-hidden="true">▤</span>
+            <h3>ATTESTATION</h3>
+          </div>
+
+          <p class="issued-to">Cette attestation est délivrée à</p>
+          <p class="participant-name">{{ attestation.participant }}</p>
+
+          <div class="certificate-seal" aria-label="Sceau décoratif">
+            ✦
+          </div>
+
+          <div class="certificate-meta">
+            <span>▦ {{ attestation.date }}</span>
+            <span>⌖ {{ attestation.lieu }}</span>
+          </div>
+
+          <p class="reference">
+            Référence : {{ attestation.reference }}
+          </p>
+        </div>
+
+        <div class="card-actions">
+          <button
+            type="button"
+            class="button-outline"
+            (click)="voirAttestation(attestation)">
+            Voir
+          </button>
+
+          <button
+            type="button"
+            class="button-download"
+            (click)="telechargerAttestation(attestation)">
+            ↓ Télécharger
+          </button>
+        </div>
+      </ng-container>
+
+      <ng-template #pending>
+        <div class="pending-heading">
+          <span class="pending-icon" aria-hidden="true">▤</span>
+
+          <div class="pending-event">
+            <h3>{{ attestation.evenement }}</h3>
+            <p>{{ attestation.type }}</p>
+          </div>
+
+          <span class="status status-pending">EN ATTENTE</span>
+        </div>
+
+        <div class="pending-message">
+          <span class="pending-clock" aria-hidden="true">◷</span>
+          <h4>Votre attestation sera disponible prochainement.</h4>
+          <p>Vous recevrez une notification lorsqu’elle sera prête.</p>
+        </div>
+
+        <p class="pending-reference">
+          Référence : {{ attestation.reference }}
+        </p>
+      </ng-template>
+    </article>
+
+    <div class="empty-state" *ngIf="attestationsFiltrees.length === 0">
+      <span aria-hidden="true">▤</span>
+      <h3>Aucune attestation trouvée</h3>
+      <p>Modifiez votre recherche ou choisissez un autre filtre.</p>
+      <button type="button" class="button-outline" (click)="reinitialiserRecherche()">
+        Afficher toutes les attestations
+      </button>
+    </div>
+  </section>
+</main>

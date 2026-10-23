@@ -16,7 +16,7 @@ import { ParticipantLayoutComponent } from './layouts/participant/participant-la
 import { ParticipantDashboardComponent } from './features/participant/dashboard/dashboard.component';
 import { ParticipantRegistrationsComponent } from './features/participant/inscriptions/inscriptions.component';
 import { ParticipantTicketsComponent } from './features/participant/tickets/tickets.component';
-import { ParticipantCertificatesComponent } from './features/participant/attestations/attestations.component';
+import { AttestationsComponent } from './features/participant/attestations/attestations.component';
 import { ParticipantProfileComponent } from './features/participant/profil/profil.component';
 import { ParticipantNotificationsComponent } from './features/participant/notifications/notifications.component';
 import { AdminLayoutComponent } from './layouts/admin/admin-layout/admin-layout.component';
@@ -84,7 +84,7 @@ export const routes: Routes = [
       { path: 'dashboard', component: ParticipantDashboardComponent },
       { path: 'inscriptions', component: ParticipantRegistrationsComponent },
       { path: 'tickets', component: ParticipantTicketsComponent },
-      { path: 'attestations', component: ParticipantCertificatesComponent },
+      { path: 'attestations', component: AttestationsComponent },
       { path: 'profil', component: ParticipantProfileComponent },
       { path: 'notifications', component: ParticipantNotificationsComponent },
     ],
