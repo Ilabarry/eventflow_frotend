@@ -34,6 +34,7 @@ import { authGuard } from './core/guards/auth.guard';
 import { roleGuard } from './core/guards/role.guard';
 import { Role } from './core/models/user.model';
 import { OrganizerProfileComponent } from './features/organizer/profil/profil.component';
+import { AboutComponent } from './features/public/about/about.component';
 
 export const routes: Routes = [
   { path: 'register', component: RegisterComponent },
@@ -45,6 +46,7 @@ export const routes: Routes = [
       { path: '', component: HommeComponent },
       { path: 'events', component: EventsComponent },
       { path: 'events/:id', component: EventDetailComponent },
+      { path: 'about', component: AboutComponent },
     ],
   },
 
