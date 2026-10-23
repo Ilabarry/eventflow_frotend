@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { ApiResponse, PaginatedResponse } from '../models/api-response.model';
+import { EventDto } from '../models/event.model';
 
 /** Statut backend (MAJUSCULES). */
 export type ApiRegistrationStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED';
@@ -19,6 +20,25 @@ export interface RegistrationOrganizerDto {
   participant_name: string;
   participant_phone: string;
   ticket_type_name: string | null;
+}
+
+/** Inscription côté participant (RegistrationListSerializer) : GET /api/registrations/my/ */
+export interface MyRegistrationDto {
+  id: string;
+  reference: string;
+  status: ApiRegistrationStatus;
+  registered_at: string;
+  cancelled_at: string | null;
+  event: EventDto;
+}
+
+/** Filtres acceptés par GET /api/registrations/my/. */
+export interface MyRegistrationsFilters {
+  page: number;
+  pageSize: number;
+  status: ApiRegistrationStatus | null;
+  /** Le backend cherche dans la RÉFÉRENCE (EVF-REG-…), pas dans le titre de l'événement. */
+  search: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -50,4 +70,25 @@ export class RegistrationService {
     );
   }
 
+  /** GET /api/registrations/my/ : inscriptions du participant connecté. */
+  listMine(
+    filters: MyRegistrationsFilters,
+  ): Observable<ApiResponse<PaginatedResponse<MyRegistrationDto>>> {
+    let params = new HttpParams()
+      .set('page', filters.page.toString())
+      .set('page_size', filters.pageSize.toString());
+
+    if (filters.status) {
+      params = params.set('status', filters.status);
+    }
+    const search = filters.search.trim();
+    if (search) {
+      params = params.set('search', search);
+    }
+
+    return this.http.get<ApiResponse<PaginatedResponse<MyRegistrationDto>>>(
+      `${this.BASE}/registrations/my/`,
+      { params },
+    );
+  }
 }

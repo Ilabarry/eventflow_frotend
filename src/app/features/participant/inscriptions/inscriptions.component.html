@@ -1,1 +1,237 @@
-<p>inscriptions works!</p>
+<section class="registrations" aria-labelledby="registrations-title">
+  <!-- ============================================================
+       BANDEAU : titre, onglets de statut, recherche
+       ============================================================ -->
+  <header class="hero">
+    <svg class="hero__flow" viewBox="0 0 400 140" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+      <path d="M0 120 C 60 60, 110 40, 170 70 S 280 120, 330 50 S 380 10, 400 18" class="hero__flow-line" />
+      <path d="M0 132 C 80 90, 140 80, 200 100 S 300 130, 400 70" class="hero__flow-line hero__flow-line--soft" />
+    </svg>
+
+    <div class="hero__content">
+      <h1 id="registrations-title" class="hero__title">Mes inscriptions</h1>
+      <p class="hero__subtitle">Retrouvez vos inscriptions et accédez à vos événements.</p>
+
+      <div class="hero__toolbar">
+        <div class="filters" role="group" aria-label="Filtrer par statut d'inscription">
+          @for (filter of statusFilters; track filter.label) {
+            <button
+              type="button"
+              class="filters__chip"
+              [class.filters__chip--active]="activeStatus() === filter.value"
+              [attr.aria-pressed]="activeStatus() === filter.value"
+              (click)="selectStatus(filter.value)"
+            >
+              {{ filter.label }}
+            </button>
+          }
+        </div>
+
+        <div class="search">
+          <svg class="icon search__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <circle cx="11" cy="11" r="7" />
+            <path d="m20 20-3.5-3.5" />
+          </svg>
+          <input
+            class="search__input"
+            type="search"
+            placeholder="Rechercher par référence…"
+            autocomplete="off"
+            aria-label="Rechercher une inscription par sa référence"
+            [value]="searchTerm()"
+            (input)="onSearchInput($event)"
+          />
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============================================================
+       CONTENU : chargement, erreur, vide ou liste
+       ============================================================ -->
+  <div class="registrations__content" aria-live="polite" [attr.aria-busy]="loadState() === 'loading'">
+    @switch (loadState()) {
+      @case ('loading') {
+        <ul class="list" aria-label="Chargement des inscriptions">
+          @for (placeholder of [1, 2, 3]; track placeholder) {
+            <li class="card card--skeleton" aria-hidden="true">
+              <div class="card__media skeleton"></div>
+              <div class="card__body">
+                <div class="skeleton skeleton--title"></div>
+                <div class="skeleton skeleton--line"></div>
+              </div>
+            </li>
+          }
+        </ul>
+      }
+
+      @case ('error') {
+        <div class="state" role="alert">
+          <p class="state__title">Impossible de charger vos inscriptions.</p>
+          <p class="state__text">Vérifiez votre connexion internet, puis réessayez.</p>
+          <button type="button" class="btn btn--primary" (click)="retry()">Réessayer</button>
+        </div>
+      }
+
+      @default {
+        @if (cards().length === 0) {
+          <div class="state">
+            @if (hasActiveFilter()) {
+              <p class="state__title">Aucune inscription ne correspond à votre recherche.</p>
+              <button type="button" class="btn btn--primary" (click)="resetFilters()">Voir toutes mes inscriptions</button>
+            } @else {
+              <p class="state__title">Vous n'êtes inscrit à aucun événement pour le moment.</p>
+              <p class="state__text">Découvrez les événements à venir et inscrivez-vous en quelques clics.</p>
+              <a class="btn btn--primary" routerLink="/events">Découvrir les événements</a>
+            }
+          </div>
+        } @else {
+          <p class="registrations__count">
+            {{ totalCount() }} inscription{{ totalCount() > 1 ? 's' : '' }}
+          </p>
+
+          <ul class="list">
+            @for (card of cards(); track card.id) {
+              <li>
+                <article class="card" [attr.aria-labelledby]="'registration-' + card.id">
+                  <!-- Affiche -->
+                  <div class="card__media">
+                    @if (card.coverImage) {
+                      <img
+                        class="card__image"
+                        [src]="card.coverImage"
+                        [alt]="'Affiche : ' + card.title"
+                        width="400"
+                        height="300"
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    } @else {
+                      <div class="card__placeholder" aria-hidden="true">
+                        EVENTFLOW
+                      </div>
+                    }
+                  </div>
+
+                  <!-- Informations de l'événement -->
+                  <div class="card__body">
+                    @if (card.categoryName) {
+                      <p class="card__eyebrow">{{ card.categoryName }}</p>
+                    }
+                    <h2 class="card__title" [id]="'registration-' + card.id">{{ card.title }}</h2>
+
+                    <ul class="card__meta">
+                      <li class="card__meta-item">
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <rect x="3" y="5" width="18" height="16" rx="2" />
+                          <path d="M3 10h18M8 3v4M16 3v4" />
+                        </svg>
+                        <time [attr.datetime]="card.startIso">{{ card.dateLabel }} · {{ card.timeLabel }}</time>
+                      </li>
+                      <li class="card__meta-item">
+                        @if (card.isOnline) {
+                          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <rect x="3" y="4" width="18" height="12" rx="2" />
+                            <path d="M8 20h8M12 16v4" />
+                          </svg>
+                        } @else {
+                          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z" />
+                            <circle cx="12" cy="10" r="2.5" />
+                          </svg>
+                        }
+                        <span>{{ card.placeLabel }}</span>
+                      </li>
+                      <li class="card__meta-item">
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M13 2 4 14h7l-1 8 9-12h-7z" />
+                        </svg>
+                        <span>{{ card.priceLabel }}</span>
+                      </li>
+                    </ul>
+
+                    <span [class]="'badge badge--' + card.statusTone">
+                      <span class="badge__dot" aria-hidden="true"></span>
+                      {{ card.statusLabel }}
+                    </span>
+                  </div>
+
+                  <!-- Date d'inscription et référence -->
+                  <div class="card__side">
+                    <p class="card__registered">
+                      Inscrit le <time [attr.datetime]="card.registeredIso">{{ card.registeredLabel }}</time>
+                    </p>
+                    <p class="card__reference">Réf. {{ card.reference }}</p>
+                  </div>
+
+                  <!-- Actions -->
+                  <a
+                    class="btn btn--event card__action-event"
+                    routerLink="/events_detail"
+                    [queryParams]="{ id: card.eventId }"
+                  >
+                    Voir l'événement
+                  </a>
+                  @if (!card.isCancelled) {
+                    <button
+                      type="button"
+                      class="btn btn--ticket card__action-ticket"
+                      disabled
+                      title="Les billets seront disponibles prochainement"
+                    >
+                      Voir mon ticket
+                    </button>
+                  }
+                </article>
+              </li>
+            }
+          </ul>
+
+          <!-- Pagination -->
+          @if (totalPages() > 1) {
+            <nav class="pagination" aria-label="Pagination des inscriptions">
+              <button
+                type="button"
+                class="pagination__btn"
+                aria-label="Page précédente"
+                [disabled]="currentPage() === 1"
+                (click)="goToPage(currentPage() - 1)"
+              >
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19 12H5m6-6-6 6 6 6" /></svg>
+              </button>
+
+              <ol class="pagination__pages">
+                @for (page of pages(); track page) {
+                  <li>
+                    <button
+                      type="button"
+                      class="pagination__btn"
+                      [class.pagination__btn--active]="page === currentPage()"
+                      [attr.aria-current]="page === currentPage() ? 'page' : null"
+                      [attr.aria-label]="'Page ' + page"
+                      (click)="goToPage(page)"
+                    >
+                      {{ page }}
+                    </button>
+                  </li>
+                }
+              </ol>
+
+              <p class="pagination__summary">Page {{ currentPage() }} sur {{ totalPages() }}</p>
+
+              <button
+                type="button"
+                class="pagination__btn"
+                aria-label="Page suivante"
+                [disabled]="currentPage() === totalPages()"
+                (click)="goToPage(currentPage() + 1)"
+              >
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14m-6-6 6 6-6 6" /></svg>
+              </button>
+            </nav>
+          }
+        }
+      }
+    }
+  </div>
+</section>
