@@ -1,1 +1,417 @@
-<h1>Ma page detail d'un evenement</h1>
+<div class="detail">
+  @switch (state) {
+    <!-- ======================= CHARGEMENT ======================= -->
+    @case ('loading') {
+      <div class="content-width" role="status" aria-busy="true">
+        <span class="sr-only">Chargement de l’événement…</span>
+        <div class="skeleton banner-skeleton"></div>
+        <div class="layout">
+          <div class="main">
+            <div class="skeleton skeleton-card-lg"></div>
+            <div class="skeleton skeleton-card-lg"></div>
+          </div>
+          <div class="skeleton skeleton-card-side"></div>
+        </div>
+      </div>
+    }
+
+    <!-- ======================= INTROUVABLE ======================= -->
+    @case ('notfound') {
+      <section class="state content-width">
+        <span class="state-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 4.2 4.2"></path></svg>
+        </span>
+        <h1>Événement introuvable</h1>
+        <p>Cet événement n’existe pas, a été supprimé ou n’est plus disponible.</p>
+        <a class="button-primary" routerLink="/events">Voir les événements</a>
+      </section>
+    }
+
+    <!-- ======================= ERREUR ======================= -->
+    @case ('error') {
+      <section class="state content-width" role="alert">
+        <span class="state-icon state-icon-error" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <path d="M12 9v4"></path><path d="M12 17h.01"></path>
+          </svg>
+        </span>
+        <h1>Impossible de charger l’événement</h1>
+        <p>{{ errorMessage }}</p>
+        <div class="state-actions">
+          <button class="button-primary" type="button" (click)="loadEvent()">Réessayer</button>
+          <a class="button-ghost" routerLink="/events">Retour aux événements</a>
+        </div>
+      </section>
+    }
+
+    <!-- ======================= ÉVÉNEMENT ======================= -->
+    @default {
+      @if (detail; as e) {
+        <!-- Bannière -->
+        <header class="banner content-width">
+          @if (e.cover_image) {
+            <img class="banner-image" [src]="e.cover_image" alt="" fetchpriority="high" />
+          }
+          <div class="banner-shade"></div>
+
+          <div class="banner-content">
+            <nav class="breadcrumb" aria-label="Fil d’Ariane">
+              <ol>
+                <li><a routerLink="/">Accueil</a></li>
+                <li><a routerLink="/events">Événements</a></li>
+                <li aria-current="page">{{ e.title }}</li>
+              </ol>
+            </nav>
+
+            <div class="banner-tags">
+              @if (e.category.name) {
+                <span class="chip chip-glass">{{ e.category.name }}</span>
+              }
+              <span class="chip chip-glass">
+                <span class="chip-dot" [class.chip-dot-online]="e.format === 'ONLINE'"></span>
+                {{ formatLabel(e.format) }}
+              </span>
+              <span class="chip chip-price" [class.chip-paid]="e.participation_type === 'PAID'">
+                {{ priceLabel(e) }}
+              </span>
+            </div>
+
+            <h1>{{ e.title }}</h1>
+
+            <ul class="banner-meta">
+              @for (item of info.slice(0, 3); track item.label) {
+                <li>
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    @for (d of item.icon; track d) {
+                      <path [attr.d]="d"></path>
+                    }
+                  </svg>
+                  <span>{{ item.value }}</span>
+                </li>
+              }
+            </ul>
+          </div>
+        </header>
+
+        <!-- Contenu + inscription -->
+        <div class="layout content-width">
+          <div class="main">
+            <!-- À propos -->
+            <section class="panel" aria-labelledby="about-title">
+              <h2 id="about-title" class="panel-title">À propos de l’événement</h2>
+
+              @if (e.description) {
+                <div class="rich" [innerHTML]="e.description"></div>
+              } @else {
+                <p class="panel-text">{{ e.short_description }}</p>
+              }
+            </section>
+
+            <!-- Détails pratiques -->
+            @if (info.length > 0) {
+              <section class="panel" aria-labelledby="details-title">
+                <h2 id="details-title" class="panel-title">Détails pratiques</h2>
+
+                <ul class="info-grid">
+                  @for (item of info; track item.label) {
+                    <li class="info-item">
+                      <span class="info-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24">
+                          @for (d of item.icon; track d) {
+                            <path [attr.d]="d"></path>
+                          }
+                        </svg>
+                      </span>
+                      <span class="info-text">
+                        <small>{{ item.label }}</small>
+                        <strong>{{ item.value }}</strong>
+                        @if (item.sub) {
+                          <span>{{ item.sub }}</span>
+                        }
+                      </span>
+                    </li>
+                  }
+                </ul>
+              </section>
+            }
+
+            <!-- Organisateur + localisation -->
+            <div class="duo">
+              @if (e.organizer; as org) {
+                <section class="panel" aria-labelledby="org-title">
+                  <h2 id="org-title" class="panel-title">Organisateur</h2>
+
+                  <div class="organizer">
+                    <span class="organizer-logo" aria-hidden="true">
+                      @if (org.logo) {
+                        <img [src]="org.logo" alt="" />
+                      } @else {
+                        {{ initials }}
+                      }
+                    </span>
+                    <div class="organizer-text">
+                      <strong>{{ org.name }}</strong>
+                      @if (org.description) {
+                        <p>{{ org.description }}</p>
+                      }
+                      @if (org.website) {
+                        <a [href]="org.website" target="_blank" rel="noopener noreferrer">
+                          Site web
+                          <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                            <path d="M15 3h6v6"></path><path d="M10 14L21 3"></path>
+                          </svg>
+                        </a>
+                      }
+                    </div>
+                  </div>
+                </section>
+              }
+
+              <section class="panel" aria-labelledby="loc-title">
+                <h2 id="loc-title" class="panel-title">Localisation</h2>
+
+                @if (e.format === 'ONLINE') {
+                  <div class="location-online">
+                    <span class="info-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24">
+                        <path d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z"></path>
+                        <path d="M2 12h20"></path>
+                        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                      </svg>
+                    </span>
+                    <div>
+                      <strong>Événement en ligne</strong>
+                      <p>
+                        @if (e.online_platform) {
+                          Sur {{ e.online_platform }}.
+                        }
+                        Le lien d’accès est communiqué après l’inscription.
+                      </p>
+                    </div>
+                  </div>
+                } @else {
+                  <div class="map" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                  </div>
+                  <p class="location-text">
+                    <strong>{{ e.venue_name || e.city || 'Lieu à préciser' }}</strong>
+                    @if (locationText) {
+                      <span>{{ locationText }}</span>
+                    }
+                  </p>
+                  @if (locationText) {
+                    <a class="button-ghost button-small" [href]="mapsUrl" target="_blank" rel="noopener noreferrer">
+                      Ouvrir dans Google Maps
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                        <path d="M15 3h6v6"></path><path d="M10 14L21 3"></path>
+                      </svg>
+                    </a>
+                  }
+                }
+              </section>
+            </div>
+          </div>
+
+          <!-- Carte d'inscription -->
+          <aside class="aside">
+            <section class="register" aria-labelledby="register-title">
+              <h2 id="register-title" class="register-title">Inscription</h2>
+
+              <p class="register-price">
+                <strong>{{ priceLabel(e) }}</strong>
+                @if (e.participation_type === 'PAID' && ticketOptions.length > 1) {
+                  <small>selon le ticket choisi</small>
+                }
+              </p>
+
+              @if (ticketOptions.length > 0) {
+                <fieldset class="tickets">
+                  <legend class="sr-only">Choisir un ticket</legend>
+                  @for (t of ticketOptions; track t.id) {
+                    <label
+                      class="ticket"
+                      [class.ticket-active]="selectedTicketId === t.id"
+                      [class.ticket-disabled]="t.remaining === 0"
+                    >
+                      <input
+                        class="sr-only"
+                        type="radio"
+                        name="ticket"
+                        [checked]="selectedTicketId === t.id"
+                        [disabled]="t.remaining === 0"
+                        (change)="selectTicket(t)"
+                      />
+                      <span class="ticket-radio" aria-hidden="true"></span>
+                      <span class="ticket-text">
+                        <strong>{{ t.name }}</strong>
+                        @if (t.description) {
+                          <small>{{ t.description }}</small>
+                        }
+                        @if (t.remaining === 0) {
+                          <small class="ticket-soldout">Épuisé</small>
+                        } @else if (t.remaining !== null && t.remaining <= 10) {
+                          <small class="ticket-low">Plus que {{ t.remaining }} place{{ t.remaining > 1 ? 's' : '' }}</small>
+                        }
+                      </span>
+                      <span class="ticket-price">{{ t.priceLabel }}</span>
+                    </label>
+                  }
+                </fieldset>
+              }
+
+              @if (e.capacity && remaining !== null) {
+                <div class="capacity">
+                  <div class="capacity-head">
+                    <span>
+                      @if (remaining === 0) {
+                        Complet
+                      } @else {
+                        <strong>{{ remaining }}</strong> place{{ remaining > 1 ? 's' : '' }} restante{{ remaining > 1 ? 's' : '' }}
+                      }
+                    </span>
+                    @if (lastSeats) {
+                      <span class="capacity-flag">Dernières places</span>
+                    }
+                  </div>
+                  <span
+                    class="capacity-bar"
+                    role="progressbar"
+                    aria-label="Taux de remplissage"
+                    [attr.aria-valuenow]="fillPercent"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                  >
+                    <span class="capacity-fill" [style.width.%]="fillPercent"></span>
+                  </span>
+                </div>
+              }
+
+              @if (ctaState === 'open') {
+                <a class="button-primary button-block" routerLink="/login" [queryParams]="registerQuery">
+                  {{ ctaLabel }}
+                </a>
+                <p class="register-hint">
+                  Pas encore de compte ? <a routerLink="/register">Créez-en un gratuitement</a>
+                </p>
+              } @else {
+                <button class="button-primary button-block" type="button" disabled>{{ ctaLabel }}</button>
+              }
+
+              <div class="register-tools">
+                <button class="tool-button" type="button" (click)="addToCalendar()">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path>
+                    <path d="M16 2v4"></path><path d="M8 2v4"></path><path d="M3 10h18"></path>
+                  </svg>
+                  Ajouter au calendrier
+                </button>
+              </div>
+
+              <div class="share">
+                <span class="share-label">Partager</span>
+                <div class="share-buttons">
+                  <a class="share-button" [href]="whatsappUrl" target="_blank" rel="noopener noreferrer" aria-label="Partager sur WhatsApp">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+                    </svg>
+                  </a>
+                  <a class="share-button" [href]="facebookUrl" target="_blank" rel="noopener noreferrer" aria-label="Partager sur Facebook">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path>
+                    </svg>
+                  </a>
+                  <a class="share-button" [href]="linkedinUrl" target="_blank" rel="noopener noreferrer" aria-label="Partager sur LinkedIn">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"></path>
+                      <rect x="2" y="9" width="4" height="12"></rect><circle cx="4" cy="4" r="2"></circle>
+                    </svg>
+                  </a>
+                  <button class="share-button" type="button" (click)="copyLink()" [attr.aria-label]="copied ? 'Lien copié' : 'Copier le lien'">
+                    @if (copied) {
+                      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"></path></svg>
+                    } @else {
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                      </svg>
+                    }
+                  </button>
+                  @if (canNativeShare) {
+                    <button class="share-button share-native" type="button" (click)="nativeShare()" aria-label="Plus d’options de partage">
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle>
+                        <path d="M8.59 13.51l6.83 3.98"></path><path d="M15.41 6.51l-6.82 3.98"></path>
+                      </svg>
+                    </button>
+                  }
+                </div>
+              </div>
+            </section>
+          </aside>
+        </div>
+
+        <!-- Événements similaires -->
+        @if (similar.length > 0) {
+          <section class="similar content-width" aria-labelledby="similar-title">
+            <header class="section-head">
+              <div>
+                <span class="section-kicker">À découvrir aussi</span>
+                <h2 id="similar-title">Événements similaires</h2>
+              </div>
+              <a class="section-link" routerLink="/events">
+                Voir tous les événements
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5l7 7-7 7"></path></svg>
+              </a>
+            </header>
+
+            <div class="similar-grid">
+              @for (event of similar; track event.id) {
+                <article class="similar-card">
+                  <a class="similar-image" [routerLink]="['/events', event.id]" [attr.aria-label]="'Voir ' + event.title">
+                    <img [src]="getEventImage(event)" alt="" loading="lazy" (error)="$any($event.target).style.display = 'none'" />
+                    <span class="similar-badge">{{ formatLabel(event.format) }}</span>
+                  </a>
+                  <div class="similar-body">
+                    <span class="similar-date">{{ formatShortDate(event.start_at) }}</span>
+                    <h3><a [routerLink]="['/events', event.id]">{{ event.title }}</a></h3>
+                    <div class="similar-footer">
+                      <span class="similar-city">{{ event.city || 'Lieu à préciser' }}</span>
+                      <span class="price-badge" [class.paid-price]="event.participation_type === 'PAID'">
+                        {{ formatPriceSimple(event) }}
+                      </span>
+                    </div>
+                  </div>
+                </article>
+              }
+            </div>
+          </section>
+        }
+
+        <!-- Barre d'inscription mobile -->
+        <div class="mobile-bar">
+          <div class="mobile-bar-price">
+            <small>{{ e.participation_type === 'PAID' ? 'Tarif' : 'Entrée' }}</small>
+            <strong>{{ priceLabel(e) }}</strong>
+          </div>
+          @if (ctaState === 'open') {
+            <a class="button-primary" routerLink="/login" [queryParams]="registerQuery">{{ ctaLabel }}</a>
+          } @else {
+            <button class="button-primary" type="button" disabled>{{ ctaLabel }}</button>
+          }
+        </div>
+      }
+    }
+  }
+
+  @if (notice) {
+    <div class="notice" role="status">
+      <span>{{ notice }}</span>
+      <button type="button" aria-label="Fermer le message" (click)="clearNotice()">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18"></path><path d="M6 6l12 12"></path></svg>
+      </button>
+    </div>
+  }
+</div>

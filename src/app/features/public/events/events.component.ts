@@ -4,6 +4,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
+import { ActivatedRoute, Router } from '@angular/router';
 
 import { BackendEvent, EventCategory } from '../../../core/models/event.model';
 import { EventsApiService } from '../../../core/services/events-api.service';
@@ -27,6 +28,34 @@ interface DateOption {
 export class EventsComponent implements OnInit {
   private readonly eventsApi = inject(EventsApiService);
   private readonly logger = inject(AppLoggerService);
+
+
+
+private readonly route = inject(ActivatedRoute);
+private readonly router = inject(Router);
+
+/** Lit les filtres envoyés par l'accueil : /events?q=...&category=...&format=...&price=...&date=... */
+private applyQueryParams(): void {
+  const params = this.route.snapshot.queryParamMap;
+
+  this.searchQuery = params.get('q') ?? '';
+
+  const category = params.get('category');
+  if (category) this.selectedCategories = [category];
+
+  const format = params.get('format');
+  if (format === 'ONLINE' || format === 'IN_PERSON') this.selectedTopFormat = format;
+
+  const price = params.get('price');
+  if (price === 'FREE' || price === 'PAID') this.selectedTopPrice = price;
+
+  const date = params.get('date');
+  if (date && this.dateOptions.some((option) => option.value === date)) this.selectedTopDate = date;
+}
+
+openEvent(event: BackendEvent): void {
+  void this.router.navigate(['/events', event.id]);
+}
 
   // Données reçues du backend.
   events: BackendEvent[] = [];
@@ -307,11 +336,6 @@ export class EventsComponent implements OnInit {
     this.currentPage = page;
     // Le chargement d'une page précise sera raccordé à l'API paginée
     // dans le service, sans charger toute la base côté navigateur.
-  }
-
-  openEvent(event: BackendEvent): void {
-    this.selectedEvent = event;
-    this.actionMessage = '';
   }
 
   closeEvent(): void {

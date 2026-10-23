@@ -112,3 +112,36 @@ export interface BackendEvent {
   organizer: unknown;
   available_slots: number | null;
 }
+
+
+export interface EventOrganizer {
+  id?: string | number;
+  name: string;
+  logo?: string | null;
+  description?: string | null;
+  website?: string | null;
+}
+
+export interface EventTicketType {
+  id: string | number;
+  name: string;
+  price: number | string;
+  currency?: string;
+  quantity?: number | null;
+  sold_count?: number | null;
+  description?: string | null;
+  is_active?: boolean;
+}
+
+export interface EventDetail extends Omit<BackendEvent, 'end_at' | 'organizer'> {
+  end_at?: string | null;
+  organizer?: EventOrganizer | null;
+  description?: string | null;
+  venue_name?: string | null;
+  address?: string | null;
+  room?: string | null;
+  online_platform?: string | null;
+  capacity?: number | null;
+  registered_count?: number | null;
+  ticket_types?: EventTicketType[];
+}
