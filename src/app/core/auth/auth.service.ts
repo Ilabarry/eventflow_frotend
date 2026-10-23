@@ -134,21 +134,18 @@ export class AuthService {
   // DÉCONNEXION
   // ------------------------------------------------------------------
   logout(): void {
-    const refresh = this.getRefreshToken();
-    console.log('[AuthService] Logout attempt');
+  const refresh = this.getRefreshToken();
 
-    if (refresh) {
-      // Blacklister le refresh token côté backend
-      this.http
-        .post(`${this.API_URL}/auth/logout/`, { refresh })
-        .subscribe({
-          next: () => this.clearSession(),
-          error: () => this.clearSession(), // on nettoie même si le backend échoue
-        });
-    } else {
-      this.clearSession();
-    }
+  // ✅ Nettoyer AVANT l'appel réseau pour une UX réactive
+  this.clearSession();
+
+  // Puis blacklister le refresh token (best-effort, on ignore l'erreur)
+  if (refresh) {
+    this.http.post(`${this.API_URL}/auth/logout/`, { refresh }).subscribe({
+      error: (err) => console.warn('[AuthService] Logout backend failed', err.status),
+    });
   }
+}
 
   // ------------------------------------------------------------------
   // PROFIL
