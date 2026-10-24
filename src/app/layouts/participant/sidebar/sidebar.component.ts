@@ -25,7 +25,7 @@ export class ParticipantSidebarComponent {
       icon: ['M3 3h7v7H3z', 'M14 3h7v7h-7z', 'M14 14h7v7h-7z', 'M3 14h7v7H3z'],
     },
     {
-      label: 'Evenments',
+      label: 'Evenements',
       path: 'evenements',
       icon: ['M3 3h7v7H3z', 'M14 3h7v7h-7z', 'M14 14h7v7h-7z', 'M3 14h7v7H3z'],
     },
@@ -52,7 +52,7 @@ export class ParticipantSidebarComponent {
       icon: ['M12 15a7 7 0 1 0 0-14 7 7 0 0 0 0 14z', 'M8.21 13.89L7 23l5-3 5 3-1.21-9.12'],
     },
     {
-      label: 'Mes Mresences',
+      label: 'Mes Presences',
       path: 'presences',
       icon: ['M12 15a7 7 0 1 0 0-14 7 7 0 0 0 0 14z', 'M8.21 13.89L7 23l5-3 5 3-1.21-9.12'],
     },
