@@ -1,9 +1,15 @@
 
-import { Component } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Subscription } from 'rxjs';
 
-type StatutAttestation = 'DISPONIBLE' | 'EN_ATTENTE';
+import {
+  CertificateService,
+  CertificateApi
+} from './certificate.service';
+
+type StatutAttestation = 'DISPONIBLE' | 'EN_ATTENTE' | 'REVOQUE';
 
 interface Attestation {
   id: string;
@@ -23,33 +29,80 @@ interface Attestation {
   templateUrl: './attestations.component.html',
   styleUrl: './attestations.component.scss'
 })
-export class AttestationsComponent {
+export class AttestationsComponent implements OnInit, OnDestroy {
   filtreActif: 'TOUTES' | StatutAttestation = 'TOUTES';
   recherche = '';
 
-  // Données de démonstration : à remplacer par les données de l'API.
-  attestations: Attestation[] = [
-    {
-      id: '1',
-      evenement: "FORUM DE L’INNOVATION NUMÉRIQUE",
-      type: 'Forum',
-      participant: 'ILA BARRY',
-      date: '25 octobre 2026',
-      lieu: 'Dakar',
-      reference: 'ATT-2026-0087',
-      statut: 'DISPONIBLE'
-    },
-    {
-      id: '2',
-      evenement: 'PYTHON WORKSHOP',
-      type: 'Formation',
-      participant: 'ILA BARRY',
-      date: '',
-      lieu: 'Dakar',
-      reference: 'ATT-2026-0088',
-      statut: 'EN_ATTENTE'
+  attestations: Attestation[] = [];
+  chargement = false;
+  erreur = '';
+
+  private readonly subscriptions = new Subscription();
+
+  constructor(private readonly certificateService: CertificateService) {}
+
+  ngOnInit(): void {
+    this.chargerAttestations();
+  }
+
+  ngOnDestroy(): void {
+    this.subscriptions.unsubscribe();
+  }
+
+  chargerAttestations(): void {
+    this.chargement = true;
+    this.erreur = '';
+
+    const subscription = this.certificateService.getMesCertificats().subscribe({
+      next: (response) => {
+        const certificats = response.data?.results ?? [];
+
+        this.attestations = certificats.map((certificat) =>
+          this.convertirCertificat(certificat)
+        );
+
+        this.chargement = false;
+      },
+      error: (error) => {
+        console.error('Erreur de chargement des certificats.', error);
+        this.erreur =
+          'Impossible de charger les attestations. Vérifiez votre connexion puis réessayez.';
+        this.chargement = false;
+      }
+    });
+
+    this.subscriptions.add(subscription);
+  }
+
+  private convertirCertificat(certificat: CertificateApi): Attestation {
+    let statut: StatutAttestation;
+
+    switch (certificat.status) {
+      case 'ISSUED':
+        statut = 'DISPONIBLE';
+        break;
+      case 'REVOKED':
+        statut = 'REVOQUE';
+        break;
+      default:
+        statut = 'EN_ATTENTE';
     }
-  ];
+
+    const date = certificat.event_start_at
+      ? new Date(certificat.event_start_at).toLocaleDateString('fr-FR')
+      : '';
+
+    return {
+      id: certificat.id,
+      evenement: certificat.event_title || 'Événement',
+      type: 'Participation',
+      participant: '',
+      date,
+      lieu: certificat.event_city || 'Non précisé',
+      reference: certificat.reference,
+      statut
+    };
+  }
 
   get attestationsFiltrees(): Attestation[] {
     const terme = this.recherche.trim().toLowerCase();
@@ -84,8 +137,7 @@ export class AttestationsComponent {
       return;
     }
 
-    // À connecter à la route ou au service de consultation du PDF.
-    console.info('Consulter l’attestation :', attestation.reference);
+    this.ouvrirPdf(attestation, false);
   }
 
   telechargerAttestation(attestation: Attestation): void {
@@ -93,8 +145,44 @@ export class AttestationsComponent {
       return;
     }
 
-    // Le téléchargement sera relié à l'API des certificats.
-    console.info('Télécharger l’attestation :', attestation.reference);
+    this.ouvrirPdf(attestation, true);
+  }
+
+  private ouvrirPdf(attestation: Attestation, telecharger: boolean): void {
+    const subscription = this.certificateService
+      .telechargerPdf(attestation.id)
+      .subscribe({
+        next: (blob) => {
+          const fichierPdf = new Blob([blob], { type: 'application/pdf' });
+          const url = URL.createObjectURL(fichierPdf);
+
+          if (telecharger) {
+            const lien = document.createElement('a');
+            lien.href = url;
+            lien.download = `${attestation.reference}.pdf`;
+            lien.click();
+          } else {
+            const nouvelOnglet = window.open(url, '_blank');
+
+            if (!nouvelOnglet) {
+              this.erreur =
+                'Le navigateur a bloqué l’ouverture du PDF. Autorisez les fenêtres pop-up puis réessayez.';
+            }
+          }
+
+          window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+        },
+        error: (error) => {
+          console.error('Erreur lors de la récupération du PDF.', error);
+
+          this.erreur =
+            error.status === 404
+              ? 'Le fichier PDF de cette attestation n’est pas disponible.'
+              : 'Impossible d’ouvrir ou de télécharger le PDF. Réessayez.';
+        }
+      });
+
+    this.subscriptions.add(subscription);
   }
 
   trackById(_index: number, attestation: Attestation): string {
