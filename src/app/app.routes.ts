@@ -61,7 +61,7 @@ export const routes: Routes = [
     component: OrganizerLayoutComponent,
     canActivate: [authGuard, roleGuard([Role.ORGANISATEUR])],
     children: [
-      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+      // { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       { path: 'dashboard', component: OrganizerDashboardComponent },
       { path: 'evenements', component: OrganizerEvenementsComponent },
       { path: 'participants', component: OrganizerParticipantsComponent },
@@ -86,7 +86,7 @@ export const routes: Routes = [
     component: ParticipantLayoutComponent,
     canActivate: [authGuard, roleGuard([Role.PARTICIPANT])],
     children: [
-      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+      // { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       { path: 'dashboard', component: ParticipantDashboardComponent },
       { path: 'evenements', component: ParticipantEventsComponent },
       { path: 'inscriptions', component: ParticipantRegistrationsComponent },
@@ -107,7 +107,7 @@ export const routes: Routes = [
     component: AdminLayoutComponent,
     canActivate: [authGuard, roleGuard([Role.ADMINISTRATEUR])],
     children: [
-      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+      // { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       { path: 'dashboard', component: AdminDashboardComponent },
       { path: 'organisateurs', component: AdminOrganizersComponent },
       { path: 'utilisateurs', component: AdminUsersComponent },
@@ -121,5 +121,5 @@ export const routes: Routes = [
   // ============================================================
   // 404
   // ============================================================
-  { path: '**', redirectTo: '' },
+  // { path: '**', redirectTo: '' },
 ];
