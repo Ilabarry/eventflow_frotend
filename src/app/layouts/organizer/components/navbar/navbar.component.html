@@ -66,11 +66,11 @@
         [attr.aria-expanded]="userMenuOpen()"
       >
         @if (avatarUrl()) {
-          <img [src]="avatarUrl()" [alt]="userName()" class="org-navbar__avatar" />
+          <img [src]="avatarUrl()" [alt]="last_name()" class="org-navbar__avatar" />
         } @else {
           <span class="org-navbar__avatar org-navbar__avatar--initial">{{ initial() }}</span>
         }
-        <span class="org-navbar__user-name">Hi {{ userName() }}</span>
+        <span class="org-navbar__user-name">Hi {{ last_name() }}</span>
         <svg
           class="org-navbar__chevron"
           [class.org-navbar__chevron--open]="userMenuOpen()"

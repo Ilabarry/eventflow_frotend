@@ -33,6 +33,11 @@ export class ParticipantLayoutComponent {
     return user?.full_name || user?.first_name || 'Participant';
   });
 
+  readonly lastName = computed(() => {
+    const user = this.authService.currentUser();
+    return user?.last_name || user?.full_name?.split(' ').pop() || 'Participant';
+  });
+
   readonly avatarUrl = computed(() => this.authService.currentUser()?.profile_picture ?? null);
 
   readonly notificationCount = signal(0);

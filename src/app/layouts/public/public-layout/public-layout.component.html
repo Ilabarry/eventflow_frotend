@@ -1,7 +1,9 @@
 <div class="public-layout">
-  <app-public-navbar />
-  <main class="public-layout__content">
+  @if (!hideNavbar()) {
+    <app-public-navbar />
+  }
+  <main class="public-layout__content" [class.public-layout__content--no-navbar]="hideNavbar()">
     <router-outlet />
   </main>
-  <app-public-footer />
+  <app-public-footer [minimal]="minimalFooter()" />
 </div>

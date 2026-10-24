@@ -11,7 +11,7 @@ import { RouterLink } from '@angular/router';
 export class OrganizerNavbarComponent {
   
   readonly sidebarOpen = input(false);
-  readonly userName = input('Utilisateur');
+  readonly last_name = input('Utilisateur');
   readonly avatarUrl = input<string | null>(null);
   readonly notificationCount = input(0);
   readonly messageCount = input(0);
@@ -20,7 +20,7 @@ export class OrganizerNavbarComponent {
   readonly logout = output<void>();
 
   readonly userMenuOpen = signal(false);
-  readonly initial = computed(() => this.userName().trim().charAt(0).toUpperCase());
+  readonly initial = computed(() => this.last_name().trim().charAt(0).toUpperCase());
 
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 

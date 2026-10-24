@@ -14,7 +14,7 @@
   width: 100%;
   max-width: 1440px;
   margin-inline: auto;
-  padding: clamp(16px, 3vw, 32px);
+  // padding: clamp(16px, 3vw, 32px); 
 }
 
 .page-banner {
@@ -47,11 +47,12 @@
   letter-spacing: 1.6px;
 }
 
-.page-banner h1 {
+.page-banner h2 {
   margin: 0 0 8px;
   font-size: clamp(25px, 3vw, 36px);
   font-weight: 800;
   text-transform: uppercase;
+  color: #7664ff;
 }
 
 .page-banner p {

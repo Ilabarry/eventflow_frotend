@@ -34,6 +34,11 @@ export class OrganizerLayoutComponent {
     return user?.full_name || user?.first_name || 'Utilisateur';
   });
 
+  readonly lastName = computed(() => {
+    const user = this.authService.currentUser();
+    return user?.last_name || user?.full_name?.split(' ').pop() || 'Participant';
+  });
+
   /** URL de l'avatar (dérivé de l'utilisateur connecté) */
   readonly avatarUrl = computed(() => this.authService.currentUser()?.profile_picture ?? null);
 

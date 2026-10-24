@@ -1,6 +1,8 @@
 .navbar {
-  position: sticky;
+  position: fixed;          // ← sticky → fixed
   top: 0;
+  left: 0;
+  right: 0;                 // ← nécessaire en fixed pour occuper toute la largeur
   z-index: 100;
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);

@@ -48,7 +48,7 @@ export const routes: Routes = [
     children: [
       { path: '', component: HommeComponent },
       { path: 'events', component: EventsComponent },
-      { path: 'events/:id', component: EventDetailComponent },
+      { path: 'events/:id', component: EventDetailComponent, data: { hideNavbar: true, minimalFooter: true }},
       { path: 'about', component: AboutComponent },
     ],
   },
