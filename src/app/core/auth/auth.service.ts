@@ -1,7 +1,7 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Observable, tap, catchError, throwError, map } from 'rxjs';
+import { Observable, tap, catchError, throwError, of, map } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { User } from '../models/user.model';
@@ -275,4 +275,30 @@ export class AuthService {
       },
     });
   }
+
+  loadCurrentUserAsync(): Observable<User | null> {
+    if (!this._accessToken()) {
+      return of(null);
+    }
+
+    return this.getMe().pipe(
+      map((response) => {
+        if (response.success && response.data) {
+          this._currentUser.set(response.data);
+          console.info('[AuthService] Current user loaded (async)', {
+            email: response.data.email,
+          });
+          return response.data;
+        }
+        this.clearSession();
+        return null;
+      }),
+      catchError((error) => {
+        console.error('[AuthService] Load current user failed', error.status);
+        this.clearSession();
+        return of(null);
+      }),
+    );
+  }
+
 }
