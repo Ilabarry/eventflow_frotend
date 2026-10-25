@@ -59,6 +59,25 @@ export class AuthService {
   readonly isOrganizer = computed(() => this._currentUser()?.roles?.includes('organisateur') ?? false);
   readonly isParticipant = computed(() => this._currentUser()?.roles?.includes('participant') ?? false);
 
+  /** Rôle principal de l'utilisateur (priorité admin > organisateur > participant). */
+  readonly primaryRole = computed<'administrateur' | 'organisateur' | 'participant' | null>(() => {
+    const roles = this._currentUser()?.roles ?? [];
+    if (roles.includes('administrateur')) return 'administrateur';
+    if (roles.includes('organisateur')) return 'organisateur';
+    if (roles.includes('participant')) return 'participant';
+    return null;
+  });
+
+  /** Route d'accueil selon le rôle. */
+  get homeRouteForRole(): string {
+    switch (this.primaryRole()) {
+      case 'administrateur': return '/admin/dashboard';
+      case 'organisateur':   return '/organisateur/dashboard';
+      case 'participant':    return '/participant/dashboard';
+      default:               return '/';
+    }
+  }
+
   // ------------------------------------------------------------------
   // Accesseurs
   // ------------------------------------------------------------------

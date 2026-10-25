@@ -78,7 +78,7 @@ export class LoginComponent {
       password: this.loginForm.value.password,
     };
 
-    console.log('[LoginComponent] Submitting login', { email: payload.email });
+    // console.log('[LoginComponent] Submitting login', { email: payload.email });
 
     this.authService.login(payload).subscribe({
       next: (response) => {
@@ -91,7 +91,7 @@ export class LoginComponent {
           });
 
           // Redirection selon le rôle
-          this.redirectByRole(user.roles);
+          this.redirectByRole();
         }
       },
       error: (error) => {
@@ -103,23 +103,23 @@ export class LoginComponent {
   }
 
   /** Redirige l'utilisateur selon son rôle principal */
-  private redirectByRole(roles: string[]): void {
+  private redirectByRole(): void {
     const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
-
-    // Si un returnUrl existe, on y va en priorité
     if (returnUrl) {
       this.router.navigateByUrl(returnUrl);
       return;
     }
 
-    // Sinon, redirection selon le rôle
-    if (roles.includes('administrateur')) {
-      this.router.navigate(['/admin/dashboard']);
-    } else if (roles.includes('organisateur')) {
-      this.router.navigate(['/organisateur/dashboard']);
-    } else {
-      this.router.navigate(['/participant/dashboard']);
+    const target = this.authService.homeRouteForRole;
+
+    if (target === '/') {
+      this.notification.warning(
+        "Votre compte n'a aucun rôle attribué. Contactez un administrateur.",
+        'Accès restreint'
+      );
     }
+
+    this.router.navigateByUrl(target);
   }
 
   // ------------------------------------------------------------------

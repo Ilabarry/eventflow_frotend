@@ -242,7 +242,7 @@ export class OrganizerDashboardComponent implements OnInit, AfterViewInit {
           }
 
           this.stats.set(this.buildStats(data));
-          this.upcomingEvents.set(data.upcoming_events.map((e) => this.toUpcomingEvent(e)));
+          this.upcomingEvents.set(data.upcoming_events .slice(0, 1) .map((e) => this.toUpcomingEvent(e)));
           this.activities.set(data.recent_registrations.map((r) => this.toActivity(r)));
           
         },

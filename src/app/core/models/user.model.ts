@@ -11,6 +11,8 @@ export interface User {
   profile_picture: string | null;
   roles: string[];
   is_active: boolean;
+   is_staff: boolean; 
+  is_superuser: boolean;  
   created_at: string;
   updated_at: string;
 }
