@@ -7,9 +7,69 @@ import { ApiResponse } from '../models/api-response.model';
 import { EventFormat, EventStatus } from '../models/event.model';
 
 /* ------------------------------------------------------------------
-   DTOs — alignés sur les serializers backend
+   DTOs — Dashboard Admin
    ------------------------------------------------------------------ */
+export interface AdminSummaryDto {
+  total_users: number;
+  active_users: number;
+  inactive_users: number;
+  participant_users: number;
+  organizer_users: number;
+  admin_users: number;
+  total_events: number;
+  published_events: number;
+  upcoming_events: number;
+  completed_events: number;
+  draft_events: number;
+  cancelled_events: number;
+  total_registrations: number;
+  active_registrations: number;
+  pending_registrations: number;
+  confirmed_registrations: number;
+  cancelled_registrations: number;
+  active_unique_participants: number;
+  attended_registrations: number;
+  attendance_rate: number;
+}
 
+export interface AdminRecentEventDto {
+  id: string;
+  title: string;
+  status: EventStatus;
+  start_at: string;
+  created_at: string;
+  organizer_name: string;
+}
+
+export interface AdminRecentUserDto {
+  id: string;
+  first_name: string;
+  last_name: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface AdminAvailabilityDto {
+  tickets: boolean;
+  payments: boolean;
+  certificates: boolean;
+  notifications: boolean;
+  supervision_alerts: boolean;
+}
+
+export interface AdminDashboardDto {
+  summary: AdminSummaryDto;
+  recent_events: AdminRecentEventDto[];
+  recent_users: AdminRecentUserDto[];
+  availability: AdminAvailabilityDto;
+  payment_statistics_available: boolean;
+  financial_statistics: any | null;
+  alerts: any | null;
+}
+
+/* ------------------------------------------------------------------
+   DTOs — Dashboard Organisateur
+   ------------------------------------------------------------------ */
 export interface OrganizerSummaryDto {
   total_events: number;
   published_events: number;
@@ -98,10 +158,8 @@ export interface OrganizerStatisticsDto {
 }
 
 /* ------------------------------------------------------------------
-   Dashboard participant — GET /api/dashboard/participant/
-   (ParticipantDashboardSerializer)
+   DTOs — Dashboard Participant
    ------------------------------------------------------------------ */
-
 export interface ParticipantSummaryDto {
   total_registrations: number;
   pending_registrations: number;
@@ -112,11 +170,9 @@ export interface ParticipantSummaryDto {
   attended_events: number;
 }
 
-/** ParticipantDashboardEventSerializer (pas de catégorie). */
 export interface ParticipantDashboardEventDto {
   id: string;
   title: string;
-  /** URL complète de l'affiche, ou null si l'événement n'en a pas. */
   cover_image: string | null;
   start_at: string;
   end_at: string;
@@ -140,7 +196,6 @@ export interface ParticipantDashboardRegistrationDto {
 
 export interface ParticipantDashboardDto {
   summary: ParticipantSummaryDto;
-  /** Triées par date de début, 5 au maximum, événements à venir seulement. */
   upcoming_registrations: ParticipantDashboardRegistrationDto[];
   recent_registrations: ParticipantDashboardRegistrationDto[];
 }
@@ -150,10 +205,18 @@ export interface ParticipantDashboardDto {
    ------------------------------------------------------------------ */
 export type ChartPeriod = 'last_30_days' | 'last_6_months' | 'last_12_months';
 
+/* ------------------------------------------------------------------
+   SERVICE
+   ------------------------------------------------------------------ */
 @Injectable({ providedIn: 'root' })
 export class DashboardService {
   private readonly http = inject(HttpClient);
   private readonly BASE = `${environment.apiUrl}/dashboard`;
+
+  /** GET /api/dashboard/admin/ */
+  getAdminDashboard(): Observable<ApiResponse<AdminDashboardDto>> {
+    return this.http.get<ApiResponse<AdminDashboardDto>>(`${this.BASE}/admin/`);
+  }
 
   /** GET /api/dashboard/organizer/ */
   getOrganizerDashboard(): Observable<ApiResponse<OrganizerDashboardDto>> {
@@ -165,7 +228,7 @@ export class DashboardService {
     return this.http.get<ApiResponse<ParticipantDashboardDto>>(`${this.BASE}/participant/`);
   }
 
-  /** GET /api/dashboard/organizer/statistics/?period=… */
+  /** GET /api/dashboard/organizer/statistics/ */
   getOrganizerStatistics(period: ChartPeriod): Observable<ApiResponse<OrganizerStatisticsDto>> {
     let params = new HttpParams();
 

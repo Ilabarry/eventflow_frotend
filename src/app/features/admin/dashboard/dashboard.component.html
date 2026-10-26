@@ -1,1 +1,291 @@
-<p>dashboard works!</p>
+<section class="dash" aria-labelledby="dash-title">
+  <!-- ============================ BANNIÈRE ============================ -->
+  <header class="hero">
+    <svg class="hero__wave" viewBox="0 0 400 120" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+      <defs>
+        <linearGradient id="admHeroWave" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#8B7CF6" />
+          <stop offset="1" stop-color="#22C7D6" />
+        </linearGradient>
+      </defs>
+      <path d="M0 90 C 50 20, 110 110, 180 60 S 300 0, 400 40" fill="none" stroke="url(#admHeroWave)" stroke-width="2.5" vector-effect="non-scaling-stroke" />
+    </svg>
+
+    <div class="hero__content">
+      <h1 id="dash-title" class="hero__title">Bienvenue{{ firstName() ? ', ' + firstName() : '' }}</h1>
+      <p class="hero__text">Voici un aperçu de la plateforme EventFlow.</p>
+      @if (lastUpdate()) {
+        <p class="hero__meta">Données mises à jour à {{ lastUpdate() }}</p>
+      }
+    </div>
+
+    <div class="hero__actions">
+      <button type="button" class="hero__btn hero__btn--ghost" (click)="refresh()" [disabled]="refreshing() || loadState() === 'loading'">
+        <svg class="icon" [class.icon--spin]="refreshing()" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M23 4v6h-6" /><path d="M1 20v-6h6" />
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+        </svg>
+        Actualiser
+      </button>
+      <button type="button" class="hero__btn" (click)="exportReport()" [disabled]="!data()">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M7 10l5 5 5-5" /><path d="M12 15V3" />
+        </svg>
+        Exporter le rapport
+      </button>
+    </div>
+  </header>
+
+  @if (loadState() === 'error') {
+    <div class="state" role="alert">
+      <span class="state__icon" aria-hidden="true">
+        <svg class="icon icon--lg" viewBox="0 0 24 24"><path [attr.d]="icons.flag[0]" /><path [attr.d]="icons.flag[1]" /></svg>
+      </span>
+      <h2 class="state__title">Impossible de charger le tableau de bord</h2>
+      <p class="state__text">Vérifiez votre connexion internet, puis réessayez.</p>
+      <button type="button" class="btn btn--solid" (click)="retry()">Réessayer</button>
+    </div>
+  } @else {
+    <!-- ============================ INDICATEURS + COURBE ============================ -->
+    <div class="overview">
+      <ul class="kpis" aria-label="Indicateurs clés" [attr.aria-busy]="!data()">
+        @if (data()) {
+          @for (kpi of kpis(); track kpi.key) {
+            <li class="kpis__item" [class.kpis__item--wide]="kpi.wide">
+              <a class="kpi" [routerLink]="kpi.link" [attr.data-tone]="kpi.tone">
+                <span class="kpi__icon" aria-hidden="true">
+                  <svg class="icon icon--lg" viewBox="0 0 24 24">
+                    @for (d of kpi.icon; track d) {
+                      <path [attr.d]="d" />
+                    }
+                  </svg>
+                </span>
+                <span class="kpi__text">
+                  <span class="kpi__value">{{ kpi.value }}</span>
+                  <span class="kpi__label">{{ kpi.label }}</span>
+                  <span class="kpi__foot">
+                    @if (kpi.trend !== null) {
+                      <span class="trend" [attr.data-dir]="trendDirection(kpi.trend)">
+                        <svg class="icon icon--xs" viewBox="0 0 24 24" aria-hidden="true">
+                          @if (trendDirection(kpi.trend) === 'down') {
+                            <path d="M7 7l10 10M17 7v10H7" />
+                          } @else {
+                            <path d="M7 17L17 7M7 7h10v10" />
+                          }
+                        </svg>
+                        {{ trendLabel(kpi.trend) }}
+                      </span>
+                    }
+                    @if (kpi.caption) {
+                      <span class="kpi__caption">{{ kpi.caption }}</span>
+                    }
+                  </span>
+                </span>
+              </a>
+            </li>
+          }
+        } @else {
+          @for (i of [1, 2, 3, 4, 5]; track i) {
+            <li class="kpis__item" [class.kpis__item--wide]="i === 5" aria-hidden="true">
+              <span class="skeleton skeleton--kpi"></span>
+            </li>
+          }
+        }
+      </ul>
+
+      <section class="panel chart-panel" aria-labelledby="chart-title">
+        <header class="panel__head">
+          <h2 id="chart-title" class="panel__title">Activités de la plateforme</h2>
+
+          <div class="chart-tools">
+            <div class="seg" role="group" aria-label="Mesure affichée">
+              @for (m of metrics; track m.value) {
+                <button
+                  type="button"
+                  class="seg__btn"
+                  [class.seg__btn--active]="metric() === m.value"
+                  [attr.aria-pressed]="metric() === m.value"
+                  (click)="setMetric(m.value)"
+                >
+                  {{ m.label }}
+                </button>
+              }
+            </div>
+
+            <select class="control" aria-label="Période du graphique" (change)="onPeriod($event)">
+              @for (p of periods; track p.value) {
+                <option [value]="p.value" [selected]="period() === p.value">{{ p.label }}</option>
+              }
+            </select>
+          </div>
+        </header>
+
+        <div class="chart" #chartHost [style.min-height.px]="height()" [class.chart--busy]="refreshing()">
+          @if (data()) {
+            <svg [attr.width]="width()" [attr.height]="height()" role="img" [attr.aria-label]="chartSummary()">
+              <defs>
+                <linearGradient id="admArea" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#22C7D6" stop-opacity="0.28" />
+                  <stop offset="1" stop-color="#22C7D6" stop-opacity="0" />
+                </linearGradient>
+              </defs>
+
+              @for (t of yTicks(); track t.value) {
+                <line class="chart__grid" [attr.x1]="pad.left" [attr.x2]="width() - pad.right" [attr.y1]="t.y" [attr.y2]="t.y" />
+                <text class="chart__axis" [attr.x]="pad.left - 10" [attr.y]="t.y" text-anchor="end" dominant-baseline="middle">{{ t.value }}</text>
+              }
+
+              <path [attr.d]="areaPath()" fill="url(#admArea)" />
+              <path class="chart__line" [attr.d]="linePath()" />
+
+              @for (p of points(); track p.date; let i = $index) {
+                @if (showLabel(i)) {
+                  <text class="chart__axis" [attr.x]="p.x" [attr.y]="height() - 8" text-anchor="middle">{{ p.label }}</text>
+                }
+              }
+
+              @if (hoverPoint(); as hp) {
+                <line class="chart__guide" [attr.x1]="hp.x" [attr.x2]="hp.x" [attr.y1]="pad.top" [attr.y2]="height() - pad.bottom" />
+                <circle class="chart__dot" [attr.cx]="hp.x" [attr.cy]="hp.y" r="5" />
+              }
+
+              <rect
+                class="chart__hit"
+                [attr.x]="pad.left" [attr.y]="pad.top" [attr.width]="width() - pad.left - pad.right" [attr.height]="height() - pad.top - pad.bottom"
+                (pointermove)="onChartMove($event)" (pointerleave)="hovered.set(null)"
+              />
+            </svg>
+
+            @if (hoverPoint(); as hp) {
+              <div class="chart__tooltip" [style.left.px]="tooltipX(hp.x)" [style.top.px]="hp.y">
+                <span class="chart__tooltip-date">{{ hp.tip }}</span>
+                <span><strong>{{ formatNumber(hp.value) }}</strong> {{ hp.value > 1 ? metricMeta().many : metricMeta().one }}</span>
+              </div>
+            }
+          } @else {
+            <span class="skeleton skeleton--chart" aria-hidden="true"></span>
+          }
+        </div>
+
+        @if (data()) {
+          <p class="chart-summary">
+            <strong>{{ formatNumber(periodTotal()) }}</strong> {{ metricMeta().many }} sur {{ period() }} jours
+            <span aria-hidden="true">·</span> environ <strong>{{ formatNumber(dailyAverage()) }}</strong> par jour
+          </p>
+        }
+      </section>
+    </div>
+
+    <!-- ============================ ÉVÉNEMENTS RÉCENTS + À TRAITER ============================ -->
+    <div class="lower">
+      <section class="panel" aria-labelledby="recent-title">
+        <header class="panel__head">
+          <h2 id="recent-title" class="panel__title">Événements récents</h2>
+          <a class="link" routerLink="/admin/evenements">
+            Voir les événements
+            <svg class="icon icon--xs" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
+          </a>
+        </header>
+
+        @if (!data()) {
+          <ul class="events" aria-hidden="true">
+            @for (i of [1, 2, 3, 4]; track i) {
+              <li class="event"><span class="skeleton skeleton--row"></span></li>
+            }
+          </ul>
+        } @else if (recentEvents().length === 0) {
+          <p class="empty">Aucun événement récent pour le moment.</p>
+        } @else {
+          <ul class="events">
+            @for (e of recentEvents(); track e.id) {
+              <li class="event">
+                <span class="event__icon" aria-hidden="true">
+                  <svg class="icon" viewBox="0 0 24 24">
+                    @for (d of icons.events; track d) {
+                      <path [attr.d]="d" />
+                    }
+                  </svg>
+                </span>
+                <span class="event__text">
+                  <strong>{{ e.title }}</strong>
+                  <small>
+                    {{ e.organizer_name }}@if (e.city) { · {{ e.city }} } · {{ eventDate(e.start_at) }}
+                  </small>
+                </span>
+                <span class="badge" [attr.data-tone]="statusMeta[e.status].tone">
+                  <span class="badge__dot" aria-hidden="true"></span>{{ statusMeta[e.status].label }}
+                </span>
+              </li>
+            }
+          </ul>
+        }
+      </section>
+
+      <div class="side">
+        <section class="panel" aria-labelledby="review-title">
+          <header class="panel__head">
+            <h2 id="review-title" class="panel__title">À traiter</h2>
+          </header>
+
+          @if (!data()) {
+            <ul class="review" aria-hidden="true">
+              @for (i of [1, 2, 3]; track i) {
+                <li><span class="skeleton skeleton--row"></span></li>
+              }
+            </ul>
+          } @else if (reviewItems().length === 0) {
+            <p class="review-ok">
+              <svg class="icon icon--lg" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><path d="M22 4L12 14.01l-3-3" /></svg>
+              Tout est à jour : rien n'attend votre décision.
+            </p>
+          } @else {
+            <ul class="review">
+              @for (item of reviewItems(); track item.key) {
+                <li>
+                  <a class="review__item" [routerLink]="item.link" [queryParams]="item.query">
+                    <span class="review__icon" aria-hidden="true">
+                      <svg class="icon" viewBox="0 0 24 24">
+                        @for (d of item.icon; track d) {
+                          <path [attr.d]="d" />
+                        }
+                      </svg>
+                    </span>
+                    <span class="review__text">
+                      <strong>{{ item.label }}</strong>
+                      <small>{{ item.hint }}</small>
+                    </span>
+                    <span class="review__count">{{ item.count }}</span>
+                  </a>
+                </li>
+              }
+            </ul>
+          }
+        </section>
+
+        <div class="brand" aria-hidden="true">
+          <span class="brand__logo">EVENT<span class="brand__accent">FLOW</span></span>
+          <span class="brand__tagline">Organisez, sensibilisez, faites vivre vos événements.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================ ACTIONS RAPIDES ============================ -->
+    <section aria-labelledby="quick-title">
+      <h2 id="quick-title" class="section-title">Actions rapides</h2>
+      <ul class="quick">
+        @for (action of quickActions; track action.link) {
+          <li>
+            <a class="quick__btn" [routerLink]="action.link">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                @for (d of action.icon; track d) {
+                  <path [attr.d]="d" />
+                }
+              </svg>
+              {{ action.label }}
+            </a>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+</section>
