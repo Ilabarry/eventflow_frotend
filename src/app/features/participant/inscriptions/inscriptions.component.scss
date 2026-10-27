@@ -583,3 +583,29 @@ $bp-small: 400px;
       'ticket ticket';
   }
 }
+
+.btn--access {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: var(--evf-radius-full, 999px);
+  background: var(--evf-gradient-flow, linear-gradient(135deg, #8B7CF6, #22C7D6));
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.875rem;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(139, 124, 246, 0.25);
+  }
+
+  .icon {
+    width: 16px;
+    height: 16px;
+    stroke-width: 2;
+  }
+}

@@ -1,10 +1,11 @@
 import { ViewportScroller } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { Subject, catchError, debounceTime, map, of, switchMap } from 'rxjs';
 
 import { PaginatedResponse } from '../../../core/models/api-response.model';
+import { NotificationService } from '../../../core/services/notification.service';
 import {
   ApiRegistrationStatus,
   MyRegistrationDto,
@@ -121,6 +122,10 @@ type LoadResult =
 export class ParticipantRegistrationsComponent {
   private readonly registrationService = inject(RegistrationService);
   private readonly viewportScroller = inject(ViewportScroller);
+  private readonly notification = inject(NotificationService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly query$ = new Subject<MyRegistrationsFilters>();
+  private readonly searchInput$ = new Subject<string>();
 
   readonly statusFilters = STATUS_FILTERS;
 
@@ -136,9 +141,7 @@ export class ParticipantRegistrationsComponent {
   // Valeurs dérivées
   readonly pages = computed(() => visiblePages(this.currentPage(), this.totalPages()));
   readonly hasActiveFilter = computed(() => this.activeStatus() !== null || this.searchTerm() !== '');
-
-  private readonly query$ = new Subject<MyRegistrationsFilters>();
-  private readonly searchInput$ = new Subject<string>();
+  
 
   constructor() {
     // switchMap annule la requête précédente si l'utilisateur change de filtre
@@ -234,4 +237,35 @@ export class ParticipantRegistrationsComponent {
     this.currentPage.set(result.page.current_page);
     this.loadState.set('ready');
   }
+
+  /**
+   * Récupère le lien d'accès à l'événement en ligne.
+   * Le backend ne renvoie `access_url` que pour les inscriptions CONFIRMED
+   * (via RegistrationDetailSerializer → EventOrganizerSerializer).
+   */
+  joinEvent(card: RegistrationCard): void {
+    this.registrationService
+      .getById(card.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (res) => {
+          const url = res.data?.event?.access_url;
+          if (url) {
+            window.open(url, '_blank', 'noopener,noreferrer');
+          } else {
+            this.notification.warning(
+              "Le lien d'accès n'est pas encore disponible. Il sera communiqué avant l'événement.",
+              'Lien indisponible',
+            );
+          }
+        },
+        error: () => {
+          this.notification.error(
+            "Impossible de récupérer le lien de l'événement.",
+            'Erreur',
+          );
+        },
+      });
+  }
+
 }

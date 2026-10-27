@@ -32,12 +32,24 @@ export interface MyRegistrationDto {
   event: EventDto;
 }
 
+/** Détail d'une inscription côté participant (RegistrationDetailSerializer). */
+export interface RegistrationDetailDto {
+  id: string;
+  reference: string;
+  status: ApiRegistrationStatus;
+  registered_at: string;
+  cancelled_at: string | null;
+  ticket_type_name: string | null;
+  event: EventDto & {
+    access_url?: string | null;
+  };
+}
+
 /** Filtres acceptés par GET /api/registrations/my/. */
 export interface MyRegistrationsFilters {
   page: number;
   pageSize: number;
   status: ApiRegistrationStatus | null;
-  /** Le backend cherche dans la RÉFÉRENCE (EVF-REG-…), pas dans le titre de l'événement. */
   search: string;
 }
 
@@ -92,15 +104,22 @@ export class RegistrationService {
     );
   }
 
-  /** inscrire le participant connecté à un événement. */
-    create(
-      payload: CreateRegistrationPayload,
-    ): Observable<ApiResponse<CreateRegistrationDto>> {
-      return this.http.post<ApiResponse<CreateRegistrationDto>>(
-        `${this.BASE}/registrations/`,
-        payload,
-      );
-    }
+  /** POST /api/registrations/ : inscrire le participant connecté à un événement. */
+  create(
+    payload: CreateRegistrationPayload,
+  ): Observable<ApiResponse<CreateRegistrationDto>> {
+    return this.http.post<ApiResponse<CreateRegistrationDto>>(
+      `${this.BASE}/registrations/`,
+      payload,
+    );
+  }
+
+  /** GET /api/registrations/{id}/ : détail complet (avec access_url si CONFIRMED). */
+  getById(registrationId: string): Observable<ApiResponse<RegistrationDetailDto>> {
+    return this.http.get<ApiResponse<RegistrationDetailDto>>(
+      `${this.BASE}/registrations/${registrationId}/`,
+    );
+  }
 }
 
 /** Réponse de POST /api/registrations/ (RegistrationDetailSerializer). */
