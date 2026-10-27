@@ -18,7 +18,7 @@ import { TicketTypeService } from '../../../core/services/ticket-type.service';
 
 type ParticipantStatus = 'confirmed' | 'pending' | 'cancelled';
 type AttendanceState = 'present' | 'absent' | 'not_checked_in';
-type Presence = 'all' | 'present' | 'absent';
+type Presence = 'all' | 'present' | 'absent' | 'not_checked_in';
 type PeriodFilter = 'all' | 'today' | '7d' | '30d';
 type SortKey = 'name' | 'email' | 'ticket' | 'status' | 'date';
 type SortDir = 'asc' | 'desc';
@@ -113,10 +113,12 @@ export class OrganizerParticipantsComponent {
     { value: 'pending', label: 'En attente' },
     { value: 'cancelled', label: 'Annulés' },
   ];
+
   readonly presenceOptions: { value: Presence; label: string }[] = [
     { value: 'all', label: 'Tous' },
     { value: 'present', label: 'Présents' },
-    { value: 'absent', label: 'Non scannés' },
+    { value: 'absent', label: 'Absents' },
+    { value: 'not_checked_in', label: 'En attente' },
   ];
   readonly periodOptions: { value: PeriodFilter; label: string }[] = [
     { value: 'all', label: 'Date' },
@@ -304,15 +306,22 @@ export class OrganizerParticipantsComponent {
   readonly stats = computed(() => {
     const list = this.participants();
     const active = list.filter((p) => p.status !== 'cancelled').length;
+    const confirmed = list.filter((p) => p.status === 'confirmed').length;
     const present = list.filter((p) => p.attendance === 'present').length;
+    const absent = list.filter((p) => p.attendance === 'absent').length;
     const capacity = this.currentEvent()?.capacity ?? null;
     return {
       active,
-      confirmed: list.filter((p) => p.status === 'confirmed').length,
+      confirmed,
       pending: list.filter((p) => p.status === 'pending').length,
       present,
+      absent,
+      notCheckedIn: list.filter((p) => p.attendance === 'not_checked_in').length,
       capacity,
-      percent: capacity ? Math.min(100, Math.round((active / capacity) * 100)) : null,
+      // Remplissage = confirmés / capacité (plus honnête)
+      percent: capacity ? Math.min(100, Math.round((confirmed / capacity) * 100)) : null,
+      // Taux de présence = présents / confirmés
+      attendanceRate: confirmed > 0 ? Math.round((present / confirmed) * 100) : null,
     };
   });
 
@@ -329,8 +338,7 @@ export class OrganizerParticipantsComponent {
     const list = this.participants().filter((p) => {
       if (status !== 'all' && p.status !== status) return false;
       if (ticket !== 'all' && p.ticket !== ticket) return false;
-      if (presence === 'present' && p.attendance !== 'present') return false;
-      if (presence === 'absent' && p.attendance !== 'not_checked_in') return false;
+      if (presence !== 'all' && p.attendance !== presence) return false;
       if (period !== 'all') {
         const time = new Date(p.registeredAt).getTime();
         const limit = period === 'today' ? startOfToday.getTime() : now - (period === '7d' ? 7 : 30) * day;
@@ -494,13 +502,14 @@ export class OrganizerParticipantsComponent {
   async markPresent(p: Participant): Promise<void> {
     this.openMenuId.set(null);
     try {
-      await firstValueFrom(this.attendanceService.checkIn(p.id));
+      const res = await firstValueFrom(this.attendanceService.checkIn(p.id));
+      const attendance = res.data;
       this.patch(p.id, {
         attendance: 'present',
-        checkedInAt: new Date().toISOString(),
+        checkedInAt: attendance?.checked_in_at ?? new Date().toISOString(),
       });
       this.notification.success(
-        `${p.firstName} ${p.lastName} est marqué présent.`,
+        `${p.firstName} ${p.lastName} est marqué présent${attendance?.checked_in_at ? ' à ' + this.formatDateTime(attendance.checked_in_at) : ''}.`,
         'Succès',
       );
     } catch (err) {
@@ -510,20 +519,17 @@ export class OrganizerParticipantsComponent {
 
   async markAbsent(p: Participant): Promise<void> {
     this.openMenuId.set(null);
-    if (p.attendance === 'present') {
+    if (p.status !== 'confirmed') {
       this.notification.warning(
-        'Ce participant est déjà présent : impossible de le marquer absent.',
+        'Seules les inscriptions confirmées peuvent être déclarées absentes.',
         'Action refusée',
       );
       return;
     }
     try {
-      await firstValueFrom(this.attendanceService.markAbsent(p.id));
+      const res = await firstValueFrom(this.attendanceService.markAbsent(p.id));
       this.patch(p.id, { attendance: 'absent' });
-      this.notification.success(
-        `${p.firstName} ${p.lastName} est marqué absent.`,
-        'Succès',
-      );
+      this.notification.success(`${p.firstName} ${p.lastName} est marqué absent.`, 'Succès');
     } catch (err) {
       this.notification.httpError(err);
     }
@@ -640,8 +646,13 @@ export class OrganizerParticipantsComponent {
     return dateTimeFmt.format(new Date(iso));
   }
 
+  private readonly eventDateFmt = new Intl.DateTimeFormat('fr-FR', {
+    weekday: 'short', day: 'numeric', month: 'long', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  });
+
   formatEventDate(iso: string): string {
-    return dateTimeFmt.format(new Date(iso));
+    return this.eventDateFmt.format(new Date(iso));
   }
 
   @HostListener('document:click', ['$event'])

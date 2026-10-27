@@ -7,6 +7,24 @@
     <div class="hero__content">
       <h1 id="pres-title" class="hero__title">Mes présences</h1>
       <p class="hero__subtitle">Vos participations enregistrées à la porte de chaque événement.</p>
+
+      <div class="hero__toolbar">
+        <div class="filters" role="group" aria-label="Filtrer par statut de présence">
+          @for (f of statusFilters; track f.value) {
+            <button
+              type="button"
+              class="filters__chip"
+              [class.filters__chip--active]="activeFilter() === f.value"
+              [attr.aria-pressed]="activeFilter() === f.value"
+              (click)="selectFilter(f.value)"
+            >{{ f.label }}</button>
+          }
+        </div>
+
+        <a routerLink="/participant/tickets" class="btn btn--outline btn--sm">
+          Voir mes tickets
+        </a>
+      </div>
     </div>
   </header>
 
@@ -23,11 +41,22 @@
     @default {
       @if (items().length === 0) {
         <div class="state">
-          <p>Vous n'avez encore aucune présence enregistrée.</p>
-          <p class="state__text">Votre présence est enregistrée par l'organisateur le jour de l'événement.</p>
-          <a routerLink="/participant/evenements" class="btn btn--primary">Découvrir les événements</a>
+          @if (activeFilter() !== 'all') {
+            <p>Aucune présence ne correspond à ce filtre.</p>
+            <button type="button" class="btn btn--primary" (click)="selectFilter('all')">
+              Voir toutes mes présences
+            </button>
+          } @else {
+            <p>Vous n'avez encore aucune présence enregistrée.</p>
+            <p class="state__text">Votre présence est enregistrée par l'organisateur le jour de l'événement.</p>
+            <a routerLink="/participant/evenements" class="btn btn--primary">Découvrir les événements</a>
+          }
         </div>
       } @else {
+        <p class="pres__count">
+          {{ totalCount() }} présence{{ totalCount() > 1 ? 's' : '' }}
+        </p>
+
         <ul class="list">
           @for (a of items(); track a.id) {
             <li>
@@ -39,6 +68,9 @@
                     {{ whenLabel(a.event_start_at) }}
                   </p>
                   <p class="card__ref">Réf. inscription : {{ a.registration_reference }}</p>
+                  @if (a.status === 'PRESENT' && checkedInLabel(a.checked_in_at); as time) {
+                    <p class="card__checkedin">Scanné à {{ time }}</p>
+                  }
                 </div>
                 <span [class]="'badge badge--' + statusTone(a.status)">
                   <span class="badge__dot"></span> {{ statusLabel(a.status) }}
@@ -47,6 +79,20 @@
             </li>
           }
         </ul>
+
+        @if (totalPages() > 1) {
+          <nav class="pagination" aria-label="Pagination des présences">
+            <button type="button" class="pagination__btn" aria-label="Page précédente"
+              [disabled]="currentPage() === 1" (click)="goToPage(currentPage() - 1)">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m6-6-6 6 6 6" /></svg>
+            </button>
+            <p class="pagination__summary">Page {{ currentPage() }} sur {{ totalPages() }}</p>
+            <button type="button" class="pagination__btn" aria-label="Page suivante"
+              [disabled]="currentPage() === totalPages()" (click)="goToPage(currentPage() + 1)">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" /></svg>
+            </button>
+          </nav>
+        }
       }
     }
   }

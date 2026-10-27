@@ -76,10 +76,12 @@ export class AttendanceService {
   listMine(
     page = 1,
     pageSize = 20,
+    status?: 'PRESENT' | 'ABSENT',
   ): Observable<ApiResponse<PaginatedResponse<MyAttendanceDto>>> {
-    const params = new HttpParams()
+    let params = new HttpParams()
       .set('page', page.toString())
       .set('page_size', pageSize.toString());
+    if (status) params = params.set('status', status);
 
     return this.http.get<ApiResponse<PaginatedResponse<MyAttendanceDto>>>(
       `${this.BASE}/me/`,

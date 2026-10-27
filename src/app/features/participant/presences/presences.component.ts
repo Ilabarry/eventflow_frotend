@@ -9,6 +9,9 @@ import {
 } from '../../../core/services/attendance.service';
 
 type LoadState = 'loading' | 'ready' | 'error';
+type AttendanceFilter = 'all' | 'PRESENT' | 'ABSENT';
+
+const PAGE_SIZE = 10;
 
 const DATE_FMT = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 const TIME_FMT = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' });
@@ -28,13 +31,34 @@ export class ParticipantPresencesComponent implements OnInit {
   readonly loadState = signal<LoadState>('loading');
   readonly items = signal<MyAttendanceDto[]>([]);
 
+  readonly currentPage = signal(1);
+  readonly totalPages = signal(1);
+  readonly totalCount = signal(0);
+  readonly activeFilter = signal<AttendanceFilter>('all');
+
+  readonly statusFilters: { value: AttendanceFilter; label: string }[] = [
+    { value: 'all', label: 'Toutes' },
+    { value: 'PRESENT', label: 'Présences' },
+    { value: 'ABSENT', label: 'Absences' },
+  ];
+
   ngOnInit(): void {
+    this.load();
+  }
+
+  load(): void {
+    this.loadState.set('loading');
+    const status = this.activeFilter() === 'all' ? undefined : this.activeFilter();
     this.attendanceService
-      .listMine()
+      .listMine(this.currentPage(), PAGE_SIZE, status as 'PRESENT' | 'ABSENT' | undefined)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (res) => {
-          this.items.set(res.data?.results ?? []);
+          const page = res.data;
+          this.items.set(page?.results ?? []);
+          this.totalCount.set(page?.count ?? 0);
+          this.totalPages.set(Math.max(1, page?.total_pages ?? 1));
+          this.currentPage.set(page?.current_page ?? 1);
           this.loadState.set('ready');
         },
         error: (err) => {
@@ -44,9 +68,28 @@ export class ParticipantPresencesComponent implements OnInit {
       });
   }
 
+  selectFilter(value: AttendanceFilter): void {
+    if (this.activeFilter() === value) return;
+    this.activeFilter.set(value);
+    this.currentPage.set(1);
+    this.load();
+  }
+
+  goToPage(p: number): void {
+    if (p < 1 || p > this.totalPages() || p === this.currentPage()) return;
+    this.currentPage.set(p);
+    this.load();
+  }
+
   whenLabel(iso: string): string {
     const d = new Date(iso);
     return `${DATE_FMT.format(d)} · ${TIME_FMT.format(d).replace(':', 'h')}`;
+  }
+
+  checkedInLabel(iso: string | null): string | null {
+    if (!iso) return null;
+    const d = new Date(iso);
+    return TIME_FMT.format(d).replace(':', 'h');
   }
 
   statusLabel(status: string): string {
