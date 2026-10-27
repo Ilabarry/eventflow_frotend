@@ -1,1 +1,540 @@
-<p>organisateurs works!</p>
+<section class="org" aria-labelledby="org-title">
+  <!-- ============================ BANNIÈRE : titre, recherche, filtres ============================ -->
+  <header class="hero">
+    <svg class="hero__wave" viewBox="0 0 400 120" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+      <defs>
+        <linearGradient id="orgHeroWave" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#8B7CF6" />
+          <stop offset="1" stop-color="#22C7D6" />
+        </linearGradient>
+      </defs>
+      <path d="M0 90 C 50 20, 110 110, 180 60 S 300 0, 400 40" fill="none" stroke="url(#orgHeroWave)" stroke-width="2.5" vector-effect="non-scaling-stroke" />
+    </svg>
+
+    <div class="hero__content">
+      <h1 id="org-title" class="hero__title">Organisateurs</h1>
+      <p class="hero__text">Supervisez les organisateurs et leur travail.</p>
+
+      <div class="hero__toolbar">
+        <div class="search">
+          <svg class="icon search__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
+          </svg>
+          <input
+            class="search__input"
+            type="search"
+            placeholder="Rechercher par nom, email…"
+            autocomplete="off"
+            aria-label="Rechercher un organisateur par nom, e-mail, organisation ou ville"
+            [value]="searchTerm()"
+            (input)="onSearchInput($event)"
+          />
+        </div>
+
+        <div class="filters">
+          <label class="filters__field">
+            <span class="sr-only">Statut</span>
+            <select class="glass" [class.glass--active]="status() !== ''" (change)="onStatus($event)">
+              <option value="" [selected]="status() === ''">Tous les statuts</option>
+              @for (option of statusOptions; track option.value) {
+                <option [value]="option.value" [selected]="status() === option.value">{{ option.label }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="filters__field">
+            <span class="sr-only">Activité</span>
+            <select class="glass" [class.glass--active]="activity() !== ''" (change)="onActivity($event)">
+              <option value="" [selected]="activity() === ''">Toutes les activités</option>
+              @for (option of activityOptions; track option.value) {
+                <option [value]="option.value" [selected]="activity() === option.value">{{ option.label }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="filters__field">
+            <span class="sr-only">Date d'inscription</span>
+            <select class="glass" [class.glass--active]="joined() !== ''" (change)="onJoined($event)">
+              <option value="" [selected]="joined() === ''">Toutes les dates</option>
+              @for (option of joinedOptions; track option.value) {
+                <option [value]="option.value" [selected]="joined() === option.value">Inscrits : {{ option.label }}</option>
+              }
+            </select>
+          </label>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============================ CARTES : un clic applique le filtre ============================ -->
+  <ul class="stats" aria-label="Résumé des organisateurs" [class.stats--loading]="loadState() === 'loading'">
+    @for (card of cards(); track card.key) {
+      <li>
+        <button
+          type="button"
+          class="stat"
+          [attr.data-tone]="card.tone"
+          [class.stat--active]="isQuickActive(card.key)"
+          [attr.aria-pressed]="isQuickActive(card.key)"
+          (click)="applyQuickFilter(card.key)"
+        >
+          <span class="stat__value">{{ formatNumber(card.value) }}</span>
+          <span class="stat__label">{{ card.label }}</span>
+        </button>
+      </li>
+    }
+  </ul>
+
+  <!-- À traiter : comptes en attente et suspendus -->
+  @if (stats(); as s) {
+    @if (s.pending > 0 || s.suspended > 0) {
+      <div class="alerts" role="group" aria-label="Comptes à examiner">
+        @if (s.pending > 0) {
+          <button type="button" class="alert alert--warning" [class.alert--active]="isQuickActive('pending')" (click)="applyQuickFilter('pending')">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
+            <strong>{{ s.pending }}</strong> en attente de validation
+          </button>
+        }
+        @if (s.suspended > 0) {
+          <button type="button" class="alert alert--danger" [class.alert--active]="isQuickActive('suspended')" (click)="applyQuickFilter('suspended')">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M4.93 4.93l14.14 14.14" /></svg>
+            <strong>{{ s.suspended }}</strong> suspendu{{ s.suspended > 1 ? 's' : '' }}
+          </button>
+        }
+      </div>
+    }
+  }
+
+  <!-- ============================ TABLEAU ============================ -->
+  <section class="panel" aria-labelledby="table-title">
+    <header class="panel__bar">
+      <h2 id="table-title" class="panel__title">
+        Organisateurs
+        <span class="panel__count">{{ formatNumber(totalCount()) }} compte{{ totalCount() > 1 ? 's' : '' }}</span>
+      </h2>
+
+      <div class="panel__tools">
+        <button type="button" class="bar-btn" (click)="refresh()" [disabled]="refreshing() || loadState() === 'loading'" aria-label="Actualiser la liste">
+          <svg class="icon" [class.icon--spin]="refreshing()" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M23 4v6h-6" /><path d="M1 20v-6h6" />
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+          </svg>
+        </button>
+        <button type="button" class="bar-btn bar-btn--text" (click)="exportAll()" [disabled]="exporting() || totalCount() === 0">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M7 10l5 5 5-5" /><path d="M12 15V3" /></svg>
+          {{ exporting() ? 'Export…' : 'Exporter' }}
+        </button>
+      </div>
+    </header>
+
+    <!-- Actions groupées -->
+    @if (selectedRows().length > 0) {
+      <div class="bulk" role="region" aria-label="Actions sur la sélection" aria-live="polite">
+        <p class="bulk__count"><strong>{{ selectedRows().length }}</strong> sélectionné{{ selectedRows().length > 1 ? 's' : '' }}</p>
+        <div class="bulk__actions">
+          @if (selectedPending().length > 0) {
+            <button type="button" class="btn btn--sm btn--success" [disabled]="busy()" (click)="validate(selectedPending())">
+              Valider ({{ selectedPending().length }})
+            </button>
+          }
+          @if (selectedSuspended().length > 0) {
+            <button type="button" class="btn btn--sm btn--outline" [disabled]="busy()" (click)="reactivate(selectedSuspended())">
+              Réactiver ({{ selectedSuspended().length }})
+            </button>
+          }
+          @if (selectedActive().length > 0) {
+            <button type="button" class="btn btn--sm btn--danger" [disabled]="busy()" (click)="askReason('suspend', selectedActive())">
+              Suspendre ({{ selectedActive().length }})
+            </button>
+          }
+          <button type="button" class="btn btn--sm btn--ghost" (click)="exportSelection()">Exporter la sélection</button>
+          <button type="button" class="btn btn--sm btn--ghost" (click)="clearSelection()">Désélectionner</button>
+        </div>
+      </div>
+    }
+
+    <div [attr.aria-busy]="loadState() === 'loading'" aria-live="polite">
+      @switch (loadState()) {
+        @case ('loading') {
+          <ul class="skeleton" aria-label="Chargement des organisateurs">
+            @for (i of [1, 2, 3, 4, 5, 6]; track i) {
+              <li class="skeleton__row" aria-hidden="true">
+                <span class="sk sk--avatar"></span>
+                <span class="sk sk--lg"></span>
+                <span class="sk"></span>
+                <span class="sk sk--sm"></span>
+              </li>
+            }
+          </ul>
+        }
+
+        @case ('error') {
+          <div class="state" role="alert">
+            <span class="state__icon state__icon--danger" aria-hidden="true">
+              <svg class="icon icon--lg" viewBox="0 0 24 24">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><path d="M12 9v4" /><path d="M12 17h.01" />
+              </svg>
+            </span>
+            <h3 class="state__title">Impossible de charger les organisateurs</h3>
+            <p class="state__text">Vérifiez votre connexion internet, puis réessayez.</p>
+            <button type="button" class="btn btn--solid" (click)="retry()">Réessayer</button>
+          </div>
+        }
+
+        @default {
+          @if (rows().length === 0) {
+            <div class="state">
+              <span class="state__icon" aria-hidden="true">
+                <svg class="icon icon--lg" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+              </span>
+              @if (hasActiveFilter()) {
+                <h3 class="state__title">Aucun organisateur ne correspond à vos critères</h3>
+                <p class="state__text">Modifiez la recherche ou retirez un filtre.</p>
+                <button type="button" class="btn btn--solid" (click)="resetFilters()">Réinitialiser les filtres</button>
+              } @else {
+                <h3 class="state__title">Aucun organisateur pour le moment</h3>
+                <p class="state__text">Les comptes organisateurs apparaîtront ici dès leur inscription.</p>
+              }
+            </div>
+          } @else {
+            <table class="table">
+              <caption class="sr-only">Liste des organisateurs</caption>
+              <thead>
+                <tr>
+                  <th scope="col" class="col-check">
+                    <input
+                      type="checkbox" class="check"
+                      aria-label="Sélectionner tous les organisateurs de la page"
+                      [checked]="allSelected()" [indeterminate]="someSelected()" (change)="toggleAll()"
+                    />
+                  </th>
+                  <th scope="col" [attr.aria-sort]="ariaSort('name')">
+                    <button type="button" class="th-btn" (click)="setSort('name')">
+                      Organisateur
+                      <span class="sort" [attr.data-dir]="sortKey() === 'name' ? sortDir() : null" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><path class="sort__up" d="M7 10l5-5 5 5" /><path class="sort__down" d="M7 14l5 5 5-5" /></svg>
+                      </span>
+                    </button>
+                  </th>
+                  <th scope="col" class="col-num" [attr.aria-sort]="ariaSort('events')">
+                    <button type="button" class="th-btn" (click)="setSort('events')">
+                      Events
+                      <span class="sort" [attr.data-dir]="sortKey() === 'events' ? sortDir() : null" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><path class="sort__up" d="M7 10l5-5 5 5" /><path class="sort__down" d="M7 14l5 5 5-5" /></svg>
+                      </span>
+                    </button>
+                  </th>
+                  <th scope="col" class="col-num" [attr.aria-sort]="ariaSort('registrations')">
+                    <button type="button" class="th-btn" (click)="setSort('registrations')">
+                      Inscriptions
+                      <span class="sort" [attr.data-dir]="sortKey() === 'registrations' ? sortDir() : null" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><path class="sort__up" d="M7 10l5-5 5 5" /><path class="sort__down" d="M7 14l5 5 5-5" /></svg>
+                      </span>
+                    </button>
+                  </th>
+                  <th scope="col" class="col-num" [attr.aria-sort]="ariaSort('upcoming')">
+                    <button type="button" class="th-btn" (click)="setSort('upcoming')">
+                      À venir
+                      <span class="sort" [attr.data-dir]="sortKey() === 'upcoming' ? sortDir() : null" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><path class="sort__up" d="M7 10l5-5 5 5" /><path class="sort__down" d="M7 14l5 5 5-5" /></svg>
+                      </span>
+                    </button>
+                  </th>
+                  <th scope="col" [attr.aria-sort]="ariaSort('status')">
+                    <button type="button" class="th-btn" (click)="setSort('status')">
+                      Statut
+                      <span class="sort" [attr.data-dir]="sortKey() === 'status' ? sortDir() : null" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><path class="sort__up" d="M7 10l5-5 5 5" /><path class="sort__down" d="M7 14l5 5 5-5" /></svg>
+                      </span>
+                    </button>
+                  </th>
+                  <th scope="col" class="col-actions">Actions</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                @for (row of rows(); track row.id; let i = $index) {
+                  <tr [class.row--selected]="selected().has(row.id)" [class.row--suspended]="row.status === 'SUSPENDED'">
+                    <td class="col-check">
+                      <input
+                        type="checkbox" class="check"
+                        [attr.aria-label]="'Sélectionner ' + row.full_name"
+                        [checked]="selected().has(row.id)" (change)="toggleRow(row)"
+                      />
+                    </td>
+
+                    <td class="cell-person">
+                      @if (row.avatar) {
+                        <img class="avatar" [src]="row.avatar" alt="" />
+                      } @else {
+                        <span class="avatar" [attr.data-tone]="avatarTone(row)" aria-hidden="true">{{ initials(row) }}</span>
+                      }
+                      <span class="person">
+                        <button type="button" class="person__name" (click)="openDetail(row)">{{ row.full_name }}</button>
+                        <span class="person__email">{{ row.email }}</span>
+                      </span>
+                    </td>
+
+                    <td class="col-num" data-label="Events">{{ formatNumber(row.events_count) }}</td>
+                    <td class="col-num" data-label="Inscriptions">{{ formatNumber(row.registrations_count) }}</td>
+                    <td class="col-num" data-label="À venir">{{ formatNumber(row.upcoming_count) }}</td>
+
+                    <td data-label="Statut">
+                      <span class="badge" [attr.data-tone]="statusMeta[row.status].tone">
+                        <span class="badge__dot" aria-hidden="true"></span>{{ statusMeta[row.status].label }}
+                      </span>
+                    </td>
+
+                    <td class="col-actions">
+                      <div class="menu-wrap">
+                        <button
+                          type="button" class="kebab" aria-haspopup="menu"
+                          [attr.aria-expanded]="openMenuId() === row.id"
+                          [attr.aria-label]="'Actions pour ' + row.full_name"
+                          (click)="toggleMenu(row.id)"
+                        >
+                          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+                            <circle cx="12" cy="5" r="1.7" /><circle cx="12" cy="12" r="1.7" /><circle cx="12" cy="19" r="1.7" />
+                          </svg>
+                        </button>
+
+                        @if (openMenuId() === row.id) {
+                          <div class="menu" [class.menu--up]="menuUp(i)" role="menu">
+                            <button type="button" class="menu__item" role="menuitem" (click)="openDetail(row)">Voir le profil</button>
+                            <a class="menu__item" role="menuitem" routerLink="/admin/evenements" [queryParams]="{ organisateur: row.id }" (click)="openMenuId.set(null)">
+                              Voir ses événements
+                            </a>
+                            <a class="menu__item" role="menuitem" [href]="'mailto:' + row.email" (click)="openMenuId.set(null)">Contacter</a>
+
+                            @if (row.status === 'PENDING') {
+                              <button type="button" class="menu__item menu__item--success" role="menuitem" (click)="validate([row])">Valider le compte</button>
+                              <button type="button" class="menu__item menu__item--danger" role="menuitem" (click)="askReason('reject', [row])">Refuser</button>
+                            } @else if (row.status === 'ACTIVE') {
+                              <button type="button" class="menu__item menu__item--danger" role="menuitem" (click)="askReason('suspend', [row])">Suspendre</button>
+                            } @else {
+                              <button type="button" class="menu__item menu__item--success" role="menuitem" (click)="reactivate([row])">Réactiver</button>
+                            }
+                          </div>
+                        }
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+
+            <footer class="pager">
+              <p class="pager__info" aria-live="polite">{{ rangeLabel() }} sur {{ formatNumber(totalCount()) }}</p>
+
+              <label class="pager__size">
+                Par page
+                <select class="glass glass--light" aria-label="Nombre de lignes par page" (change)="onPageSize($event)">
+                  @for (size of pageSizes; track size) {
+                    <option [value]="size" [selected]="pageSize() === size">{{ size }}</option>
+                  }
+                </select>
+              </label>
+
+              @if (totalPages() > 1) {
+                <nav class="pager__nav" aria-label="Pagination des organisateurs">
+                  <button type="button" class="page" aria-label="Page précédente" [disabled]="currentPage() === 1" (click)="goToPage(currentPage() - 1)">
+                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg>
+                  </button>
+
+                  <ol class="pager__pages">
+                    @for (page of pages(); track page) {
+                      <li>
+                        <button
+                          type="button" class="page"
+                          [class.page--active]="page === currentPage()"
+                          [attr.aria-current]="page === currentPage() ? 'page' : null"
+                          [attr.aria-label]="'Page ' + page"
+                          (click)="goToPage(page)"
+                        >
+                          {{ page }}
+                        </button>
+                      </li>
+                    }
+                  </ol>
+
+                  <p class="pager__summary">Page {{ currentPage() }} sur {{ totalPages() }}</p>
+
+                  <button type="button" class="page" aria-label="Page suivante" [disabled]="currentPage() === totalPages()" (click)="goToPage(currentPage() + 1)">
+                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6" /></svg>
+                  </button>
+                </nav>
+              }
+            </footer>
+          }
+        }
+      }
+    </div>
+  </section>
+
+  <!-- ============================ FICHE DÉTAILLÉE ============================ -->
+  <dialog #detailDialog class="drawer" aria-labelledby="drawer-title" (click)="onBackdropClick($event, 'detail')" (close)="detail.set(null)">
+    @if (detail(); as d) {
+      <div class="drawer__panel">
+        <header class="drawer__head">
+          <div class="drawer__id">
+            @if (d.organizer.avatar) {
+              <img class="avatar avatar--lg" [src]="d.organizer.avatar" alt="" />
+            } @else {
+              <span class="avatar avatar--lg" [attr.data-tone]="avatarTone(d.organizer)" aria-hidden="true">{{ initials(d.organizer) }}</span>
+            }
+            <div class="drawer__name">
+              <h2 id="drawer-title">{{ d.organizer.full_name }}</h2>
+              @if (d.organizer.organization_name) {
+                <p>{{ d.organizer.organization_name }}</p>
+              }
+              <span class="badge" [attr.data-tone]="statusMeta[d.organizer.status].tone">
+                <span class="badge__dot" aria-hidden="true"></span>{{ statusMeta[d.organizer.status].label }}
+              </span>
+            </div>
+          </div>
+          <button type="button" class="close" aria-label="Fermer la fiche" (click)="closeDetail()">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12" /></svg>
+          </button>
+        </header>
+
+        @if (d.organizer.status === 'SUSPENDED' && d.organizer.suspended_reason) {
+          <p class="drawer__notice" role="note"><strong>Motif de la suspension :</strong> {{ d.organizer.suspended_reason }}</p>
+        }
+
+        <ul class="mini">
+          <li><strong>{{ formatNumber(d.organizer.events_count) }}</strong><span>Événements</span></li>
+          <li><strong>{{ formatNumber(d.organizer.registrations_count) }}</strong><span>Inscriptions</span></li>
+          <li><strong>{{ formatNumber(d.organizer.upcoming_count) }}</strong><span>À venir</span></li>
+        </ul>
+
+        <dl class="facts">
+          <div><dt>E-mail</dt><dd><a [href]="'mailto:' + d.organizer.email">{{ d.organizer.email }}</a></dd></div>
+          <div><dt>Téléphone</dt><dd><a [href]="'tel:' + d.organizer.phone.replaceAll(' ', '')">{{ d.organizer.phone }}</a></dd></div>
+          @if (d.organizer.city) {
+            <div><dt>Ville</dt><dd>{{ d.organizer.city }}</dd></div>
+          }
+          <div><dt>Inscrit le</dt><dd>{{ formatDate(d.organizer.created_at) }}</dd></div>
+          <div><dt>Dernière connexion</dt><dd>{{ formatDate(d.organizer.last_login_at) }}</dd></div>
+        </dl>
+
+        <section aria-labelledby="drawer-events">
+          <h3 id="drawer-events" class="drawer__section">Derniers événements</h3>
+
+          @if (d.loading) {
+            <span class="sk sk--row" aria-hidden="true"></span>
+            <span class="sk sk--row" aria-hidden="true"></span>
+          } @else if (d.failed) {
+            <p class="drawer__muted">Impossible de charger les événements de cet organisateur.</p>
+          } @else if (d.events.length === 0) {
+            <p class="drawer__muted">Cet organisateur n'a pas encore créé d'événement.</p>
+          } @else {
+            <ul class="events">
+              @for (e of d.events; track e.id) {
+                <li class="event">
+                  <span class="event__text">
+                    <strong>{{ e.title }}</strong>
+                    <small>{{ formatDate(e.start_at) }} · {{ formatNumber(e.registrations_count) }} inscrit{{ e.registrations_count > 1 ? 's' : '' }}</small>
+                  </span>
+                  <span class="badge" [attr.data-tone]="eventStatusMeta[e.status].tone">
+                    <span class="badge__dot" aria-hidden="true"></span>{{ eventStatusMeta[e.status].label }}
+                  </span>
+                </li>
+              }
+            </ul>
+            <a class="drawer__link" routerLink="/admin/evenements" [queryParams]="{ organisateur: d.organizer.id }" (click)="closeDetail()">
+              Voir tous ses événements →
+            </a>
+          }
+        </section>
+
+        <footer class="drawer__foot">
+          <a class="btn btn--outline" [href]="'mailto:' + d.organizer.email">Contacter</a>
+          @if (d.organizer.status === 'PENDING') {
+            <button type="button" class="btn btn--danger-outline" [disabled]="busy()" (click)="askReason('reject', [d.organizer])">Refuser</button>
+            <button type="button" class="btn btn--success" [disabled]="busy()" (click)="validate([d.organizer])">Valider</button>
+          } @else if (d.organizer.status === 'ACTIVE') {
+            <button type="button" class="btn btn--danger" [disabled]="busy()" (click)="askReason('suspend', [d.organizer])">Suspendre</button>
+          } @else {
+            <button type="button" class="btn btn--success" [disabled]="busy()" (click)="reactivate([d.organizer])">Réactiver</button>
+          }
+        </footer>
+      </div>
+    }
+  </dialog>
+
+  <!-- ============================ MOTIF (suspension / refus) ============================ -->
+  <dialog
+    #reasonDialog
+    class="dialog"
+    aria-labelledby="reason-title"
+    (click)="onBackdropClick($event, 'reason')"
+    (cancel)="onReasonCancel($event)"
+    (close)="reasonRequest.set(null)"
+  >
+    @if (reasonRequest(); as request) {
+      <form class="dialog__panel" [formGroup]="reasonForm" (ngSubmit)="confirmReason()" novalidate>
+        <header class="dialog__head">
+          <h2 id="reason-title">{{ request.action === 'reject' ? 'Refuser la demande' : 'Suspendre le compte' }}</h2>
+          <button type="button" class="close" aria-label="Fermer" [disabled]="busy()" (click)="closeReason()">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12" /></svg>
+          </button>
+        </header>
+
+        <p class="dialog__text">
+          @if (request.action === 'reject') {
+            <strong>{{ reasonTargetsLabel() }}</strong> ne pourra pas organiser d'événements sur EventFlow.
+          } @else {
+            <strong>{{ reasonTargetsLabel() }}</strong> ne pourra plus se connecter ni gérer ses événements.
+            Les événements publiés restent consultables et vous pourrez réactiver le compte à tout moment.
+          }
+        </p>
+
+        <div class="field">
+          <label class="field__label" for="reason-select">Motif <span class="req">*</span></label>
+          <select
+            id="reason-select" class="input" formControlName="reason"
+            [class.input--error]="reasonAttempted() && reasonForm.controls.reason.invalid"
+          >
+            <option value="" disabled>Sélectionner un motif</option>
+            @for (option of reasonOptions(); track option.value) {
+              <option [value]="option.value">{{ option.label }}</option>
+            }
+          </select>
+          @if (reasonAttempted() && reasonForm.controls.reason.invalid) {
+            <span class="field__error">Choisissez un motif.</span>
+          }
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="reason-details">
+            Précisions @if (detailsRequired()) { <span class="req">*</span> } @else { (facultatif) }
+          </label>
+          <textarea
+            id="reason-details" class="input input--area" rows="3" maxlength="300" formControlName="details"
+            placeholder="Ajoutez le contexte utile à l'organisateur et à votre équipe…"
+            [class.input--error]="reasonAttempted() && reasonForm.hasError('detailsRequired')"
+          ></textarea>
+          @if (reasonAttempted() && reasonForm.hasError('detailsRequired')) {
+            <span class="field__error">Précisez le motif (10 caractères minimum).</span>
+          }
+        </div>
+
+        <label class="check-row">
+          <input type="checkbox" class="check" formControlName="notify" />
+          <span>Prévenir l'organisateur par e-mail</span>
+        </label>
+
+        <footer class="dialog__foot">
+          <button type="button" class="btn btn--ghost" [disabled]="busy()" (click)="closeReason()">Annuler</button>
+          <button type="submit" class="btn btn--danger" [disabled]="busy()">
+            @if (busy()) {
+              <span class="spinner" aria-hidden="true"></span> Envoi…
+            } @else {
+              {{ request.action === 'reject' ? 'Refuser la demande' : 'Suspendre' }}
+            }
+          </button>
+        </footer>
+      </form>
+    }
+  </dialog>
+</section>

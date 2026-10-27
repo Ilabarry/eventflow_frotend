@@ -8,6 +8,8 @@ import { Subscription } from 'rxjs';
 import { BackendEvent, EventDetail, EventTicketType } from '../../../core/models/event.model';
 import { AppLoggerService } from '../../../core/services/app-logger.service';
 import { EventsApiService } from '../../../core/services/events-api.service';
+import { environment } from '../../../../environments/environment';
+import { EventOrganizer } from '../../../core/models/event.model';
 
 import { AuthService } from '../../../core/auth/auth.service';
 import { NotificationService } from '../../../core/services/notification.service';
@@ -93,23 +95,23 @@ export class EventDetailComponent implements OnInit, OnDestroy {
   private readonly initialTitle = this.title.getTitle();
 
   private readonly authService = inject(AuthService);
-private readonly notification = inject(NotificationService);
-private readonly registrationService = inject(RegistrationService);
-private readonly router = inject(Router);
+  private readonly notification = inject(NotificationService);
+  private readonly registrationService = inject(RegistrationService);
+  private readonly router = inject(Router);
 
-/** État de l'inscription en cours */
-readonly registering = signal(false);
-readonly registered = signal(false);
-readonly registrationError = signal<string | null>(null);
+  /** État de l'inscription en cours */
+  readonly registering = signal(false);
+  readonly registered = signal(false);
+  readonly registrationError = signal<string | null>(null);
 
-/** L'utilisateur connecté a-t-il le rôle participant ? */
-readonly canRegister = computed(() => {
-  const user = this.authService.currentUser();
-  return user?.roles?.includes('participant') ?? false;
-});
+  /** L'utilisateur connecté a-t-il le rôle participant ? */
+  readonly canRegister = computed(() => {
+    const user = this.authService.currentUser();
+    return user?.roles?.includes('participant') ?? false;
+  });
 
-/** Est-ce que l'utilisateur est connecté ? */
-readonly isAuthenticated = computed(() => this.authService.isAuthenticated());
+  /** Est-ce que l'utilisateur est connecté ? */
+  readonly isAuthenticated = computed(() => this.authService.isAuthenticated());
 
   ngOnInit(): void {
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
@@ -139,9 +141,9 @@ readonly isAuthenticated = computed(() => this.authService.isAuthenticated());
     if (!e) return;
 
     console.log('[EventDetail] register() — participation_type:', e.participation_type);
-  console.log('[EventDetail] register() — ticketOptions:', this.ticketOptions);
-  console.log('[EventDetail] register() — selectedTicketId:', this.selectedTicketId);
-  console.log('[EventDetail] register() — isPaid:', e.participation_type === 'PAID');
+    console.log('[EventDetail] register() — ticketOptions:', this.ticketOptions);
+    console.log('[EventDetail] register() — selectedTicketId:', this.selectedTicketId);
+    console.log('[EventDetail] register() — isPaid:', e.participation_type === 'PAID');
 
     // 1. Non connecté → login
     if (!this.isAuthenticated()) {
@@ -268,12 +270,6 @@ readonly isAuthenticated = computed(() => this.authService.isAuthenticated());
         this.detail = data;
         this.info = this.buildInfo(data);
         this.ticketOptions = this.buildTickets(data);
-        // 🔍 DEBUG
-console.log('[EventDetail] format:', data.format);
-console.log('[EventDetail] participation_type:', data.participation_type);
-console.log('[EventDetail] ticket_types (bruts):', data.ticket_types);
-console.log('[EventDetail] ticketOptions (mappés):', this.ticketOptions);
-console.log('[EventDetail] selectedTicketId initial:', this.selectedTicketId);
         this.selectedTicketId = this.ticketOptions.find((t) => t.remaining !== 0)?.id ?? null;
         this.state = 'ready';
         this.applySeo(data);
@@ -413,6 +409,13 @@ console.log('[EventDetail] selectedTicketId initial:', this.selectedTicketId);
 
   private addressLine(e: EventDetail): string {
     return [e.room ? `Salle ${e.room}` : '', e.address, e.city].filter((x) => !!x && String(x).trim()).join(', ');
+  }
+
+  private absoluteMediaUrl(url: string | null | undefined): string | null {
+    if (!url) return null;
+    if (/^https?:\/\//i.test(url)) return url;
+    const backendOrigin = environment.apiUrl.replace(/\/api\/?$/, '');
+    return `${backendOrigin}${url.startsWith('/') ? url : '/' + url}`;
   }
 
   /* ------------------------------------------------------------------
@@ -564,17 +567,13 @@ console.log('[EventDetail] selectedTicketId initial:', this.selectedTicketId);
   /* ------------------------------------------------------------------
      AFFICHAGE
      ------------------------------------------------------------------ */
-  get initials(): string {
-    const name = this.detail?.organizer?.name ?? '';
-    return (
-      name
-        .split(/\s+/)
-        .filter(Boolean)
-        .slice(0, 2)
-        .map((w) => w.charAt(0))
-        .join('')
-        .toUpperCase() || '?'
-    );
+  organizerInitials(org: EventOrganizer): string {
+    const fn = (org.first_name ?? '').trim();
+    const ln = (org.last_name ?? '').trim();
+    if (fn || ln) return `${fn.charAt(0)}${ln.charAt(0)}`.toUpperCase() || '?';
+    return (org.full_name ?? '?')
+      .split(/\s+/).filter(Boolean).slice(0, 2)
+      .map((w) => w.charAt(0)).join('').toUpperCase() || '?';
   }
 
   formatLabel(format: BackendEvent['format']): string {

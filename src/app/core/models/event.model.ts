@@ -115,11 +115,16 @@ export interface BackendEvent {
 
 
 export interface EventOrganizer {
-  id?: string | number;
-  name: string;
-  logo?: string | null;
-  description?: string | null;
-  website?: string | null;
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  full_name: string;
+  phone: string;
+  profile_picture: string | null;
+  roles: string[];
+  is_active?: boolean;
+  created_at?: string;
 }
 
 export interface EventTicketType {
@@ -135,7 +140,7 @@ export interface EventTicketType {
 
 export interface EventDetail extends Omit<BackendEvent, 'end_at' | 'organizer'> {
   end_at?: string | null;
-  organizer?: EventOrganizer | null;
+  organizer?: EventOrganizer | null;   // ← UserSerializer
   description?: string | null;
   venue_name?: string | null;
   address?: string | null;
