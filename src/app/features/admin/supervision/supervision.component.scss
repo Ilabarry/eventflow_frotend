@@ -1,0 +1,365 @@
+// ==================================================================
+// Admin — page « Supervision » (alertes + journal d'audit)
+// Couleurs et polices : variables --evf-* de src/styles.scss.
+// ==================================================================
+
+$bp-tablet: 960px;
+$bp-mobile: 640px;
+
+:host {
+  display: block;
+  font-family: var(--evf-font-body);
+  color: var(--evf-dark);
+}
+
+.supervision {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 1200px;
+}
+
+p {
+  margin: 0;
+}
+
+// ---- Bandeau -------------------------------------------------------
+.hero {
+  position: relative;
+  overflow: hidden;
+  padding: 24px 28px;
+  border-radius: 16px;
+  color: #fff;
+  background: linear-gradient(120deg, var(--evf-dark), #1e1b4b 55%, var(--evf-violet-dark));
+
+  &__flow {
+    position: absolute;
+    inset: 0 0 0 auto;
+    width: 55%;
+    height: 100%;
+  }
+
+  &__line {
+    fill: none;
+    stroke: var(--evf-violet);
+    stroke-width: 5;
+    stroke-linecap: round;
+
+    &--soft {
+      stroke: var(--evf-cyan);
+      stroke-width: 2;
+      opacity: 0.6;
+    }
+  }
+
+  &__content {
+    position: relative;
+  }
+
+  &__eyebrow {
+    font: 700 0.8rem var(--evf-font-heading);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #a29bfe;
+  }
+
+  &__title {
+    margin: 2px 0 4px;
+    font: 800 clamp(1.4rem, 2.5vw, 1.8rem) var(--evf-font-heading);
+    color: #fff;
+    text-transform: uppercase;
+  }
+
+  &__subtitle {
+    color: rgba(255, 255, 255, 0.85);
+  }
+}
+
+// ---- Compteurs -----------------------------------------------------
+.counters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.counter {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  column-gap: 12px;
+  padding: 14px 16px;
+  border-radius: 12px;
+
+  &--critical { background: #fde2e1; }
+  &--warning { background: #fdf3c4; }
+  &--dark { background: #475569; color: #fff; }
+  &--success { background: #dcfce7; }
+
+  &__icon {
+    grid-row: span 2;
+    width: 32px;
+    height: 32px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  &__value {
+    font: 800 1.5rem/1 var(--evf-font-heading);
+  }
+
+  &__label {
+    font-size: 0.9rem;
+  }
+}
+
+// ---- Filtres et titres de section ---------------------------------
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  &__chip {
+    min-height: 36px;
+    padding: 4px 16px;
+    border: 1px solid #cbd5e1;
+    border-radius: 999px;
+    background: var(--evf-surface);
+    font: 600 0.88rem var(--evf-font-body);
+    color: var(--evf-dark);
+    cursor: pointer;
+
+    &--active {
+      border-color: var(--evf-violet);
+      background: var(--evf-violet);
+      color: #fff;
+    }
+  }
+}
+
+.section-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 0 12px;
+
+  &__title {
+    margin: 0;
+    font: 800 1.1rem var(--evf-font-heading);
+    text-transform: uppercase;
+  }
+}
+
+// ---- Cartes d'alerte -----------------------------------------------
+.alerts {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.alert {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: start;
+  gap: 16px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+
+  &--critical { --bg: #fde8e8; --line: #f5b5b5; --tone: #991b1b; }
+  &--warning { --bg: #fbf3cf; --line: #e9d68a; --tone: #854d0e; }
+  &--info { --bg: #e0ecfd; --line: #b4cdf5; --tone: #1e40af; }
+
+  &__icon {
+    display: grid;
+    place-items: center;
+    width: 52px;
+    height: 52px;
+    border: 2px solid var(--tone);
+    border-radius: 50%;
+    color: var(--tone);
+
+    svg {
+      width: 26px;
+      height: 26px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+  }
+
+  &__body {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  &__title {
+    margin: 0;
+    font: 700 1rem var(--evf-font-heading);
+    text-transform: uppercase;
+  }
+
+  &__meta,
+  &__more {
+    font-size: 0.85rem;
+    color: #475569;
+  }
+
+  &__level {
+    font-weight: 700;
+    color: var(--tone);
+  }
+
+  &__details {
+    display: grid;
+    justify-items: start;
+    gap: 8px;
+    margin-top: 6px;
+  }
+
+  &__samples {
+    display: grid;
+    gap: 4px;
+    margin: 0;
+    padding-left: 18px;
+    font-size: 0.88rem;
+    overflow-wrap: anywhere;
+  }
+
+  &__link {
+    padding: 0;
+    border: 0;
+    background: none;
+    font: 600 0.9rem var(--evf-font-body);
+    color: var(--evf-violet-dark);
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  &__action {
+    min-width: 130px;
+    min-height: 40px;
+    padding: 8px 18px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #7fe3ec, #b9a8f7);
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--evf-dark);
+  }
+}
+
+// ---- Historique ----------------------------------------------------
+.history {
+  &__list {
+    display: grid;
+    gap: 2px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__item {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 10px;
+    padding: 10px 4px;
+    border-bottom: 1px solid var(--evf-border);
+
+    &--denied {
+      color: #991b1b;
+    }
+  }
+
+  &__icon {
+    width: 18px;
+    height: 18px;
+    margin-top: 2px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+  }
+
+  &__title {
+    overflow-wrap: anywhere;
+  }
+
+  &__meta {
+    font-size: 0.82rem;
+    color: var(--evf-text-muted);
+    overflow-wrap: anywhere;
+  }
+
+  &__more {
+    margin-top: 12px;
+  }
+}
+
+// ---- États ---------------------------------------------------------
+.state {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 32px 16px;
+  border: 1px dashed var(--evf-border);
+  border-radius: 12px;
+  background: var(--evf-surface);
+  text-align: center;
+}
+
+.skeleton {
+  height: 90px;
+  margin-bottom: 12px;
+  border-radius: 12px;
+  background: #eef2f7;
+
+  &--line {
+    height: 48px;
+  }
+}
+
+// ---- Responsive ----------------------------------------------------
+@media (max-width: $bp-tablet) {
+  .counters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: $bp-mobile) {
+  .hero {
+    padding: 20px 16px;
+  }
+
+  // L'icône et le texte côte à côte, le bouton sur toute la largeur dessous
+  .alert {
+    grid-template-columns: auto 1fr;
+    padding: 14px;
+
+    &__icon {
+      width: 40px;
+      height: 40px;
+    }
+
+    &__action {
+      grid-column: 1 / -1;
+      min-height: 44px;
+    }
+  }
+
+  .filters__chip {
+    min-height: 44px;
+  }
+}

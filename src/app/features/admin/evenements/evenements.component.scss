@@ -1,0 +1,589 @@
+// ==================================================================
+// Admin — page « Événements »
+// Couleurs et polices : variables --evf-* de src/styles.scss.
+// ==================================================================
+
+$bp-tablet: 960px;
+$bp-mobile: 640px;
+
+:host {
+  display: block;
+  font-family: var(--evf-font-body);
+  color: var(--evf-dark);
+}
+
+.events {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-width: 1200px;
+}
+
+.icon {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+// ---- Bandeau -------------------------------------------------------
+.hero {
+  position: relative;
+  overflow: hidden;
+  padding: 26px 28px;
+  border-radius: 16px;
+  color: #fff;
+  background: linear-gradient(120deg, var(--evf-dark), #1e1b4b 55%, var(--evf-violet-dark));
+
+  &__flow {
+    position: absolute;
+    inset: 0 0 0 auto;
+    width: 55%;
+    height: 100%;
+  }
+
+  &__line {
+    fill: none;
+    stroke: var(--evf-violet);
+    stroke-width: 5;
+    stroke-linecap: round;
+
+    &--soft {
+      stroke: var(--evf-cyan);
+      stroke-width: 2;
+      opacity: 0.6;
+    }
+  }
+
+  &__content {
+    position: relative;
+  }
+
+  &__title {
+    margin: 0;
+    font: 800 clamp(1.4rem, 2.5vw, 1.8rem) var(--evf-font-heading);
+    text-transform: uppercase;
+    background: linear-gradient(90deg, #a29bfe, var(--evf-cyan));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  &__subtitle {
+    margin: 4px 0 0;
+    color: rgba(255, 255, 255, 0.85);
+  }
+}
+
+// ---- Recherche, compteurs, filtres -------------------------------
+.search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--evf-border);
+  border-radius: 10px;
+  background: var(--evf-surface);
+  color: var(--evf-text-muted);
+
+  &:focus-within {
+    outline: 3px solid var(--evf-cyan);
+  }
+
+  &__input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    color: var(--evf-dark);
+
+    &:focus-visible {
+      outline: none;
+    }
+  }
+}
+
+.counters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.counter {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  column-gap: 12px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--bg);
+
+  &--violet { --bg: #ede9fe; }
+  &--success { --bg: #dcfce7; }
+  &--info { --bg: #dbeafe; }
+  &--neutral { --bg: #ece9e1; }
+
+  &__icon {
+    grid-row: span 2;
+    width: 34px;
+    height: 34px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+  }
+
+  &__value {
+    font: 800 1.5rem/1 var(--evf-font-heading);
+  }
+
+  &__label {
+    font-size: 0.95rem;
+  }
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+
+  &__select,
+  &__reset {
+    min-height: 40px;
+    padding: 6px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    background: var(--evf-surface);
+    font: inherit;
+    font-size: 0.9rem;
+    color: var(--evf-dark);
+    cursor: pointer;
+  }
+
+  &__reset {
+    border-color: transparent;
+    background: none;
+    color: var(--evf-violet);
+    font-weight: 600;
+  }
+}
+
+// ---- Tableau -----------------------------------------------------
+.panel {
+  border: 1px solid var(--evf-border);
+  border-radius: 14px;
+  background: var(--evf-surface);
+
+  &__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+  }
+
+  &__title {
+    margin: 0;
+    font: 700 1rem var(--evf-font-heading);
+    text-transform: uppercase;
+  }
+
+  &__count {
+    margin: 0;
+    color: var(--evf-text-muted);
+  }
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+
+  th {
+    padding: 12px 14px;
+    background: #f5eefa;
+    font-weight: 700;
+    text-align: left;
+  }
+
+  td {
+    padding: 12px 14px;
+    border-top: 1px solid var(--evf-border);
+    vertical-align: middle;
+  }
+
+  &__event {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  &__title {
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+
+  &__actions {
+    width: 1%;
+    text-align: center;
+  }
+}
+
+.thumb {
+  position: relative;
+  display: grid;
+  place-content: center;
+  grid-auto-flow: column;
+  flex-shrink: 0;
+  overflow: hidden;
+  width: 112px;
+  aspect-ratio: 14 / 9;
+  border-radius: 8px;
+  font: 800 0.7rem var(--evf-font-heading);
+  color: var(--evf-violet-dark);
+  background: linear-gradient(135deg, #ede9fe, #cffafe);
+
+  img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  &__accent {
+    color: var(--evf-cyan);
+  }
+}
+
+.format {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px 3px 5px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+
+  &__dot {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  &--success { background: #dcfce7; color: #15803d; }
+  &--neutral { background: #f1f5f9; color: #475569; }
+  &--info { background: #dbeafe; color: #1d4ed8; }
+  &--danger { background: #fee2e2; color: #b91c1c; }
+}
+
+// ---- Menu « ⋯ » --------------------------------------------------
+.actions {
+  position: relative;
+  display: inline-block;
+
+  &__toggle {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 32px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: var(--evf-surface);
+    cursor: pointer;
+
+    &[aria-expanded='true'] {
+      border-color: var(--evf-violet);
+    }
+  }
+}
+
+.menu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 230px;
+  margin: 0;
+  padding: 6px;
+  border: 1px solid var(--evf-border);
+  border-radius: 10px;
+  background: var(--evf-surface);
+  box-shadow: var(--evf-shadow-lg);
+  list-style: none;
+  text-align: left;
+
+  &__item {
+    display: block;
+    width: 100%;
+    padding: 10px 12px;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    font: inherit;
+    color: var(--evf-dark);
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+      background: #f5f3ff;
+    }
+
+    &--danger {
+      color: #b91c1c;
+    }
+  }
+}
+
+// ---- États et pagination -----------------------------------------
+.state {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 40px 16px;
+  text-align: center;
+
+  &__title {
+    margin: 0;
+    font-weight: 600;
+  }
+}
+
+.skeleton {
+  height: 64px;
+  margin: 0 16px 10px;
+  border-radius: 8px;
+  background: #eef2f7;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+
+  &__pages {
+    display: flex;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__btn {
+    min-width: 40px;
+    height: 40px;
+    border: 1px solid var(--evf-border);
+    border-radius: 10px;
+    background: var(--evf-surface);
+    font: inherit;
+    cursor: pointer;
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    &--active {
+      background: var(--evf-violet);
+      color: #fff;
+    }
+  }
+
+  &__summary {
+    display: none;
+    margin: 0;
+  }
+}
+
+// ---- Fenêtres ----------------------------------------------------
+.dialog {
+  width: min(560px, calc(100% - 32px));
+  padding: 0;
+  border: 0;
+  border-radius: 16px;
+
+  &::backdrop {
+    background: rgba(17, 24, 39, 0.6);
+  }
+
+  &__panel {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 24px;
+  }
+
+  &__close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 40px;
+    height: 40px;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    cursor: pointer;
+  }
+
+  &__title {
+    margin: 0 36px 0 0;
+    font: 700 1.15rem var(--evf-font-heading);
+  }
+
+  &__text {
+    margin: 0;
+    color: var(--evf-text-muted);
+  }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+}
+
+.facts {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+
+  div {
+    display: grid;
+    grid-template-columns: 130px 1fr;
+    gap: 10px;
+  }
+
+  dt {
+    color: var(--evf-text-muted);
+  }
+
+  dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
+// Rouge plus foncé que --evf-error : texte blanc lisible (contraste AA)
+.btn--danger {
+  background: #b91c1c;
+}
+
+.field__label {
+  font-weight: 600;
+}
+
+.field__input {
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  font: inherit;
+  resize: vertical;
+}
+
+.field__hint {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--evf-text-muted);
+
+  &--error {
+    color: #b91c1c;
+  }
+}
+
+// ---- Responsive --------------------------------------------------
+@media (max-width: $bp-tablet) {
+  .counters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+// Mobile : chaque ligne du tableau devient une carte
+@media (max-width: $bp-mobile) {
+  .hero {
+    padding: 20px 16px;
+  }
+
+  .filters__select {
+    flex: 1 1 45%;
+    min-height: 44px;
+  }
+
+  .table {
+    thead {
+      display: none;
+    }
+
+    tr {
+      position: relative;
+      display: grid;
+      gap: 6px;
+      padding: 14px;
+      border-top: 1px solid var(--evf-border);
+    }
+
+    td {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 0;
+      border: 0;
+    }
+
+    td[data-label]::before {
+      content: attr(data-label);
+      color: var(--evf-text-muted);
+    }
+
+    // Plus précis que « .table td » : la vignette et le titre restent à gauche
+    td.table__event {
+      justify-content: flex-start;
+      padding-right: 56px;
+    }
+
+    &__actions {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      width: auto;
+    }
+  }
+
+  .thumb {
+    width: 80px;
+  }
+
+  .pagination__pages {
+    display: none;
+  }
+
+  .pagination__summary {
+    display: block;
+  }
+
+  .facts div {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+}
