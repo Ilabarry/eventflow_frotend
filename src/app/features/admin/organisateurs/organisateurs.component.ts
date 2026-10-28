@@ -1,12 +1,34 @@
 import { ViewportScroller } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
-  ChangeDetectionStrategy, Component, DestroyRef, ElementRef, HostListener, computed, inject, signal, viewChild,
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  ElementRef,
+  HostListener,
+  computed,
+  inject,
+  signal,
+  viewChild,
 } from '@angular/core';
-import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
-import { AbstractControl, NonNullableFormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import {
+  AbstractControl,
+  NonNullableFormBuilder,
+  ReactiveFormsModule,
+  ValidationErrors,
+  Validators,
+} from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { Subject, catchError, debounceTime, finalize, map, of, switchMap } from 'rxjs';
+import {
+  Subject,
+  catchError,
+  debounceTime,
+  finalize,
+  map,
+  of,
+  switchMap,
+} from 'rxjs';
 
 import {
   AdminEventStatus,
@@ -23,33 +45,35 @@ import {
 import { AdminApiService } from '../../../core/services/admin.service';
 import { NotificationService } from '../../../core/services/notification.service';
 
-/* ------------------------------------------------------------------
- * Constantes
- * ------------------------------------------------------------------ */
+/* ------------------------------------------------------------------ */
 const SEARCH_DEBOUNCE_MS = 400;
 const MAX_VISIBLE_PAGES = 5;
 const DEFAULT_PAGE_SIZE = 10;
 const TEXT_MAX = 100;
+const REASON_MIN = 10;
+const REASON_MAX = 500;
 
 type LoadState = 'loading' | 'ready' | 'error';
 type SortKey = 'name' | 'events' | 'registrations' | 'upcoming' | 'status' | 'joined';
 type SortDir = 'asc' | 'desc';
 type BadgeTone = 'success' | 'warning' | 'danger' | 'info' | 'neutral';
-type QuickFilter = 'all' | 'active' | 'with' | 'without' | 'pending' | 'suspended';
+type QuickFilter = 'all' | 'active' | 'with' | 'without' | 'suspended';
 
-/** Champs de tri attendus par l'API. */
+/**
+ * Tri accepté par le backend (OrganizerFilter) :
+ *   created_at, last_name, events_total, events_published, registrations_confirmed
+ */
 const SORT_FIELDS: Record<SortKey, string> = {
-  name: 'full_name',
-  events: 'events_count',
-  registrations: 'registrations_count',
-  upcoming: 'upcoming_count',
-  status: 'status',
+  name: 'last_name',
+  events: 'events_total',
+  registrations: 'registrations_confirmed',
+  upcoming: 'events_published',
+  status: 'is_active',
   joined: 'created_at',
 };
 
 const STATUS_META: Record<OrganizerStatus, { label: string; tone: BadgeTone }> = {
   ACTIVE: { label: 'Actif', tone: 'success' },
-  PENDING: { label: 'En attente', tone: 'warning' },
   SUSPENDED: { label: 'Suspendu', tone: 'danger' },
 };
 
@@ -61,23 +85,10 @@ const EVENT_STATUS_META: Record<AdminEventStatus, { label: string; tone: BadgeTo
   CANCELLED: { label: 'Annulé', tone: 'danger' },
 };
 
-const STATUS_OPTIONS: readonly { label: string; value: OrganizerStatus }[] = [
-  { label: 'Actifs', value: 'ACTIVE' },
-  { label: 'En attente de validation', value: 'PENDING' },
-  { label: 'Suspendus', value: 'SUSPENDED' },
-];
-
 const ACTIVITY_OPTIONS: readonly { label: string; value: OrganizerActivity }[] = [
   { label: 'Avec événements', value: 'with_events' },
   { label: 'Avec événements à venir', value: 'with_upcoming' },
   { label: 'Sans événement', value: 'without_events' },
-];
-
-const JOINED_OPTIONS: readonly { label: string; value: string }[] = [
-  { label: '7 derniers jours', value: '7' },
-  { label: '30 derniers jours', value: '30' },
-  { label: '90 derniers jours', value: '90' },
-  { label: '12 derniers mois', value: '365' },
 ];
 
 const SUSPEND_REASONS = [
@@ -88,18 +99,9 @@ const SUSPEND_REASONS = [
   { value: 'other', label: 'Autre motif' },
 ];
 
-const REJECT_REASONS = [
-  { value: 'incomplete', label: 'Dossier incomplet' },
-  { value: 'identity', label: 'Identité non vérifiable' },
-  { value: 'terms', label: "Non-respect des conditions d'utilisation" },
-  { value: 'other', label: 'Autre motif' },
-];
-
 const DONE_MESSAGES: Record<OrganizerAction, (n: number) => string> = {
-  validate: (n) => (n > 1 ? `${n} comptes ont été validés.` : 'Le compte a été validé.'),
-  reject: () => 'La demande a été refusée.',
-  suspend: (n) => (n > 1 ? `${n} comptes ont été suspendus.` : 'Le compte a été suspendu.'),
-  reactivate: (n) => (n > 1 ? `${n} comptes ont été réactivés.` : 'Le compte a été réactivé.'),
+  suspend: (n) => (n > 1 ? `${n} comptes suspendus.` : 'Le compte a été suspendu.'),
+  reactivate: (n) => (n > 1 ? `${n} comptes réactivés.` : 'Le compte a été réactivé.'),
 };
 
 const NUMBER = new Intl.NumberFormat('fr-FR');
@@ -120,11 +122,11 @@ function visiblePages(current: number, total: number): number[] {
   return Array.from({ length: count }, (_, index) => first + index);
 }
 
-/** « Autre motif » impose une précision d'au moins 10 caractères. */
 function reasonDetails(group: AbstractControl): ValidationErrors | null {
   const reason = group.get('reason')?.value as string;
   const details = String(group.get('details')?.value ?? '').trim();
-  return reason === 'other' && details.length < 10 ? { detailsRequired: true } : null;
+  if (reason !== 'other') return null;
+  return details.length >= REASON_MIN ? null : { detailsRequired: true };
 }
 
 function downloadBlob(blob: Blob, filename: string): void {
@@ -146,7 +148,7 @@ interface DetailState {
 }
 
 interface ReasonRequest {
-  action: 'suspend' | 'reject';
+  action: OrganizerAction;
   targets: AdminOrganizerDto[];
 }
 
@@ -159,9 +161,6 @@ type LoadResult =
   | { ok: true; list: AdminOrganizerList }
   | { ok: false; notFound: boolean };
 
-/* ------------------------------------------------------------------
- * Composant
- * ------------------------------------------------------------------ */
 @Component({
   selector: 'app-admin-organizers',
   standalone: true,
@@ -182,9 +181,7 @@ export class AdminOrganizersComponent {
   private readonly reasonDialog = viewChild.required<ElementRef<HTMLDialogElement>>('reasonDialog');
   private readonly detailDialog = viewChild.required<ElementRef<HTMLDialogElement>>('detailDialog');
 
-  readonly statusOptions = STATUS_OPTIONS;
   readonly activityOptions = ACTIVITY_OPTIONS;
-  readonly joinedOptions = JOINED_OPTIONS;
   readonly statusMeta = STATUS_META;
   readonly eventStatusMeta = EVENT_STATUS_META;
   readonly pageSizes = [10, 25, 50];
@@ -219,23 +216,41 @@ export class AdminOrganizersComponent {
   readonly reasonForm = this.fb.group(
     {
       reason: ['', Validators.required],
-      details: ['', Validators.maxLength(300)],
+      details: ['', Validators.maxLength(REASON_MAX)],
       notify: [true],
     },
     { validators: reasonDetails },
   );
-  private readonly reasonValue = toSignal(this.reasonForm.controls.reason.valueChanges, { initialValue: '' });
 
   private readonly query$ = new Subject<AdminOrganizerFilters>();
   private readonly searchInput$ = new Subject<string>();
 
-  /* ------------------------------------------------------------------
-     DONNÉES DÉRIVÉES
-     ------------------------------------------------------------------ */
+  /* ------------------------------------------------------------------ */
+  /* OPTIONS STATIQUES                                                  */
+  /* ------------------------------------------------------------------ */
+  readonly statusOptions: readonly { label: string; value: OrganizerStatus }[] = [
+    { label: 'Actifs', value: 'ACTIVE' },
+    { label: 'Suspendus', value: 'SUSPENDED' },
+  ];
+
+  readonly joinedOptions: readonly { label: string; value: string }[] = [
+    { label: '7 derniers jours', value: '7' },
+    { label: '30 derniers jours', value: '30' },
+    { label: '90 derniers jours', value: '90' },
+    { label: '12 derniers mois', value: '365' },
+  ];
+
+  /* ------------------------------------------------------------------ */
+  /* DONNÉES DÉRIVÉES                                                   */
+  /* ------------------------------------------------------------------ */
   readonly pages = computed(() => visiblePages(this.currentPage(), this.totalPages()));
 
   readonly hasActiveFilter = computed(
-    () => this.searchTerm().trim() !== '' || this.status() !== '' || this.activity() !== '' || this.joined() !== '',
+    () =>
+      this.searchTerm().trim() !== '' ||
+      this.status() !== '' ||
+      this.activity() !== '' ||
+      this.joined() !== '',
   );
 
   readonly rangeLabel = computed(() => {
@@ -246,11 +261,14 @@ export class AdminOrganizersComponent {
   });
 
   readonly selectedRows = computed(() => this.rows().filter((row) => this.selected().has(row.id)));
-  readonly selectedPending = computed(() => this.selectedRows().filter((r) => r.status === 'PENDING'));
-  readonly selectedActive = computed(() => this.selectedRows().filter((r) => r.status === 'ACTIVE'));
-  readonly selectedSuspended = computed(() => this.selectedRows().filter((r) => r.status === 'SUSPENDED'));
-  readonly allSelected = computed(() => this.rows().length > 0 && this.selectedRows().length === this.rows().length);
-  readonly someSelected = computed(() => this.selectedRows().length > 0 && !this.allSelected());
+  readonly selectedActive = computed(() => this.selectedRows().filter((r) => r.is_active));
+  readonly selectedSuspended = computed(() => this.selectedRows().filter((r) => !r.is_active));
+  readonly allSelected = computed(
+    () => this.rows().length > 0 && this.selectedRows().length === this.rows().length,
+  );
+  readonly someSelected = computed(
+    () => this.selectedRows().length > 0 && !this.allSelected(),
+  );
 
   readonly cards = computed(() => {
     const s = this.stats();
@@ -262,8 +280,8 @@ export class AdminOrganizersComponent {
     ];
   });
 
-  readonly reasonOptions = computed(() => (this.reasonRequest()?.action === 'reject' ? REJECT_REASONS : SUSPEND_REASONS));
-  readonly detailsRequired = computed(() => this.reasonValue() === 'other');
+  readonly detailsRequired = computed(() => this.reasonForm.controls.reason.value === 'other');
+  readonly reasonOptions = computed(() => SUSPEND_REASONS);
   readonly reasonTargetsLabel = computed(() => {
     const targets = this.reasonRequest()?.targets ?? [];
     return targets.length === 1 ? targets[0].full_name : `${targets.length} comptes`;
@@ -272,14 +290,21 @@ export class AdminOrganizersComponent {
   constructor() {
     this.restoreFromUrl();
 
-    // switchMap annule la requête précédente si un filtre change avant la réponse.
     this.query$
       .pipe(
         switchMap((filters) =>
           this.admin.listOrganizers(filters).pipe(
-            map((response): LoadResult => (response.data ? { ok: true, list: response.data } : { ok: false, notFound: false })),
+            map(
+              (response): LoadResult =>
+                response.data
+                  ? { ok: true, list: response.data }
+                  : { ok: false, notFound: false },
+            ),
             catchError((error: unknown) =>
-              of<LoadResult>({ ok: false, notFound: error instanceof HttpErrorResponse && error.status === 404 }),
+              of<LoadResult>({
+                ok: false,
+                notFound: error instanceof HttpErrorResponse && error.status === 404,
+              }),
             ),
           ),
         ),
@@ -287,38 +312,41 @@ export class AdminOrganizersComponent {
       )
       .subscribe((result) => this.applyResult(result));
 
-    // Recherche : une requête 400 ms après la dernière frappe, pas à chaque touche.
-    this.searchInput$.pipe(debounceTime(SEARCH_DEBOUNCE_MS), takeUntilDestroyed()).subscribe((value) => {
-      if (value.trim() === this.searchTerm().trim()) return;
-      this.searchTerm.set(value);
-      this.applyFilters();
-    });
+    this.searchInput$
+      .pipe(debounceTime(SEARCH_DEBOUNCE_MS), takeUntilDestroyed())
+      .subscribe((value) => {
+        if (value.trim() === this.searchTerm().trim()) return;
+        this.searchTerm.set(value);
+        this.applyFilters();
+      });
 
     this.load(false);
   }
 
-  /* ------------------------------------------------------------------
-     FILTRES, TRI, PAGINATION
-     ------------------------------------------------------------------ */
+  /* ------------------------------------------------------------------ */
+  /* FILTRES, TRI, PAGINATION                                           */
+  /* ------------------------------------------------------------------ */
   onSearchInput(event: Event): void {
     this.searchInput$.next((event.target as HTMLInputElement).value);
   }
 
   onStatus(event: Event): void {
     const value = (event.target as HTMLSelectElement).value;
-    this.status.set(STATUS_OPTIONS.some((o) => o.value === value) ? (value as OrganizerStatus) : '');
+    this.status.set(value === 'ACTIVE' || value === 'SUSPENDED' ? value : '');
     this.applyFilters();
   }
 
   onActivity(event: Event): void {
     const value = (event.target as HTMLSelectElement).value;
-    this.activity.set(ACTIVITY_OPTIONS.some((o) => o.value === value) ? (value as OrganizerActivity) : '');
+    this.activity.set(
+      ACTIVITY_OPTIONS.some((o) => o.value === value) ? (value as OrganizerActivity) : '',
+    );
     this.applyFilters();
   }
 
   onJoined(event: Event): void {
     const value = (event.target as HTMLSelectElement).value;
-    this.joined.set(JOINED_OPTIONS.some((o) => o.value === value) ? value : '');
+    this.joined.set(this.joinedOptions.some((o) => o.value === value) ? value : '');
     this.applyFilters();
   }
 
@@ -327,10 +355,11 @@ export class AdminOrganizersComponent {
     this.applyFilters();
   }
 
-  /** Cartes et pastilles : un clic applique le filtre correspondant. */
   applyQuickFilter(kind: QuickFilter): void {
-    this.status.set(kind === 'active' ? 'ACTIVE' : kind === 'pending' ? 'PENDING' : kind === 'suspended' ? 'SUSPENDED' : '');
-    this.activity.set(kind === 'with' ? 'with_events' : kind === 'without' ? 'without_events' : '');
+    this.status.set(kind === 'active' ? 'ACTIVE' : kind === 'suspended' ? 'SUSPENDED' : '');
+    this.activity.set(
+      kind === 'with' ? 'with_events' : kind === 'without' ? 'without_events' : '',
+    );
     if (kind === 'all') {
       this.searchTerm.set('');
       this.joined.set('');
@@ -342,12 +371,16 @@ export class AdminOrganizersComponent {
     const status = this.status();
     const activity = this.activity();
     switch (kind) {
-      case 'all': return !this.hasActiveFilter();
-      case 'active': return status === 'ACTIVE' && activity === '';
-      case 'with': return activity === 'with_events' && status === '';
-      case 'without': return activity === 'without_events' && status === '';
-      case 'pending': return status === 'PENDING';
-      case 'suspended': return status === 'SUSPENDED';
+      case 'all':
+        return !this.hasActiveFilter();
+      case 'active':
+        return status === 'ACTIVE' && activity === '';
+      case 'with':
+        return activity === 'with_events' && status === '';
+      case 'without':
+        return activity === 'without_events' && status === '';
+      case 'suspended':
+        return status === 'SUSPENDED';
     }
   }
 
@@ -360,7 +393,7 @@ export class AdminOrganizersComponent {
       this.sortDir.update((dir) => (dir === 'asc' ? 'desc' : 'asc'));
     } else {
       this.sortKey.set(key);
-      this.sortDir.set(key === 'name' || key === 'status' ? 'asc' : 'desc');
+      this.sortDir.set(key === 'name' ? 'asc' : 'desc');
     }
     this.applyFilters();
   }
@@ -390,9 +423,9 @@ export class AdminOrganizersComponent {
     this.load(false);
   }
 
-  /* ------------------------------------------------------------------
-     CHARGEMENT
-     ------------------------------------------------------------------ */
+  /* ------------------------------------------------------------------ */
+  /* CHARGEMENT                                                         */
+  /* ------------------------------------------------------------------ */
   private load(silent: boolean): void {
     if (silent) {
       this.refreshing.set(true);
@@ -405,18 +438,18 @@ export class AdminOrganizersComponent {
     this.query$.next(this.buildFilters());
   }
 
-  private buildFilters(page = this.currentPage(), pageSize = this.pageSize()): AdminOrganizerFilters {
-    const days = Number(this.joined());
-    const joinedAfter = days > 0 ? isoDay(new Date(Date.now() - days * 86_400_000)) : null;
+  private buildFilters(
+    page = this.currentPage(),
+    pageSize = this.pageSize(),
+  ): AdminOrganizerFilters {
     const prefix = this.sortDir() === 'desc' ? '-' : '';
-
     return {
       page,
       pageSize,
       search: this.searchTerm(),
-      status: this.status() || null,
+      is_active:
+        this.status() === 'ACTIVE' ? true : this.status() === 'SUSPENDED' ? false : null,
       activity: this.activity() || null,
-      joinedAfter,
       ordering: `${prefix}${SORT_FIELDS[this.sortKey()]}`,
     };
   }
@@ -426,14 +459,16 @@ export class AdminOrganizersComponent {
     this.refreshing.set(false);
 
     if (!result.ok) {
-      // Page inexistante (adresse modifiée à la main, filtres plus restrictifs) : retour à la page 1.
       if (result.notFound && this.currentPage() > 1) {
         this.currentPage.set(1);
         this.load(false);
         return;
       }
       if (wasSilent && this.rows().length > 0) {
-        this.notification.error("Actualisation impossible : la liste affichée peut être ancienne.", 'Organisateurs');
+        this.notification.error(
+          'Actualisation impossible : la liste affichée peut être ancienne.',
+          'Organisateurs',
+        );
       } else {
         this.loadState.set('error');
       }
@@ -441,21 +476,31 @@ export class AdminOrganizersComponent {
     }
 
     const { list } = result;
-    this.rows.set(list.results);
-    this.stats.set(list.stats);
-    this.totalCount.set(list.count);
-    this.totalPages.set(Math.max(1, list.total_pages));
-    this.currentPage.set(list.current_page);
 
-    // On ne garde que les sélections encore visibles.
-    const visible = new Set(list.results.map((row) => row.id));
+    // Filtre côté client : "Inscrit depuis N jours"
+    const days = Number(this.joined());
+    let results = list.results;
+    if (days > 0) {
+      const threshold = Date.now() - days * 86_400_000;
+      results = results.filter(
+        (o) => new Date(o.created_at).getTime() >= threshold,
+      );
+    }
+
+    this.rows.set(results);
+    this.stats.set(list.stats);
+    this.totalCount.set(days > 0 ? results.length : list.count);
+    this.totalPages.set(days > 0 ? 1 : Math.max(1, list.total_pages));
+    if (days === 0) this.currentPage.set(list.current_page);
+
+    const visible = new Set(results.map((row) => row.id));
     this.selected.update((current) => new Set([...current].filter((id) => visible.has(id))));
     this.loadState.set('ready');
   }
 
-  /* ------------------------------------------------------------------
-     SÉLECTION
-     ------------------------------------------------------------------ */
+  /* ------------------------------------------------------------------ */
+  /* SÉLECTION                                                          */
+  /* ------------------------------------------------------------------ */
   toggleRow(row: AdminOrganizerDto): void {
     this.selected.update((current) => {
       const next = new Set(current);
@@ -465,29 +510,29 @@ export class AdminOrganizersComponent {
   }
 
   toggleAll(): void {
-    this.selected.set(this.allSelected() ? new Set() : new Set(this.rows().map((row) => row.id)));
+    this.selected.set(
+      this.allSelected() ? new Set() : new Set(this.rows().map((row) => row.id)),
+    );
   }
 
   clearSelection(): void {
     this.selected.set(new Set());
   }
 
-  /* ------------------------------------------------------------------
-     ACTIONS SUR LES COMPTES
-     ------------------------------------------------------------------ */
+  /* ------------------------------------------------------------------ */
+  /* ACTIONS                                                            */
+  /* ------------------------------------------------------------------ */
   toggleMenu(id: string): void {
     this.openMenuId.update((current) => (current === id ? null : id));
   }
 
-  validate(targets: AdminOrganizerDto[]): void {
-    this.run(targets, 'validate');
-  }
-
+  /** Réactivation directe (le backend exige une raison → on en envoie une par défaut). */
   reactivate(targets: AdminOrganizerDto[]): void {
-    this.run(targets, 'reactivate');
+    if (targets.length === 0 || this.busy()) return;
+    this.run(targets, 'reactivate', { reason: 'Réactivation par un administrateur.' });
   }
 
-  askReason(action: 'suspend' | 'reject', targets: AdminOrganizerDto[]): void {
+  askReason(action: OrganizerAction, targets: AdminOrganizerDto[]): void {
     if (targets.length === 0) return;
     this.openMenuId.set(null);
     this.reasonForm.reset({ reason: '', details: '', notify: true });
@@ -503,10 +548,10 @@ export class AdminOrganizersComponent {
     this.reasonForm.markAllAsTouched();
     if (this.reasonForm.invalid) return;
 
-    const { reason, details, notify } = this.reasonForm.getRawValue();
-    const label = this.reasonOptions().find((option) => option.value === reason)?.label ?? reason;
+    const { reason, details } = this.reasonForm.getRawValue();
+    const label = SUSPEND_REASONS.find((o) => o.value === reason)?.label ?? reason;
     const text = details.trim() ? `${label} : ${details.trim()}` : label;
-    this.run(request.targets, request.action, { reason: text, notify });
+    this.run(request.targets, request.action, { reason: text });
   }
 
   closeReason(): void {
@@ -514,10 +559,14 @@ export class AdminOrganizersComponent {
   }
 
   onReasonCancel(event: Event): void {
-    if (this.busy()) event.preventDefault(); // Échap ne ferme pas la fenêtre pendant l'envoi
+    if (this.busy()) event.preventDefault();
   }
 
-  private run(targets: AdminOrganizerDto[], action: OrganizerAction, payload: OrganizerActionPayload = {}): void {
+  private run(
+    targets: AdminOrganizerDto[],
+    action: OrganizerAction,
+    payload: OrganizerActionPayload,
+  ): void {
     if (targets.length === 0 || this.busy()) return;
     this.openMenuId.set(null);
     this.busy.set(true);
@@ -528,8 +577,17 @@ export class AdminOrganizersComponent {
             .updateOrganizerStatus(targets[0].id, action, payload)
             .pipe(map((response): ActionResult => ({ count: 1, updated: response.data ?? null })))
         : this.admin
-            .bulkUpdateOrganizers(targets.map((t) => t.id), action, payload)
-            .pipe(map((response): ActionResult => ({ count: response.data?.updated ?? targets.length, updated: null })));
+            .bulkUpdateOrganizers(
+              targets.map((t) => t.id),
+              action,
+              payload,
+            )
+            .pipe(
+              map((response): ActionResult => ({
+                count: response.data?.updated ?? targets.length,
+                updated: null,
+              })),
+            );
 
     request$
       .pipe(finalize(() => this.busy.set(false)), takeUntilDestroyed(this.destroyRef))
@@ -549,9 +607,9 @@ export class AdminOrganizersComponent {
       });
   }
 
-  /* ------------------------------------------------------------------
-     FICHE DÉTAILLÉE
-     ------------------------------------------------------------------ */
+  /* ------------------------------------------------------------------ */
+  /* FICHE DÉTAILLÉE                                                    */
+  /* ------------------------------------------------------------------ */
   openDetail(row: AdminOrganizerDto): void {
     this.openMenuId.set(null);
     this.detail.set({ organizer: row, events: [], loading: true, failed: false });
@@ -562,9 +620,16 @@ export class AdminOrganizersComponent {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (response) => {
-          if (this.detail()?.organizer.id !== row.id) return; // une autre fiche a été ouverte entre-temps
+          if (this.detail()?.organizer.id !== row.id) return;
           this.detail.update((d) =>
-            d ? { organizer: response.data?.organizer ?? d.organizer, events: response.data?.recent_events ?? [], loading: false, failed: false } : d,
+            d
+              ? {
+                  organizer: response.data?.organizer ?? d.organizer,
+                  events: response.data?.recent_events ?? [],
+                  loading: false,
+                  failed: false,
+                }
+              : d,
           );
         },
         error: () => {
@@ -578,7 +643,6 @@ export class AdminOrganizersComponent {
     this.detailDialog().nativeElement.close();
   }
 
-  /** Clic sur le fond sombre : le clic arrive sur le <dialog> lui-même. */
   onBackdropClick(event: MouseEvent, kind: 'detail' | 'reason'): void {
     const element = (kind === 'detail' ? this.detailDialog() : this.reasonDialog()).nativeElement;
     if (event.target !== element) return;
@@ -586,9 +650,9 @@ export class AdminOrganizersComponent {
     else this.closeReason();
   }
 
-  /* ------------------------------------------------------------------
-     EXPORT CSV
-     ------------------------------------------------------------------ */
+  /* ------------------------------------------------------------------ */
+  /* EXPORT CSV                                                         */
+  /* ------------------------------------------------------------------ */
   exportAll(): void {
     if (this.exporting()) return;
     this.exporting.set(true);
@@ -608,20 +672,31 @@ export class AdminOrganizersComponent {
     const rows = this.selectedRows();
     if (rows.length === 0) return;
     const lines = [
-      ['Nom', 'E-mail', 'Téléphone', 'Organisation', 'Ville', 'Statut', 'Événements', 'Inscriptions', 'À venir', 'Inscrit le'],
+      ['Nom', 'E-mail', 'Téléphone', 'Statut', 'Événements', 'Inscriptions', 'Inscrit le'],
       ...rows.map((o) => [
-        o.full_name, o.email, o.phone, o.organization_name ?? '', o.city ?? '', STATUS_META[o.status].label,
-        String(o.events_count), String(o.registrations_count), String(o.upcoming_count), o.created_at.slice(0, 10),
+        o.full_name,
+        o.email,
+        o.phone,
+        o.is_active ? 'Actif' : 'Suspendu',
+        String(o.events_total),
+        String(o.registrations_confirmed),
+        o.created_at.slice(0, 10),
       ]),
     ].map((row) => row.map(csvCell).join(';'));
 
-    downloadBlob(new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' }), `selection-organisateurs-${isoDay(new Date())}.csv`);
-    this.notification.success(`${rows.length} compte${rows.length > 1 ? 's' : ''} exporté${rows.length > 1 ? 's' : ''}.`, 'Export');
+    downloadBlob(
+      new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' }),
+      `selection-organisateurs-${isoDay(new Date())}.csv`,
+    );
+    this.notification.success(
+      `${rows.length} compte${rows.length > 1 ? 's' : ''} exporté${rows.length > 1 ? 's' : ''}.`,
+      'Export',
+    );
   }
 
-  /* ------------------------------------------------------------------
-     ADRESSE DE LA PAGE : les filtres survivent au retour arrière
-     ------------------------------------------------------------------ */
+  /* ------------------------------------------------------------------ */
+  /* URL                                                                */
+  /* ------------------------------------------------------------------ */
   private syncUrl(): void {
     void this.router.navigate([], {
       relativeTo: this.route,
@@ -632,7 +707,8 @@ export class AdminOrganizersComponent {
         activite: this.activity() || null,
         inscription: this.joined() || null,
         tri: this.sortKey() !== 'joined' ? this.sortKey() : null,
-        sens: this.sortKey() !== 'joined' || this.sortDir() !== 'desc' ? this.sortDir() : null,
+        sens:
+          this.sortKey() !== 'joined' || this.sortDir() !== 'desc' ? this.sortDir() : null,
         page: this.currentPage() > 1 ? this.currentPage() : null,
         taille: this.pageSize() !== DEFAULT_PAGE_SIZE ? this.pageSize() : null,
       },
@@ -641,17 +717,16 @@ export class AdminOrganizersComponent {
 
   private restoreFromUrl(): void {
     const params = this.route.snapshot.queryParamMap;
-
     this.searchTerm.set((params.get('q') ?? '').slice(0, TEXT_MAX));
 
-    const status = params.get('statut');
-    if (STATUS_OPTIONS.some((o) => o.value === status)) this.status.set(status as OrganizerStatus);
+    const st = params.get('statut');
+    if (st === 'ACTIVE' || st === 'SUSPENDED') this.status.set(st);
 
-    const activity = params.get('activite');
-    if (ACTIVITY_OPTIONS.some((o) => o.value === activity)) this.activity.set(activity as OrganizerActivity);
+    const act = params.get('activite');
+    if (ACTIVITY_OPTIONS.some((o) => o.value === act)) this.activity.set(act as OrganizerActivity);
 
-    const joined = params.get('inscription');
-    if (JOINED_OPTIONS.some((o) => o.value === joined)) this.joined.set(joined as string);
+    const joinedParam = params.get('inscription');
+    if (this.joinedOptions.some((o) => o.value === joinedParam)) this.joined.set(joinedParam!);
 
     const sort = params.get('tri');
     if (sort && sort in SORT_FIELDS) this.sortKey.set(sort as SortKey);
@@ -664,28 +739,34 @@ export class AdminOrganizersComponent {
     if (this.pageSizes.includes(size)) this.pageSize.set(size);
   }
 
-  /* ------------------------------------------------------------------
-     AFFICHAGE
-     ------------------------------------------------------------------ */
+  /* ------------------------------------------------------------------ */
+  /* AFFICHAGE                                                          */
+  /* ------------------------------------------------------------------ */
   initials(row: AdminOrganizerDto): string {
-    return `${row.first_name.charAt(0)}${row.last_name.charAt(0)}`.toUpperCase();
+    const parts = row.full_name.split(' ');
+    const first = parts[0]?.charAt(0) ?? '';
+    const last = parts.length > 1 ? parts[parts.length - 1].charAt(0) : '';
+    return `${first}${last}`.toUpperCase();
   }
 
   avatarTone(row: AdminOrganizerDto): number {
     return Array.from(row.id).reduce((sum, char) => sum + char.charCodeAt(0), 0) % 5;
   }
 
-  formatNumber(value: number | null): string {
-    return value === null ? '—' : NUMBER.format(value);
+  formatNumber(value: number | null | undefined): string {
+    return value === null || value === undefined ? '—' : NUMBER.format(value);
   }
 
-  formatDate(iso: string | null): string {
+  formatDate(iso: string | null | undefined): string {
     return iso ? DATE.format(new Date(iso)) : '—';
   }
 
-  /** Les deux dernières lignes ouvrent leur menu vers le haut pour ne pas déborder. */
   menuUp(index: number): boolean {
     return this.rows().length > 3 && index >= this.rows().length - 2;
+  }
+
+  getOrganizerStatus(row: AdminOrganizerDto): OrganizerStatus {
+    return row.is_active ? 'ACTIVE' : 'SUSPENDED';
   }
 
   @HostListener('document:click', ['$event'])

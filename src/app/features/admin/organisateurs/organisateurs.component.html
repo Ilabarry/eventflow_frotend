@@ -1,5 +1,5 @@
 <section class="org" aria-labelledby="org-title">
-  <!-- ============================ BANNIÈRE : titre, recherche, filtres ============================ -->
+  <!-- ============================ BANNIÈRE ============================ -->
   <header class="hero">
     <svg class="hero__wave" viewBox="0 0 400 120" preserveAspectRatio="none" aria-hidden="true" focusable="false">
       <defs>
@@ -25,7 +25,7 @@
             type="search"
             placeholder="Rechercher par nom, email…"
             autocomplete="off"
-            aria-label="Rechercher un organisateur par nom, e-mail, organisation ou ville"
+            aria-label="Rechercher un organisateur par nom ou e-mail"
             [value]="searchTerm()"
             (input)="onSearchInput($event)"
           />
@@ -66,7 +66,7 @@
     </div>
   </header>
 
-  <!-- ============================ CARTES : un clic applique le filtre ============================ -->
+  <!-- ============================ CARTES ============================ -->
   <ul class="stats" aria-label="Résumé des organisateurs" [class.stats--loading]="loadState() === 'loading'">
     @for (card of cards(); track card.key) {
       <li>
@@ -85,22 +85,14 @@
     }
   </ul>
 
-  <!-- À traiter : comptes en attente et suspendus -->
+  <!-- À traiter : comptes suspendus -->
   @if (stats(); as s) {
-    @if (s.pending > 0 || s.suspended > 0) {
-      <div class="alerts" role="group" aria-label="Comptes à examiner">
-        @if (s.pending > 0) {
-          <button type="button" class="alert alert--warning" [class.alert--active]="isQuickActive('pending')" (click)="applyQuickFilter('pending')">
-            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
-            <strong>{{ s.pending }}</strong> en attente de validation
-          </button>
-        }
-        @if (s.suspended > 0) {
-          <button type="button" class="alert alert--danger" [class.alert--active]="isQuickActive('suspended')" (click)="applyQuickFilter('suspended')">
-            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M4.93 4.93l14.14 14.14" /></svg>
-            <strong>{{ s.suspended }}</strong> suspendu{{ s.suspended > 1 ? 's' : '' }}
-          </button>
-        }
+    @if (s.suspended > 0) {
+      <div class="alerts" role="group" aria-label="Comptes suspendus">
+        <button type="button" class="alert alert--danger" [class.alert--active]="isQuickActive('suspended')" (click)="applyQuickFilter('suspended')">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M4.93 4.93l14.14 14.14" /></svg>
+          <strong>{{ s.suspended }}</strong> suspendu{{ s.suspended > 1 ? 's' : '' }}
+        </button>
       </div>
     }
   }
@@ -129,14 +121,9 @@
 
     <!-- Actions groupées -->
     @if (selectedRows().length > 0) {
-      <div class="bulk" role="region" aria-label="Actions sur la sélection" aria-live="polite">
+      <div class="bulk" role="region" aria-label="Actions sur la sélection">
         <p class="bulk__count"><strong>{{ selectedRows().length }}</strong> sélectionné{{ selectedRows().length > 1 ? 's' : '' }}</p>
         <div class="bulk__actions">
-          @if (selectedPending().length > 0) {
-            <button type="button" class="btn btn--sm btn--success" [disabled]="busy()" (click)="validate(selectedPending())">
-              Valider ({{ selectedPending().length }})
-            </button>
-          }
           @if (selectedSuspended().length > 0) {
             <button type="button" class="btn btn--sm btn--outline" [disabled]="busy()" (click)="reactivate(selectedSuspended())">
               Réactiver ({{ selectedSuspended().length }})
@@ -254,7 +241,7 @@
 
               <tbody>
                 @for (row of rows(); track row.id; let i = $index) {
-                  <tr [class.row--selected]="selected().has(row.id)" [class.row--suspended]="row.status === 'SUSPENDED'">
+                  <tr [class.row--selected]="selected().has(row.id)" [class.row--suspended]="!row.is_active">
                     <td class="col-check">
                       <input
                         type="checkbox" class="check"
@@ -264,24 +251,20 @@
                     </td>
 
                     <td class="cell-person">
-                      @if (row.avatar) {
-                        <img class="avatar" [src]="row.avatar" alt="" />
-                      } @else {
-                        <span class="avatar" [attr.data-tone]="avatarTone(row)" aria-hidden="true">{{ initials(row) }}</span>
-                      }
+                      <span class="avatar" [attr.data-tone]="avatarTone(row)" aria-hidden="true">{{ initials(row) }}</span>
                       <span class="person">
                         <button type="button" class="person__name" (click)="openDetail(row)">{{ row.full_name }}</button>
                         <span class="person__email">{{ row.email }}</span>
                       </span>
                     </td>
 
-                    <td class="col-num" data-label="Events">{{ formatNumber(row.events_count) }}</td>
-                    <td class="col-num" data-label="Inscriptions">{{ formatNumber(row.registrations_count) }}</td>
-                    <td class="col-num" data-label="À venir">{{ formatNumber(row.upcoming_count) }}</td>
-
+                    <td class="col-num" data-label="Events">{{ formatNumber(row.events_total) }}</td>
+                    <td class="col-num" data-label="Inscriptions">{{ formatNumber(row.registrations_confirmed) }}</td>
+                    <td class="col-num" data-label="À venir">{{ formatNumber(row.events_upcoming) }}</td>
                     <td data-label="Statut">
-                      <span class="badge" [attr.data-tone]="statusMeta[row.status].tone">
-                        <span class="badge__dot" aria-hidden="true"></span>{{ statusMeta[row.status].label }}
+                      <span class="badge" [attr.data-tone]="statusMeta[getOrganizerStatus(row)].tone">
+                        <span class="badge__dot" aria-hidden="true"></span>
+                        {{ statusMeta[getOrganizerStatus(row)].label }}
                       </span>
                     </td>
 
@@ -301,15 +284,10 @@
                         @if (openMenuId() === row.id) {
                           <div class="menu" [class.menu--up]="menuUp(i)" role="menu">
                             <button type="button" class="menu__item" role="menuitem" (click)="openDetail(row)">Voir le profil</button>
-                            <a class="menu__item" role="menuitem" routerLink="/admin/evenements" [queryParams]="{ organisateur: row.id }" (click)="openMenuId.set(null)">
-                              Voir ses événements
-                            </a>
+                            <a class="menu__item" role="menuitem" routerLink="/admin/evenements" [queryParams]="{ organisateur: row.id }" (click)="openMenuId.set(null)">Voir ses événements</a>
                             <a class="menu__item" role="menuitem" [href]="'mailto:' + row.email" (click)="openMenuId.set(null)">Contacter</a>
 
-                            @if (row.status === 'PENDING') {
-                              <button type="button" class="menu__item menu__item--success" role="menuitem" (click)="validate([row])">Valider le compte</button>
-                              <button type="button" class="menu__item menu__item--danger" role="menuitem" (click)="askReason('reject', [row])">Refuser</button>
-                            } @else if (row.status === 'ACTIVE') {
+                            @if (row.is_active) {
                               <button type="button" class="menu__item menu__item--danger" role="menuitem" (click)="askReason('suspend', [row])">Suspendre</button>
                             } @else {
                               <button type="button" class="menu__item menu__item--success" role="menuitem" (click)="reactivate([row])">Réactiver</button>
@@ -377,18 +355,12 @@
       <div class="drawer__panel">
         <header class="drawer__head">
           <div class="drawer__id">
-            @if (d.organizer.avatar) {
-              <img class="avatar avatar--lg" [src]="d.organizer.avatar" alt="" />
-            } @else {
-              <span class="avatar avatar--lg" [attr.data-tone]="avatarTone(d.organizer)" aria-hidden="true">{{ initials(d.organizer) }}</span>
-            }
+            <span class="avatar avatar--lg" [attr.data-tone]="avatarTone(d.organizer)" aria-hidden="true">{{ initials(d.organizer) }}</span>
             <div class="drawer__name">
               <h2 id="drawer-title">{{ d.organizer.full_name }}</h2>
-              @if (d.organizer.organization_name) {
-                <p>{{ d.organizer.organization_name }}</p>
-              }
-              <span class="badge" [attr.data-tone]="statusMeta[d.organizer.status].tone">
-                <span class="badge__dot" aria-hidden="true"></span>{{ statusMeta[d.organizer.status].label }}
+              <span class="badge" [attr.data-tone]="statusMeta[getOrganizerStatus(d.organizer)].tone">
+                <span class="badge__dot" aria-hidden="true"></span>
+                {{ statusMeta[getOrganizerStatus(d.organizer)].label }}
               </span>
             </div>
           </div>
@@ -397,24 +369,17 @@
           </button>
         </header>
 
-        @if (d.organizer.status === 'SUSPENDED' && d.organizer.suspended_reason) {
-          <p class="drawer__notice" role="note"><strong>Motif de la suspension :</strong> {{ d.organizer.suspended_reason }}</p>
-        }
-
         <ul class="mini">
-          <li><strong>{{ formatNumber(d.organizer.events_count) }}</strong><span>Événements</span></li>
-          <li><strong>{{ formatNumber(d.organizer.registrations_count) }}</strong><span>Inscriptions</span></li>
-          <li><strong>{{ formatNumber(d.organizer.upcoming_count) }}</strong><span>À venir</span></li>
+          <li><strong>{{ formatNumber(d.organizer.events_total) }}</strong><span>Événements</span></li>
+          <li><strong>{{ formatNumber(d.organizer.registrations_confirmed) }}</strong><span>Inscriptions</span></li>
+          <li><strong>{{ formatNumber(d.organizer.events_upcoming) }}</strong><span>À venir</span></li>
         </ul>
 
         <dl class="facts">
           <div><dt>E-mail</dt><dd><a [href]="'mailto:' + d.organizer.email">{{ d.organizer.email }}</a></dd></div>
           <div><dt>Téléphone</dt><dd><a [href]="'tel:' + d.organizer.phone.replaceAll(' ', '')">{{ d.organizer.phone }}</a></dd></div>
-          @if (d.organizer.city) {
-            <div><dt>Ville</dt><dd>{{ d.organizer.city }}</dd></div>
-          }
           <div><dt>Inscrit le</dt><dd>{{ formatDate(d.organizer.created_at) }}</dd></div>
-          <div><dt>Dernière connexion</dt><dd>{{ formatDate(d.organizer.last_login_at) }}</dd></div>
+          <div><dt>Dernière connexion</dt><dd>{{ formatDate(d.organizer.last_login) }}</dd></div>
         </dl>
 
         <section aria-labelledby="drawer-events">
@@ -433,7 +398,10 @@
                 <li class="event">
                   <span class="event__text">
                     <strong>{{ e.title }}</strong>
-                    <small>{{ formatDate(e.start_at) }} · {{ formatNumber(e.registrations_count) }} inscrit{{ e.registrations_count > 1 ? 's' : '' }}</small>
+                    <small>
+                      {{ formatDate(e.start_at) }} · {{ formatNumber(e.registrations_count ?? 0) }}
+                      inscrit{{ (e.registrations_count ?? 0) > 1 ? 's' : '' }}
+                    </small>
                   </span>
                   <span class="badge" [attr.data-tone]="eventStatusMeta[e.status].tone">
                     <span class="badge__dot" aria-hidden="true"></span>{{ eventStatusMeta[e.status].label }}
@@ -448,11 +416,7 @@
         </section>
 
         <footer class="drawer__foot">
-          <a class="btn btn--outline" [href]="'mailto:' + d.organizer.email">Contacter</a>
-          @if (d.organizer.status === 'PENDING') {
-            <button type="button" class="btn btn--danger-outline" [disabled]="busy()" (click)="askReason('reject', [d.organizer])">Refuser</button>
-            <button type="button" class="btn btn--success" [disabled]="busy()" (click)="validate([d.organizer])">Valider</button>
-          } @else if (d.organizer.status === 'ACTIVE') {
+          @if (d.organizer.is_active) {
             <button type="button" class="btn btn--danger" [disabled]="busy()" (click)="askReason('suspend', [d.organizer])">Suspendre</button>
           } @else {
             <button type="button" class="btn btn--success" [disabled]="busy()" (click)="reactivate([d.organizer])">Réactiver</button>
@@ -462,7 +426,7 @@
     }
   </dialog>
 
-  <!-- ============================ MOTIF (suspension / refus) ============================ -->
+  <!-- ============================ MOTIF ============================ -->
   <dialog
     #reasonDialog
     class="dialog"
@@ -474,19 +438,15 @@
     @if (reasonRequest(); as request) {
       <form class="dialog__panel" [formGroup]="reasonForm" (ngSubmit)="confirmReason()" novalidate>
         <header class="dialog__head">
-          <h2 id="reason-title">{{ request.action === 'reject' ? 'Refuser la demande' : 'Suspendre le compte' }}</h2>
+          <h2 id="reason-title">Suspendre le compte</h2>
           <button type="button" class="close" aria-label="Fermer" [disabled]="busy()" (click)="closeReason()">
             <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12" /></svg>
           </button>
         </header>
 
         <p class="dialog__text">
-          @if (request.action === 'reject') {
-            <strong>{{ reasonTargetsLabel() }}</strong> ne pourra pas organiser d'événements sur EventFlow.
-          } @else {
-            <strong>{{ reasonTargetsLabel() }}</strong> ne pourra plus se connecter ni gérer ses événements.
-            Les événements publiés restent consultables et vous pourrez réactiver le compte à tout moment.
-          }
+          <strong>{{ reasonTargetsLabel() }}</strong> ne pourra plus se connecter ni gérer ses événements.
+          Les événements publiés restent consultables et vous pourrez réactiver le compte à tout moment.
         </p>
 
         <div class="field">
@@ -530,7 +490,7 @@
             @if (busy()) {
               <span class="spinner" aria-hidden="true"></span> Envoi…
             } @else {
-              {{ request.action === 'reject' ? 'Refuser la demande' : 'Suspendre' }}
+              Suspendre
             }
           </button>
         </footer>
