@@ -166,7 +166,7 @@ export class LoginComponent {
       return {
         type: 'account_disabled',
         message:
-          "⚠️ Votre compte est désactivé. Contactez l'administrateur pour plus d'informations. admin@eventflow.sn · +221771234567",
+          "Votre compte est désactivé. Contactez l'administrateur depuis le mail reçu",
         email,
       };
     }
