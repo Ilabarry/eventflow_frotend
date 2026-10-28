@@ -110,7 +110,7 @@ function messageOf(error: unknown, fallback: string): string {
 @Component({
   selector: 'app-categories',
   standalone: true,
-  imports: [CommonModule, FormsModule, CategoryRowComponent],
+  imports: [CommonModule, FormsModule],
   templateUrl: './categories.component.html',
   styleUrl: './categories.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
