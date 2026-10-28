@@ -179,7 +179,24 @@
                   >
                     Voir l'événement
                   </a>
-                  @if (!card.isCancelled) {
+
+                  <!-- ✅ Rejoindre un événement en ligne (uniquement si CONFIRMED) -->
+                  @if (card.isOnline && !card.isCancelled && card.statusTone === 'success') {
+                    <button
+                      type="button"
+                      class="btn btn--access card__action-ticket"
+                      (click)="joinEvent(card)"
+                    >
+                      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M15 3h6v6" />
+                        <path d="M10 14L21 3" />
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                      </svg>
+                      Rejoindre l'événement
+                    </button>
+                  }
+
+                  @if (!card.isOnline && !card.isCancelled) {
                     <button
                       type="button"
                       class="btn btn--ticket card__action-ticket"

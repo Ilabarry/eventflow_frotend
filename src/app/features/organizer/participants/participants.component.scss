@@ -1504,6 +1504,18 @@
   }
 }
 
+.certificates-unavailable {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: var(--evf-radius-full, 999px);
+  background: linear-gradient(135deg, #8B7CF6 0%, #22C7D6 100%);
+  color: var(--evf-text-muted, #eee);
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
 @keyframes toast-in {
   from { opacity: 0; transform: translate(-50%, 12px); }
   to { opacity: 1; transform: translate(-50%, 0); }

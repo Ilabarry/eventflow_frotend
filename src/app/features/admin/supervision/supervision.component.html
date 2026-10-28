@@ -1,1 +1,192 @@
-<p>supervision works!</p>
+<section class="supervision" aria-labelledby="supervision-title">
+  <!-- ============================================================
+       BANDEAU
+       ============================================================ -->
+  <header class="hero">
+    <svg class="hero__flow" viewBox="0 0 400 140" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+      <path d="M0 120 C 60 60, 110 40, 170 70 S 280 120, 330 50 S 380 10, 400 18" class="hero__line" />
+      <path d="M0 132 C 80 90, 140 80, 200 100 S 300 130, 400 70" class="hero__line hero__line--soft" />
+    </svg>
+    <div class="hero__content">
+      <p class="hero__eyebrow">Tableau de bord administrateur</p>
+      <h1 id="supervision-title" class="hero__title">Supervision</h1>
+      <p class="hero__subtitle">Surveillez les activités qui nécessitent votre attention.</p>
+    </div>
+  </header>
+
+  <!-- Compteurs -->
+  <ul class="counters" aria-label="Indicateurs de supervision">
+    @for (item of counters(); track item.label) {
+      <li [class]="'counter counter--' + item.tone">
+        <svg class="counter__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          @switch (item.icon) {
+            @case ('alert') { <path d="M12 3 2 21h20zM12 10v5M12 18h.01" /> }
+            @case ('flag') { <path d="M5 21V4M5 4h11l-2 4 2 4H5" /> }
+            @case ('block') { <circle cx="12" cy="12" r="9" /><path d="M12 7v6M12 16h.01" /> }
+            @default { <circle cx="12" cy="12" r="9" /><path d="m8 12 3 3 5-6" /> }
+          }
+        </svg>
+        <span class="counter__value">{{ item.value ?? '—' }}</span>
+        <span class="counter__label">{{ item.label }}</span>
+      </li>
+    }
+  </ul>
+
+  <!-- ============================================================
+       À TRAITER : alertes calculées par le backend
+       ============================================================ -->
+  <section aria-labelledby="todo-title">
+    <div class="filters" role="group" aria-label="Filtrer les alertes par niveau">
+      @for (option of levelOptions; track option.label) {
+        <button
+          type="button"
+          class="filters__chip"
+          [class.filters__chip--active]="level() === option.value"
+          [attr.aria-pressed]="level() === option.value"
+          (click)="selectLevel(option.value)"
+        >{{ option.label }}</button>
+      }
+    </div>
+
+    <div class="section-head">
+      <h2 id="todo-title" class="section-head__title">À traiter</h2>
+      @if (alertsState() === 'ready') {
+        <p class="section-head__count">{{ visibleAlerts().length }} élément{{ visibleAlerts().length > 1 ? 's' : '' }}</p>
+      }
+    </div>
+
+    <div aria-live="polite" [attr.aria-busy]="alertsState() === 'loading'">
+      @switch (alertsState()) {
+        @case ('loading') {
+          <div class="skeleton" aria-hidden="true"></div>
+          <div class="skeleton" aria-hidden="true"></div>
+        }
+        @case ('error') {
+          <div class="state" role="alert">
+            <p>Impossible de charger les alertes.</p>
+            <button type="button" class="btn btn--primary" (click)="retryAlerts()">Réessayer</button>
+          </div>
+        }
+        @default {
+          @if (visibleAlerts().length === 0) {
+            <div class="state">
+              <p>{{ level() ? 'Aucune alerte de ce niveau.' : 'Aucune alerte : tout est en ordre.' }}</p>
+            </div>
+          } @else {
+            <ul class="alerts">
+              @for (alert of visibleAlerts(); track alert.code) {
+                <li [class]="'alert alert--' + alert.level.toLowerCase()">
+                  <span class="alert__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" focusable="false">
+                      @if (alert.level === 'INFO') {
+                        <circle cx="12" cy="12" r="9" /><path d="M12 11v6M12 7h.01" />
+                      } @else {
+                        <path d="M12 3 2 21h20zM12 10v5M12 18h.01" />
+                      }
+                    </svg>
+                  </span>
+                  <div class="alert__body">
+                    <h3 class="alert__title">{{ alert.title }}</h3>
+                    <p class="alert__text">{{ alert.message }}</p>
+                    <p class="alert__meta">
+                      <span class="alert__level">{{ alert.levelLabel }}</span> · {{ alert.count }} élément{{ alert.count > 1 ? 's' : '' }}
+                    </p>
+
+                    @if (expanded() === alert.code) {
+                      <div class="alert__details" [id]="'alert-' + alert.code">
+                        @if (alert.samples.length > 0) {
+                          <ul class="alert__samples">
+                            @for (sample of alert.samples; track $index) {
+                              <li>{{ sample }}</li>
+                            }
+                          </ul>
+                          @if (alert.count > alert.samples.length) {
+                            <p class="alert__more">… et {{ alert.count - alert.samples.length }} autre(s).</p>
+                          }
+                        }
+                        @if (alert.link) {
+                          <a class="alert__link" [routerLink]="alert.link">{{ alert.linkLabel }} →</a>
+                        }
+                        @if (alert.showsDeniedHistory) {
+                          <button type="button" class="alert__link" (click)="showDeniedHistory()">Voir les refus dans l'historique →</button>
+                        }
+                      </div>
+                    }
+                  </div>
+                  <button
+                    type="button"
+                    class="btn alert__action"
+                    [attr.aria-expanded]="expanded() === alert.code"
+                    [attr.aria-controls]="'alert-' + alert.code"
+                    (click)="toggle(alert.code)"
+                  >{{ expanded() === alert.code ? 'Masquer' : 'Examiner' }}</button>
+                </li>
+              }
+            </ul>
+          }
+        }
+      }
+    </div>
+  </section>
+
+  <!-- ============================================================
+       HISTORIQUE DES ACTIONS : journal d'audit
+       ============================================================ -->
+  <section class="history" aria-labelledby="history-title">
+    <div class="section-head">
+      <h2 id="history-title" class="section-head__title">Historique des actions</h2>
+      <div class="filters" role="group" aria-label="Filtrer l'historique">
+        <button type="button" class="filters__chip" [class.filters__chip--active]="historyFilter() === null" [attr.aria-pressed]="historyFilter() === null" (click)="setHistoryFilter(null)">Toutes</button>
+        <button type="button" class="filters__chip" [class.filters__chip--active]="historyFilter() === 'DENIED'" [attr.aria-pressed]="historyFilter() === 'DENIED'" (click)="setHistoryFilter('DENIED')">Refusées</button>
+      </div>
+    </div>
+
+    <div aria-live="polite" [attr.aria-busy]="historyState() === 'loading'">
+      @switch (historyState()) {
+        @case ('loading') {
+          <div class="skeleton skeleton--line" aria-hidden="true"></div>
+        }
+        @case ('error') {
+          <div class="state" role="alert">
+            <p>Impossible de charger l'historique.</p>
+            <button type="button" class="btn btn--primary" (click)="retryHistory()">Réessayer</button>
+          </div>
+        }
+        @default {
+          @if (history().length === 0) {
+            <div class="state"><p>Aucune action enregistrée.</p></div>
+          } @else {
+            <ol class="history__list">
+              @for (item of history(); track item.id) {
+                <li class="history__item" [class.history__item--denied]="item.denied">
+                  <svg class="history__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    @if (item.denied) {
+                      <circle cx="12" cy="12" r="9" /><path d="M12 7v6M12 16h.01" />
+                    } @else {
+                      <circle cx="12" cy="12" r="9" /><path d="m8 12 3 3 5-6" />
+                    }
+                  </svg>
+                  <div>
+                    <p class="history__title">
+                      @if (item.denied) { <strong>Refusée :</strong> }
+                      {{ item.title }}
+                    </p>
+                    <p class="history__meta">
+                      {{ item.actor }} · <time [attr.datetime]="item.dateIso">{{ item.dateLabel }}</time>
+                      @if (item.reason) { · Motif : « {{ item.reason }} » }
+                    </p>
+                  </div>
+                </li>
+              }
+            </ol>
+            @if (historyHasMore()) {
+              <button type="button" class="btn btn--ghost history__more" [disabled]="historyLoadingMore()" (click)="loadMore()">
+                {{ historyLoadingMore() ? 'Chargement…' : 'Voir plus' }}
+              </button>
+            }
+          }
+        }
+      }
+    </div>
+  </section>
+</section>

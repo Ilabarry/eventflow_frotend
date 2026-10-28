@@ -199,21 +199,13 @@
           <ul class="events">
             @for (e of recentEvents(); track e.id) {
               <li class="event">
-                <span class="event__icon" aria-hidden="true">
-                  <svg class="icon" viewBox="0 0 24 24">
-                    @for (d of icons.events; track d) {
-                      <path [attr.d]="d" />
-                    }
-                  </svg>
-                </span>
+                <span class="event__icon" aria-hidden="true">…</span>
                 <span class="event__text">
                   <strong>{{ e.title }}</strong>
-                  <small>
-                    {{ e.organizer_name }}@if (e.city) { · {{ e.city }} } · {{ eventDate(e.start_at) }}
-                  </small>
+                  <small>{{ e.organizer_name }}@if (e.city) { · {{ e.city }} } · {{ eventDate(e.start_at) }}</small>
                 </span>
-                <span class="badge" [attr.data-tone]="statusMeta[e.status].tone">
-                  <span class="badge__dot" aria-hidden="true"></span>{{ statusMeta[e.status].label }}
+                <span class="badge" [attr.data-tone]="statusMetaFor(e.status).tone">
+                  <span class="badge__dot" aria-hidden="true"></span>{{ statusMetaFor(e.status).label }}
                 </span>
               </li>
             }

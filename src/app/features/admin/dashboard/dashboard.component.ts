@@ -430,4 +430,17 @@ export class AdminDashboardComponent {
 
     this.notification.success('Le rapport a été téléchargé.', 'Export');
   }
+
+  /** Retourne les métadonnées d'un statut d'événement (ou un fallback). */
+  statusMetaFor(status: string): { label: string; tone: 'success' | 'warning' | 'danger' | 'info' | 'neutral' } {
+    const map: Record<AdminEventStatus, { label: string; tone: 'success' | 'warning' | 'danger' | 'info' | 'neutral' }> = {
+      PUBLISHED: { label: 'Publié', tone: 'success' },
+      PENDING: { label: 'À modérer', tone: 'warning' },
+      DRAFT: { label: 'Brouillon', tone: 'neutral' },
+      FINISHED: { label: 'Terminé', tone: 'info' },
+      CANCELLED: { label: 'Annulé', tone: 'danger' },
+    };
+    return map[status as AdminEventStatus] ?? { label: status, tone: 'neutral' };
+  }
+
 }

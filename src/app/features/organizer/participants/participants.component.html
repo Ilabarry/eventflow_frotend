@@ -200,6 +200,24 @@
       }
 
       <div class="menu-wrap export">
+        @if (currentEvent(); as ev) {
+          @if (canGenerateCertificates()) {
+            <button
+              type="button"
+              class="btn btn--outline btn--sm certificates-unavailable "
+              (click)="generateCertificates()"
+            >
+              📜 Générer les certificats
+            </button>
+          } @else {
+            <span class="certificates-unavailable" role="note">
+              📜 Certificats disponibles après l'événement
+            </span>
+          }
+        }
+      </div>
+
+      <div class="menu-wrap export">
         <button
           type="button" class="btn btn--outline btn--sm"
           aria-haspopup="menu" [attr.aria-expanded]="exportOpen()"
@@ -411,7 +429,13 @@
                               </div>
                             }
 
-                            <button type="button" class="menu__item" role="menuitem" (click)="markAbsent(p)" [disabled]="p.attendance === 'present'">
+                            <button
+                              type="button"
+                              class="menu__item"
+                              role="menuitem"
+                              (click)="markAbsent(p)"
+                              [disabled]="p.attendance === 'present' || p.status !== 'confirmed'"
+                            >
                               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                 <circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line>
                               </svg>

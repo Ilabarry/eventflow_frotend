@@ -101,8 +101,7 @@ export class AuthService {
         tap((response) => {
           console.log('[AuthService] Register success', { email: payload.email });
           this.notification.success(
-            'Inscription réussie. Vous pouvez maintenant vous connecter.',
-            'Bienvenue !'
+            'Inscription réussie. Vous pouvez maintenant vérifier votre mail'
           );
         }),
         catchError((error) => {
@@ -150,16 +149,6 @@ export class AuthService {
             );
           }
         }),
-        catchError((error) => {
-          console.error('[AuthService] Login error', error.status);
-          if (error.status === 401) {
-            this.notification.error(
-              'Email ou mot de passe incorrect.',
-              'Connexion échouée'
-            );
-          }
-          return throwError(() => error);
-        })
       );
 }
 
@@ -319,6 +308,13 @@ export class AuthService {
         this.clearSession();
         return of(null);
       }),
+    );
+  }
+
+  resendVerificationEmail(email: string): Observable<ApiResponse<null>> {
+    return this.http.post<ApiResponse<null>>(
+      `${this.API_URL}/auth/resend-verification/`,
+      { email },
     );
   }
 
