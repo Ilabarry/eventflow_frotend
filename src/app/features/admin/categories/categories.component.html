@@ -1,1 +1,610 @@
-<p>categories works!</p>
+<!-- ======================================================================
+     PAGE « CATÉGORIES » — administration
+     Maquette : bannière + recherche + 3 compteurs + tableau + pagination.
+     Le chrome (navbar, sidebar, vague de bas de page) vient du layout admin :
+     cette vue ne dessine QUE la zone de contenu.
+     ====================================================================== -->
+<section class="cats" [class.cats--dense]="dense()" aria-labelledby="cats-title">
+  <!-- ==================== BANNIÈRE ==================== -->
+  @if (!dense()) {
+    <header class="hero">
+      <svg class="hero__wave" viewBox="0 0 400 120" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+        <defs>
+          <linearGradient id="catsHeroWave" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#8B7CF6" />
+            <stop offset="1" stop-color="#22C7D6" />
+          </linearGradient>
+        </defs>
+        <path
+          d="M0 90 C 50 20, 110 110, 180 60 S 300 0, 400 40"
+          fill="none"
+          stroke="url(#catsHeroWave)"
+          stroke-width="2.5"
+          vector-effect="non-scaling-stroke"
+        />
+      </svg>
+
+      <div class="hero__content">
+        <p class="hero__eyebrow">Catégories</p>
+        <h1 id="cats-title" class="hero__title">Organisez les événements EVENTFLOW par catégories.</h1>
+      </div>
+
+      <div class="hero__actions">
+        <button
+          type="button"
+          class="hero__btn hero__btn--ghost"
+          (click)="reload()"
+          [attr.aria-busy]="loadState() === 'loading'"
+        >
+          <svg class="icon" [class.icon--spin]="loadState() === 'loading'" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M23 4v6h-6" /><path d="M1 20v-6h6" />
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+          </svg>
+          Actualiser
+        </button>
+        <button type="button" class="hero__btn" (click)="openCreate()">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+          Ajouter catégorie
+        </button>
+      </div>
+    </header>
+  }
+
+  <!-- ==================== OUTILS : recherche + statut ==================== -->
+  <div class="toolbar">
+    <form class="search" role="search" (ngSubmit)="$event.preventDefault()">
+      <label class="sr-only" for="cats-search">Rechercher une catégorie par nom</label>
+      <span class="search__field">
+        <span class="search__icon" aria-hidden="true">
+          <svg class="icon" viewBox="0 0 24 24">
+            <circle cx="11" cy="11" r="7" /><path d="M21 21l-4.35-4.35" />
+          </svg>
+        </span>
+        <input
+          id="cats-search"
+          class="search__input"
+          type="search"
+          name="q"
+          autocomplete="off"
+          placeholder="Rechercher une catégorie…"
+          [ngModel]="search()"
+          (ngModelChange)="onSearchChange($event)"
+        />
+        @if (search()) {
+          <button type="button" class="search__clear" (click)="clearSearch()" aria-label="Effacer la recherche">
+            <svg class="icon icon--xs" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12" /></svg>
+          </button>
+        }
+      </span>
+      <button type="submit" class="search__go">rechercher</button>
+    </form>
+
+    <div class="toolbar__side">
+      <div class="seg" role="group" aria-label="Filtrer par statut">
+        @for (option of statusOptions; track option.value) {
+          <button
+            type="button"
+            class="seg__btn"
+            [class.seg__btn--active]="status() === option.value"
+            [attr.aria-pressed]="status() === option.value"
+            (click)="setStatus(option.value)"
+          >
+            {{ option.label }}
+          </button>
+        }
+      </div>
+
+      @if (isFiltered()) {
+        <button type="button" class="chip" (click)="clearFilters()">
+          <svg class="icon icon--xs" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M7 12h10M10 18h4" /></svg>
+          Réinitialiser les filtres
+          <svg class="icon icon--xs" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12" /></svg>
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- ==================== COMPTEURS ==================== -->
+  <ul class="stats" aria-label="Vue d'ensemble des catégories">
+    @for (card of statCards(); track card.label) {
+      <li class="stats__item">
+        <article class="stat" [attr.data-tone]="card.tone">
+          <span class="stat__head">
+            <span class="stat__icon" aria-hidden="true">
+              <svg class="icon icon--lg" viewBox="0 0 24 24">
+                @for (d of card.icon; track d) {
+                  <path [attr.d]="d" />
+                }
+              </svg>
+            </span>
+            <span class="stat__value" [class.stat__value--muted]="card.muted">{{ card.value }}</span>
+          </span>
+          <span class="stat__label">{{ card.label }}</span>
+        </article>
+      </li>
+    }
+  </ul>
+
+  <!-- ==================== ERREUR DE CHARGEMENT ==================== -->
+  @if (loadState() === 'error') {
+    <div class="state" role="alert">
+      <span class="state__icon" aria-hidden="true">
+        <svg class="icon icon--lg" viewBox="0 0 24 24">
+          <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" /><path d="M4 22v-7" />
+        </svg>
+      </span>
+      <h2 class="state__title">Impossible de charger les catégories</h2>
+      <p class="state__text">{{ errorMessage() }}</p>
+      <button type="button" class="btn btn--solid" (click)="retry()">Réessayer</button>
+    </div>
+  } @else {
+    <!-- ==================== TABLEAU ==================== -->
+    <section class="panel" [class.panel--busy]="loadState() === 'loading'">
+      <header class="panel__head">
+        <h2 class="panel__title">Catégories</h2>
+        <p class="panel__count" [attr.aria-live]="loadState() === 'loading' ? 'off' : 'polite'">
+          {{ loadState() === 'loading' ? 'Chargement…' : rangeLabel() }}
+        </p>
+      </header>
+
+      <!-- Version tableau : >= 760 px. Les donnees sont tabulaires, le <table>
+           reste la structure semantique ; la region est roulable au clavier. -->
+      <div class="table-wrap" #tableHost tabindex="0" role="region" [attr.aria-label]="tableLabel()">
+        <table class="table" [class.table--dim]="loadState() === 'loading' && rows().length > 0">
+          <caption class="sr-only">
+            Catégories de la plateforme : nom, nombre d'événements rattachés, statut, date de création et actions.
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col" class="th th--sticky th--identity">
+                <button
+                  type="button"
+                  class="th__sort"
+                  [class.th__sort--active]="sortState('name') !== 'none'"
+                  (click)="toggleSort('name')"
+                  [attr.aria-label]="'Trier par nom — tri actuel : ' + sortLabel('name')"
+                >
+                  Catégorie
+                  <ng-container *ngTemplateOutlet="sortIconTpl; context: { field: 'name' }" />
+                </button>
+              </th>
+              <th scope="col" class="th th--num">
+                <button
+                  type="button"
+                  class="th__sort th__sort--num"
+                  [class.th__sort--active]="sortState('events_total') !== 'none'"
+                  (click)="toggleSort('events_total')"
+                  title="Trier par nombre d'événements rattachés"
+                  [attr.aria-label]="'Trier par événements — tri actuel : ' + sortLabel('events_total')"
+                >
+                  Événements
+                  <ng-container *ngTemplateOutlet="sortIconTpl; context: { field: 'events_total' }" />
+                </button>
+              </th>
+              <th scope="col" class="th th--status">Statut</th>
+              <th scope="col" class="th th--date">
+                <button
+                  type="button"
+                  class="th__sort"
+                  [class.th__sort--active]="sortState('created_at') !== 'none'"
+                  (click)="toggleSort('created_at')"
+                  title="Trier par date de création"
+                  [attr.aria-label]="'Trier par date de création — tri actuel : ' + sortLabel('created_at')"
+                >
+                  Créé le
+                  <ng-container *ngTemplateOutlet="sortIconTpl; context: { field: 'created_at' }" />
+                </button>
+              </th>
+              <th scope="col" class="th th--actions">
+                <span>Actions</span>
+              </th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <!-- Squelette : 6 lignes de meme gabarit que le tableau reel, pour
+                 qu'aucun saut de mise en page ne suive le remplacement. -->
+            @if (loadState() === 'loading' && rows().length === 0) {
+              @for (placeholder of skeletonRows; track placeholder) {
+                <tr class="row row--skeleton" aria-hidden="true">
+                  <td class="cell cell--identity"><span class="skeleton skeleton--identity"></span></td>
+                  <td class="cell cell--num"><span class="skeleton skeleton--num"></span></td>
+                  <td class="cell cell--status"><span class="skeleton skeleton--badge"></span></td>
+                  <td class="cell cell--date"><span class="skeleton skeleton--date"></span></td>
+                  <td class="cell cell--actions"><span class="skeleton skeleton--dots"></span></td>
+                </tr>
+              }
+            }
+
+            @for (row of rows(); track row.id) {
+              <tr
+                app-category-row
+                class="row"
+                variant="table"
+                [row]="row"
+                [busy]="busyId() === row.id"
+                [class.row--busy]="busyId() === row.id"
+                [menuOpen]="menuOpenFor() === row.id"
+                [class.row--off]="!row.is_active"
+                (edit)="openEdit(row)"
+                (changeState)="openReason(row, $event)"
+                (remove)="openReason(row, 'delete')"
+                (toggleMenu)="toggleMenu(row.id)"
+              ></tr>
+            }
+          </tbody>
+        </table>
+
+        @if (loadState() === 'ready' && isEmpty()) {
+          <div class="empty">
+            <span class="empty__icon" aria-hidden="true">
+              <svg class="icon icon--lg" viewBox="0 0 24 24">
+                <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+                <path d="M7 7h.01" />
+              </svg>
+            </span>
+            @if (isFiltered()) {
+              <h3 class="empty__title">Aucune catégorie ne correspond</h3>
+              <p class="empty__text">Les filtres actifs n'ont renvoyé aucun résultat. Élargissez la recherche ou réinitialisez-les.</p>
+              <button type="button" class="btn btn--ghost" (click)="clearFilters()">Effacer les filtres</button>
+            } @else {
+              <h3 class="empty__title">Aucune catégorie pour le moment</h3>
+              <p class="empty__text">Créez la première catégorie pour structurer le catalogue d'événements.</p>
+              <button type="button" class="btn btn--solid" (click)="openCreate()">Ajouter catégorie</button>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Version cartes : < 760 px. Un <td> ne se recycle pas en bloc sans
+           perdre ses roles ; on rend donc le MEME composant de ligne, avec le
+           MEME contexte, dans une liste. -->
+      <ul class="cats-cards" aria-label="Catégories">
+        @if (loadState() === 'loading' && rows().length === 0) {
+          @for (placeholder of skeletonRows; track placeholder) {
+            <li class="rc rc--skeleton" aria-hidden="true">
+              <span class="skeleton skeleton--card"></span>
+            </li>
+          }
+        }
+        @for (row of rows(); track row.id) {
+          <li class="rc" [class.row--off]="!row.is_active" [class.row--busy]="busyId() === row.id">
+            <div
+              app-category-row
+              class="rc"
+              variant="card"
+              [row]="row"
+              [busy]="busyId() === row.id"
+              [menuOpen]="menuOpenFor() === row.id"
+              (edit)="openEdit(row)"
+              (changeState)="openReason(row, $event)"
+              (remove)="openReason(row, 'delete')"
+              (toggleMenu)="toggleMenu(row.id)"
+            ></div>
+          </li>
+        }
+        @if (loadState() === 'ready' && isEmpty()) {
+          <li class="rc rc--empty">Aucune catégorie à afficher.</li>
+        }
+      </ul>
+
+      <!-- ==================== PAGINATION ==================== -->
+      @if (total() > 0) {
+        <nav class="pager" aria-label="Pagination des catégories">
+          <p class="pager__meta">
+            {{ format(total()) }} catégorie{{ total() > 1 ? 's' : '' }}
+            @if (totalPages() > 1) {
+              · page {{ currentPage() }}/{{ totalPages() }}
+            }
+          </p>
+
+          <div class="pager__controls">
+            <select
+              class="control control--size"
+              aria-label="Nombre de lignes par page"
+              [ngModel]="pageSize()"
+              (ngModelChange)="setPageSize($event)"
+            >
+              @for (size of pageSizeOptions; track size) {
+                <!-- value (et non ngValue) : le <select> ne transporte que du
+                     texte, le handler convertit — un option[ngValue] numérique
+                     rend l'option introuvable pour l'API DOM (et les tests). -->
+                <option [value]="size">{{ size }} / page</option>
+              }
+            </select>
+
+            <ul class="pager__list">
+              <li>
+                <button type="button" class="pager__btn" (click)="goPage(currentPage() - 1)" [disabled]="!canPrev()" aria-label="Page précédente">
+                  <svg class="icon icon--xs" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg>
+                </button>
+              </li>
+              @for (page of pages(); track page) {
+                <li>
+                  @if (page === '…') {
+                    <span class="pager__gap" aria-hidden="true">…</span>
+                  } @else {
+                    <button
+                      type="button"
+                      class="pager__btn"
+                      [class.pager__btn--active]="page === currentPage()"
+                      [attr.aria-current]="page === currentPage() ? 'page' : null"
+                      [attr.aria-label]="'Page ' + page"
+                      (click)="goPage(page)"
+                    >
+                      {{ page }}
+                    </button>
+                  }
+                </li>
+              }
+              <li>
+                <button type="button" class="pager__btn" (click)="goPage(currentPage() + 1)" [disabled]="!canNext()" aria-label="Page suivante">
+                  <svg class="icon icon--xs" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6" /></svg>
+                </button>
+              </li>
+            </ul>
+          </div>
+        </nav>
+      }
+    </section>
+  }
+
+  <!-- Signature de la maquette (vague + baseline) : element decoratif de page,
+       le texte principal etant deja porte par la sidebar de l'administration. -->
+  <footer class="sign" aria-hidden="true">
+    <svg class="sign__wave" viewBox="0 0 220 60" preserveAspectRatio="none">
+      <path d="M0 50 C 30 10, 55 55, 90 30 S 150 5, 220 28" fill="none" stroke="#22C7D6" stroke-width="2" />
+    </svg>
+  </footer>
+</section>
+
+<!-- ======================================================================
+     MODALE — créer / modifier
+     ====================================================================== -->
+@if (modal(); as model) {
+  <div class="backdrop" (click)="closeModal()">
+    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="cats-modal-title" (click)="$event.stopPropagation()">
+      <header class="dialog__head">
+        <h2 id="cats-modal-title" class="dialog__title">
+          {{ model.mode === 'create' ? 'Ajouter une catégorie' : 'Modifier la catégorie' }}
+        </h2>
+        <button type="button" class="dialog__close" (click)="closeModal()" aria-label="Fermer">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12" /></svg>
+        </button>
+      </header>
+
+      <!-- `name` est OBLIGATOIRE sur chaque [ngModel] d'un <form> : sans lui,
+           Angular lève NG01352 et la liaison ne se met jamais en place — le champ
+           reste vide côté modèle et l'envoi perd la valeur saisie.
+           Pas de (ngSubmit) non plus : le pied est hors du <form>, le bouton du bas
+           n'est donc pas un submit natif — un seul chemin d'envoi, pas de double POST. -->
+      <form class="dialog__body">
+        <p class="dialog__note">
+          Nom unique (insensible à la casse). Le slug est dérivé du nom par le serveur : deux noms qui
+          produiraient la même URL sont refusés.
+        </p>
+
+        <div class="field">
+          <label class="field__label" for="cats-name">
+            Nom <span class="field__req" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="cats-name"
+            #firstField
+            name="name"
+            class="field__input"
+            [class.field__input--invalid]="hasError('name')"
+            type="text"
+            maxlength="100"
+            autocomplete="off"
+            required
+            placeholder="Ex. Tech / digital"
+            [ngModel]="model.name"
+            (ngModelChange)="updateModal({ name: $event })"
+          />
+          <div class="field__foot">
+            @if (hasError('name')) {
+              <p class="field__error" role="alert">{{ errorText('name') }}</p>
+            } @else if (model.slug) {
+              <p class="field__hint">URL actuelle : <code>/{{ model.slug }}</code></p>
+            } @else {
+              <p class="field__hint">Affiché dans les filtres publics et la grille de vente des billets.</p>
+            }
+            <span class="field__count">{{ model.name.length }}/{{ limits.name }}</span>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="cats-desc">Description</label>
+          <textarea
+            id="cats-desc"
+            name="description"
+            class="field__input field__input--area"
+            rows="3"
+            maxlength="2000"
+            placeholder="À quoi sert cette catégorie ?"
+            [ngModel]="model.description"
+            (ngModelChange)="updateModal({ description: $event })"
+          ></textarea>
+          <div class="field__foot">
+            <p class="field__hint">Optionnelle.</p>
+            <span class="field__count">{{ model.description.length }}/{{ limits.description }}</span>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="cats-icon">Icône</label>
+          <div class="field__row">
+            <input
+              id="cats-icon"
+              name="icon"
+              class="field__input"
+              [class.field__input--invalid]="hasError('icon')"
+              type="text"
+              maxlength="100"
+              autocomplete="off"
+              placeholder="tech, music, sport… ou une URL d'image"
+              [ngModel]="model.icon"
+              (ngModelChange)="updateModal({ icon: $event })"
+            />
+            <span class="preview" [attr.data-tone]="'violet'">
+              {{ model.icon.trim() ? iconPreview(model.icon) : 'A' }}
+            </span>
+          </div>
+          <div class="field__foot">
+            @if (hasError('icon')) {
+              <p class="field__error" role="alert">{{ errorText('icon') }}</p>
+            } @else {
+              <p class="field__hint">
+                Le backend stocke un <em>nom</em> d'icône (100 caractères max), pas une image. La page traduit
+                « tech », « music »… en glyphe, et affiche l'image si vous saisissez une URL.
+              </p>
+            }
+            <span class="field__count">{{ model.icon.length }}/{{ limits.icon }}</span>
+          </div>
+        </div>
+
+        @if (hasError('detail')) {
+          <p class="form-error" role="alert">{{ errorText('detail') }}</p>
+        }
+
+        <p class="field-status">
+          <span class="badge" [attr.data-tone]="model.isActive ? 'success' : 'neutral'">
+            <span class="badge__dot" aria-hidden="true"></span>{{ model.isActive ? 'Actif' : 'Inactif' }}
+          </span>
+          <span>L'état ne se change pas ici : le menu de la ligne exige une raison, conservée au journal d'audit.</span>
+        </p>
+      </form>
+
+      <footer class="dialog__foot">
+        <button type="button" class="btn btn--ghost" (click)="closeModal()" [disabled]="modalSaving()">Annuler</button>
+        <button type="button" class="btn btn--solid" (click)="saveModal()" [disabled]="modalSaving()">
+          @if (modalSaving()) {
+            <svg class="icon icon--xs icon--spin" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-6.22-8.56" /></svg>
+            {{ model.mode === 'create' ? 'Création…' : 'Enregistrement…' }}
+          } @else {
+            {{ model.mode === 'create' ? 'Créer la catégorie' : 'Enregistrer' }}
+          }
+        </button>
+      </footer>
+    </div>
+  </div>
+}
+
+<!-- ======================================================================
+     MODALE — désactiver / réactiver / supprimer
+     ====================================================================== -->
+@if (reason(); as state) {
+  <div class="backdrop" (click)="closeReason()">
+    <div class="dialog dialog--sm" role="alertdialog" aria-modal="true" aria-labelledby="cats-reason-title" (click)="$event.stopPropagation()">
+      <header class="dialog__head">
+        <h2 id="cats-reason-title" class="dialog__title">{{ reasonTitle(state.action) }}</h2>
+        <button type="button" class="dialog__close" (click)="closeReason()" aria-label="Fermer">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12" /></svg>
+        </button>
+      </header>
+
+      <div class="dialog__body">
+        <p class="dialog__lede">
+          <strong>{{ state.name }}</strong>
+          · {{ format(state.eventsTotal) }} événement(s) rattaché(s)
+        </p>
+
+        @switch (state.action) {
+          @case ('delete') {
+            <p class="dialog__warn">
+              Suppression possible seulement si <strong>aucun événement</strong> n'utilise cette catégorie : le
+              serveur protège les données existantes et renvoie un conflit sinon. L'action est définitive.
+            </p>
+          }
+          @case ('deactivate') {
+            <p class="dialog__text">La catégorie disparaît des listes publiques ; ses événements existants ne sont pas modifiés.</p>
+          }
+          @case ('activate') {
+            <p class="dialog__text">La catégorie redevient visible et sélectionnable côté participant.</p>
+          }
+        }
+
+        <div class="field">
+          <label class="field__label" for="cats-reason">
+            Raison
+            @if (state.action !== 'delete') {
+              <span class="field__req" aria-hidden="true">*</span>
+            } @else {
+              <span class="field__opt">(facultative)</span>
+            }
+          </label>
+          <input
+            id="cats-reason"
+            #reasonField
+            name="reason"
+            class="field__input"
+            [class.field__input--invalid]="!!state.error"
+            type="text"
+            maxlength="500"
+            autocomplete="off"
+            placeholder="Ex. Doublon avec « Culture », fusion en cours"
+            [ngModel]="state.reason"
+            (ngModelChange)="updateReason($event)"
+          />
+          <div class="field__foot">
+            @if (state.error) {
+              <p class="field__error" role="alert">{{ state.error }}</p>
+            } @else if (state.action !== 'delete') {
+              <p class="field__hint">Conservée au journal d'audit · {{ limits.reasonMin }} caractères minimum.</p>
+            } @else {
+              <p class="field__hint">Tracée à l'audit si renseignée.</p>
+            }
+            <span class="field__count">{{ state.reason.length }}/{{ limits.reason }}</span>
+          </div>
+        </div>
+      </div>
+
+      <footer class="dialog__foot">
+        <button type="button" class="btn btn--ghost" (click)="closeReason()" [disabled]="reasonSaving()">Annuler</button>
+        <button
+          type="button"
+          class="btn"
+          [class.btn--danger]="state.action === 'delete'"
+          [class.btn--solid]="state.action !== 'delete'"
+          (click)="confirmReason()"
+          [disabled]="reasonSaving()"
+        >
+          @if (reasonSaving()) {
+            <svg class="icon icon--xs icon--spin" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-6.22-8.56" /></svg>
+          }
+          @switch (state.action) {
+            @case ('delete') {
+              Confirmer la suppression
+            }
+            @case ('deactivate') {
+              Désactiver
+            }
+            @case ('activate') {
+              Réactiver
+            }
+          }
+        </button>
+      </footer>
+    </div>
+  </div>
+}
+
+<!-- ==================== GABARITS PARTAGÉS ==================== -->
+<ng-template #sortIconTpl let-field="field">
+  <svg class="icon icon--xs sort-icon" [attr.data-dir]="sortState(field)" viewBox="0 0 24 24" aria-hidden="true">
+    @switch (sortState(field)) {
+      @case ('asc') {
+        <path d="M12 19V5M5 12l7-7 7 7" />
+      }
+      @case ('desc') {
+        <path d="M12 5v14M19 12l-7 7-7-7" />
+      }
+      @default {
+        <path d="M8 9l4-4 4 4M8 15l4 4 4-4" />
+      }
+    }
+  </svg>
+</ng-template>

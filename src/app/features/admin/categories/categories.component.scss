@@ -1,0 +1,1522 @@
+/* ================================================================
+   PAGE CATÉGORIES — administration
+   ----------------------------------------------------------------
+   Mêmes tokens que le tableau de bord admin : les variables sont
+   redéclarées sur CE :host (elles héritent de --evf-* globaux), donc les
+   composants enfants (`app-category-row`) les reçoivent par cascade.
+   Aucune variable globale n'est ajoutée ni modifiée ici.
+   ================================================================ */
+:host {
+  display: block;
+
+  --gap: 1rem;
+  --c-violet: var(--evf-violet, #6C5CE7);
+  --c-violet-dark: var(--evf-violet-dark, #5846D6);
+  --c-cyan: var(--evf-cyan, #22C7D6);
+  --c-dark: var(--evf-dark, #0A0A12);
+  --c-text: var(--evf-text, #1E293B);
+  --c-muted: var(--evf-text-muted, #64748B);
+  --c-border: var(--evf-border, #E2E8F0);
+  --c-bg: var(--evf-bg, #F8FAFC);
+  --c-surface: var(--evf-surface, #FFFFFF);
+  --c-error: var(--evf-error, #EF4444);
+  --c-gradient: var(--evf-gradient-flow, linear-gradient(135deg, #6C5CE7 0%, #22C7D6 100%));
+}
+
+:host *,
+:host *::before,
+:host *::after {
+  box-sizing: border-box;
+}
+
+.cats {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  max-width: 1280px;
+  margin: 0 auto;
+  padding-bottom: 0.5rem;
+  font-family: var(--evf-font-body, 'Inter'), sans-serif;
+  color: var(--c-text);
+}
+
+.icon {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+
+  &--lg { width: 24px; height: 24px; }
+  &--xs { width: 14px; height: 14px; }
+  &--spin { animation: cats-spin 0.9s linear infinite; }
+}
+
+@keyframes cats-spin {
+  to { transform: rotate(360deg); }
+}
+
+.sr-only {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ================================================================
+   BANNIÈRE
+   ================================================================ */
+.hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  min-height: 120px;
+  padding: 1.5rem;
+  border-radius: 20px;
+  background: #0A0A12;
+  color: #fff;
+  overflow: hidden;
+  isolation: isolate;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    /* Même visuel que la bannière du tableau de bord admin : la cohérence
+       passe par la meme source, pas par une nouvelle image. */
+    background-image: url('https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=1200&q=80');
+    background-size: cover;
+    background-position: center;
+    opacity: 0.55;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(90deg, rgba(10, 10, 18, 0.92) 0%, rgba(10, 10, 18, 0.45) 60%, rgba(10, 10, 18, 0.78) 100%);
+  }
+
+  &__wave {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 55%;
+    height: 100%;
+    z-index: 0;
+    opacity: 0.85;
+    pointer-events: none;
+  }
+
+  &__content {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    min-width: 0;
+    max-width: 62ch;
+  }
+
+  &__eyebrow {
+    margin: 0;
+    font: 800 0.72rem/1 var(--evf-font-heading, 'Sora'), sans-serif;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    background: linear-gradient(135deg, #8B7CF6 0%, #22C7D6 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+
+  &__title {
+    margin: 0;
+    font-family: var(--evf-font-heading, 'Sora'), sans-serif;
+    font-size: clamp(1.15rem, 2.4vw, 1.6rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.2;
+    color: #fff;
+  }
+
+  &__actions {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.625rem;
+  }
+
+  &__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 42px;
+    padding: 0 1.125rem;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    background: #3b4ce6;
+    color: #fff;
+    font: 700 0.85rem var(--evf-font-body, 'Inter'), sans-serif;
+    white-space: nowrap;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(59, 76, 230, 0.32);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+
+    &:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 22px rgba(59, 76, 230, 0.42);
+    }
+
+    &:focus-visible {
+      outline: 3px solid rgba(139, 124, 246, 0.6);
+      outline-offset: 2px;
+    }
+
+    &:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    &--ghost {
+      border-color: rgba(255, 255, 255, 0.3);
+      background: rgba(255, 255, 255, 0.1);
+      box-shadow: none;
+      backdrop-filter: blur(6px);
+
+      &:hover:not(:disabled) {
+        background: rgba(255, 255, 255, 0.18);
+        box-shadow: none;
+      }
+    }
+  }
+}
+
+/* ================================================================
+   COMPTEURS
+   ================================================================ */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  &__item {
+    min-width: 0;
+  }
+}
+
+.stat {
+  position: relative;
+  display: flex;
+  height: 100%;
+  padding: 1.1rem 1rem 1rem;
+  flex-direction: column;
+  gap: 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  /* Fonds pleins de la maquette : vert pastel / indigo pastel, sans ombre
+     ni liseré — la carte EST la couleur. */
+  background: var(--tone-bg, var(--c-surface));
+  overflow: hidden;
+
+  &[data-tone='green'] { --tone-bg: #d4f4e1; }
+  &[data-tone='violet'] { --tone-bg: #dee1ff; }
+  &[data-tone='cyan'] { --tone-bg: #d4f4e1; }
+
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+  }
+
+  &__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    border-radius: 13px;
+    background: #fff;
+    color: #0d1631;
+  }
+
+  &__value {
+    font-family: var(--evf-font-heading, 'Sora'), sans-serif;
+    font-size: 1.6rem;
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    color: #0d1631;
+    font-variant-numeric: tabular-nums;
+
+    &--muted {
+      color: var(--c-muted);
+      opacity: 0.75;
+    }
+  }
+
+  &__label {
+    width: 100%;
+    color: #0d1631;
+    font-size: 0.88rem;
+    font-weight: 700;
+    text-align: center;
+  }
+}
+
+/* ================================================================
+   OUTILS
+   ================================================================ */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+/* Champ gris de la maquette ; le conteneur ne porte plus de bordure :
+   le fond vit sur .search__field, le bouton reste un frere a droite. */
+.search__field {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  min-width: 0;
+  height: 52px;
+  padding: 0 1rem;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  background: #f2f2f7;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+  &:focus-within {
+    border-color: rgba(108, 92, 231, 0.55);
+    box-shadow: 0 0 0 4px rgba(108, 92, 231, 0.12);
+  }
+}
+
+.search {
+  position: relative;
+  display: flex;
+  flex: 1 1 420px;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+  max-width: none;
+  height: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  transition: none;
+
+  &__icon {
+    display: inline-flex;
+    color: var(--c-muted);
+  }
+
+  &__input {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 100%;
+    padding: 0 0.625rem;
+    border: 0;
+    background: transparent;
+    color: var(--c-text);
+    font: 500 0.9rem var(--evf-font-body, 'Inter'), sans-serif;
+
+    &::placeholder {
+      color: var(--c-muted);
+      opacity: 0.9;
+    }
+
+    &:focus {
+      outline: none;
+    }
+
+    /* Chrome/Safari donnent au `type=search` un X natif qui doublerait notre
+       bouton « effacer » (et le notre porte l'aria-label). */
+    &::-webkit-search-cancel-button {
+      display: none;
+    }
+  }
+
+  &__clear {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(100, 116, 139, 0.12);
+    color: var(--c-muted);
+    cursor: pointer;
+
+    &:hover {
+      background: rgba(239, 68, 68, 0.12);
+      color: var(--c-error);
+    }
+
+    &:focus-visible {
+      outline: 3px solid rgba(108, 92, 231, 0.45);
+    }
+  }
+
+  &__go {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 52px;
+    padding: 0 1.75rem;
+    border: 0;
+    border-radius: 12px;
+    background: #3b4ce6;
+    color: #fff;
+    font: 700 0.9rem var(--evf-font-body, 'Inter'), sans-serif;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.2s ease;
+
+    &:hover:not(:disabled) {
+      background: #2f3fd6;
+      transform: translateY(-1px);
+    }
+
+    &:focus-visible {
+      outline: 3px solid rgba(59, 76, 230, 0.45);
+      outline-offset: 2px;
+    }
+  }
+}
+
+.toolbar__side {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 30px;
+  padding: 0 0.75rem;
+  border: 1px dashed rgba(108, 92, 231, 0.45);
+  border-radius: 999px;
+  background: rgba(108, 92, 231, 0.06);
+  color: var(--c-violet);
+  font: 700 0.75rem var(--evf-font-body, 'Inter'), sans-serif;
+  cursor: pointer;
+
+  &:hover {
+    border-style: solid;
+    background: rgba(239, 68, 68, 0.08);
+    color: var(--c-error);
+  }
+
+  &:focus-visible {
+    outline: 3px solid rgba(108, 92, 231, 0.45);
+  }
+}
+
+.seg {
+  display: inline-flex;
+  gap: 0.125rem;
+  padding: 3px;
+  border: 1px solid var(--c-border);
+  border-radius: 999px;
+  background: var(--c-bg);
+
+  &__btn {
+    height: 28px;
+    padding: 0 0.75rem;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--c-muted);
+    font: 600 0.78rem var(--evf-font-body, 'Inter'), sans-serif;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease;
+
+    &:hover:not(.seg__btn--active) {
+      color: var(--c-violet);
+    }
+
+    &:focus-visible {
+      outline: 3px solid rgba(108, 92, 231, 0.45);
+    }
+
+    &--active {
+      background: var(--c-violet);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(108, 92, 231, 0.3);
+    }
+  }
+}
+
+/* ================================================================
+   PANNEAU + TABLEAU
+   ================================================================ */
+.panel {
+  min-width: 0;
+  padding: 1.125rem 0 0;
+  border: 1px solid var(--c-border);
+  border-radius: 16px;
+  background: var(--c-surface);
+  box-shadow: 0 2px 12px rgba(10, 10, 18, 0.04);
+  overflow: clip;
+
+  &__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.375rem 1rem;
+    padding: 0 1.25rem 0.875rem;
+  }
+
+  &__title {
+    margin: 0;
+    font-family: var(--evf-font-heading, 'Sora'), sans-serif;
+    font-size: 0.9rem;
+    font-weight: 800;
+    color: var(--c-dark);
+  }
+
+  &__count {
+    margin: 0;
+    color: var(--c-muted);
+    font-size: 0.78rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Rechargement d'une liste deja affichee : on le signale sans cacher les
+     donnees en place (le contraste du cache n'est jamais suffisant). */
+  &--busy {
+    .table {
+      opacity: 0.62;
+    }
+  }
+}
+
+/* La liste deroule VERTICALEMENT a l'interieur du panneau (demande de la
+   maquette) : l'en-tete reste colle en haut, la pagination reste sous le
+   tableau, et le reste de la page ne bouge pas. `hidden auto` ferme
+   l'axe horizontal par principe : avec les largeurs de colonnes en
+   pourcentages, il n'y a jamais rien a y faire defiler. */
+.table-wrap {
+  display: block;
+  max-height: min(58vh, 560px);
+  overflow: hidden auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  outline: none;
+
+  &:focus-visible {
+    box-shadow: inset 0 0 0 3px rgba(108, 92, 231, 0.45);
+  }
+}
+
+.table {
+  width: 100%;
+  /* `table-layout: fixed` : ce sont desormais les <th> qui dictent les
+     largeurs, plus le contenu des cellules. Un nom ou une description
+     interminable ne peut donc plus elargir le tableau au-dela du panneau
+     (c'etait la source du defilement horizontal). */
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+  transition: opacity 0.2s ease;
+
+  &--dim {
+    opacity: 0.62;
+  }
+
+  thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    padding: 0.5rem 0.875rem;
+    border-top: 1px solid var(--c-border);
+    border-bottom: 1px solid var(--c-border);
+    background: var(--c-bg);
+    color: var(--c-muted);
+    font: 700 0.78rem/1.2 var(--evf-font-body, 'Inter'), sans-serif;
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  tbody > tr > * {
+    border-bottom: 1px solid rgba(226, 232, 240, 0.75);
+  }
+
+  tbody > tr:last-child > * {
+    border-bottom: 0;
+  }
+}
+
+.th {
+  /* 42 + 12 + 16 + 16 + 14 = 100 % : les cinq colonnes tiennent toujours,
+     y compris a 760 px (juste avant le basculement en cartes). */
+  &--identity {
+    width: 42%;
+  }
+
+  &--sticky {
+    left: 0;
+    z-index: 3;
+    background-image: linear-gradient(var(--c-bg), var(--c-bg));
+  }
+
+  &--num {
+    width: 12%;
+    text-align: right;
+  }
+
+  &--status {
+    width: 16%;
+  }
+
+  &--date {
+    width: 16%;
+  }
+
+  &--actions {
+    width: 14%;
+    text-align: right;
+  }
+
+  &__sort {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    cursor: pointer;
+    transition: color 0.18s ease;
+
+    &:hover {
+      color: var(--c-violet);
+    }
+
+    &:focus-visible {
+      outline: 3px solid rgba(108, 92, 231, 0.45);
+      outline-offset: 3px;
+      border-radius: 4px;
+    }
+
+    &--active {
+      color: var(--c-violet);
+    }
+
+    &--num {
+      flex-direction: row-reverse;
+    }
+  }
+}
+
+.sort-icon {
+  opacity: 0.45;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+
+  &[data-dir='asc'],
+  &[data-dir='desc'] {
+    opacity: 1;
+  }
+}
+
+.row--skeleton {
+  pointer-events: none;
+
+  .cell {
+    padding: 0.5rem 0.75rem;
+  }
+}
+
+.skeleton {
+  display: block;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #EEF2F7 25%, #E2E8F0 50%, #EEF2F7 75%);
+  background-size: 200% 100%;
+  animation: cats-shimmer 1.3s infinite linear;
+
+  &--identity { width: min(260px, 100%); height: 38px; border-radius: 12px; }
+  &--num { width: 48px; height: 22px; margin-left: auto; }
+  &--badge { width: 76px; height: 26px; border-radius: 999px; }
+  &--date { width: 64px; height: 16px; }
+  &--dots { width: 34px; height: 34px; margin-left: auto; border-radius: 10px; }
+  &--card { display: block; width: 100%; height: 118px; border-radius: 14px; }
+}
+
+@keyframes cats-shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+/* ================================================================
+   CARTES (mobile) — meme composant de ligne, presentation differente
+   ================================================================ */
+/* Les deux rendus restent dans le DOM (aucun clignotement au redimensionnement),
+   mais `display: none` les retire de l'arbre d'accessibilité : un lecteur
+   d'écran ne lit jamais deux fois la même ligne. */
+.cats-cards {
+  display: none;
+  margin: 0;
+  padding: 0 1.25rem 1.125rem;
+  list-style: none;
+}
+
+.rc {
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--c-border);
+  border-radius: 14px;
+  background: var(--c-surface);
+  box-shadow: 0 1px 2px rgba(10, 10, 18, 0.04);
+
+  & + & {
+    margin-top: 0.625rem;
+  }
+
+  &--empty {
+    color: var(--c-muted);
+    font-size: 0.85rem;
+    text-align: center;
+  }
+
+  &--busy {
+    opacity: 0.6;
+  }
+}
+
+/* ================================================================
+   ETATS VIDES / ERREUR
+   ================================================================ */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 2.25rem 1.25rem;
+  text-align: center;
+
+  &__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    border-radius: 18px;
+    background: rgba(108, 92, 231, 0.1);
+    color: var(--c-violet);
+  }
+
+  &__title {
+    margin: 0.25rem 0 0;
+    font-family: var(--evf-font-heading, 'Sora'), sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--c-dark);
+  }
+
+  &__text {
+    margin: 0;
+    max-width: 46ch;
+    color: var(--c-muted);
+    font-size: 0.875rem;
+  }
+}
+
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 2.5rem 1rem;
+  border: 1px dashed var(--c-border);
+  border-radius: 16px;
+  background: var(--c-surface);
+  text-align: center;
+
+  &__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    border-radius: 18px;
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--c-error);
+  }
+
+  &__title {
+    margin: 0.25rem 0 0;
+    font-family: var(--evf-font-heading, 'Sora'), sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--c-dark);
+  }
+
+  &__text {
+    margin: 0 0 0.5rem;
+    max-width: 52ch;
+    color: var(--c-muted);
+    font-size: 0.9rem;
+  }
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 40px;
+  padding: 0 1.25rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font: 700 0.85rem var(--evf-font-body, 'Inter'), sans-serif;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, opacity 0.2s ease;
+
+  &--solid {
+    background: var(--c-gradient);
+    color: #fff;
+    box-shadow: 0 6px 18px rgba(108, 92, 231, 0.28);
+
+    &:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 24px rgba(108, 92, 231, 0.36);
+    }
+  }
+
+  &--ghost {
+    border-color: var(--c-border);
+    background: var(--c-surface);
+    color: var(--c-text);
+
+    &:hover:not(:disabled) {
+      border-color: rgba(108, 92, 231, 0.45);
+      color: var(--c-violet);
+    }
+  }
+
+  &--danger {
+    background: var(--c-error);
+    color: #fff;
+    box-shadow: 0 6px 18px rgba(239, 68, 68, 0.28);
+
+    &:hover:not(:disabled) {
+      background: #DC2626;
+    }
+  }
+
+  &:focus-visible {
+    outline: 3px solid rgba(108, 92, 231, 0.45);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+}
+
+/* ================================================================
+   PAGINATION
+   ================================================================ */
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 0.875rem 1.25rem;
+  border-top: 1px solid var(--c-border);
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.6), var(--c-surface));
+
+  &__meta {
+    margin: 0;
+    color: var(--c-muted);
+    font-size: 0.8rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  &__list {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 32px;
+    padding: 0 0.5rem;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--c-text, #1f2937);
+    font: 700 0.85rem var(--evf-font-body, 'Inter'), sans-serif;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+    transition: background 0.18s ease, color 0.18s ease;
+
+    &:hover:not(:disabled):not(.pager__btn--active) {
+      background: rgba(108, 92, 231, 0.08);
+      color: var(--c-violet, #6c5ce7);
+    }
+
+    &:focus-visible {
+      outline: 3px solid rgba(108, 92, 231, 0.45);
+      outline-offset: 2px;
+    }
+
+    &:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    &--active {
+      background: transparent;
+      color: var(--c-violet, #6c5ce7);
+      font-weight: 800;
+      box-shadow: none;
+    }
+  }
+
+  &__gap {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    color: var(--c-muted);
+    font-size: 0.85rem;
+  }
+}
+
+.control {
+  height: 34px;
+  padding: 0 2rem 0 0.8rem;
+  border: 1px solid var(--c-border);
+  border-radius: 999px;
+  background-color: var(--c-surface);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.55rem center;
+  background-size: 16px;
+  color: var(--c-text);
+  font: 600 0.78rem var(--evf-font-body, 'Inter'), sans-serif;
+  cursor: pointer;
+  appearance: none;
+
+  &:hover {
+    border-color: #CBD5E1;
+  }
+
+  &:focus-visible {
+    outline: 3px solid rgba(108, 92, 231, 0.45);
+  }
+}
+
+/* ================================================================
+   VAGUE DE BAS DE PAGE (signature de la maquette)
+   ================================================================ */
+.sign {
+  position: relative;
+  height: 44px;
+  margin-top: -0.25rem;
+  pointer-events: none;
+
+  &__wave {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: min(220px, 45%);
+    height: 100%;
+    opacity: 0.35;
+  }
+}
+
+/* ================================================================
+   MODALES
+   ================================================================ */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(10, 10, 18, 0.55);
+  backdrop-filter: blur(3px);
+  animation: cats-fade 0.18s ease-out;
+}
+
+.dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(560px, 100%);
+  max-height: min(88vh, 780px);
+  border: 1px solid var(--c-border);
+  border-radius: 18px;
+  background: var(--c-surface);
+  box-shadow: 0 24px 60px rgba(10, 10, 18, 0.3);
+  overflow: hidden;
+  animation: cats-pop 0.2s ease-out;
+
+  &--sm {
+    width: min(460px, 100%);
+  }
+
+  &__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.125rem 1.25rem 0.75rem;
+  }
+
+  &__title {
+    margin: 0;
+    font-family: var(--evf-font-heading, 'Sora'), sans-serif;
+    font-size: 1.05rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--c-dark);
+  }
+
+  &__close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--c-muted);
+    cursor: pointer;
+
+    &:hover {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--c-error);
+    }
+
+    &:focus-visible {
+      outline: 3px solid rgba(108, 92, 231, 0.45);
+    }
+  }
+
+  &__body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+    padding: 0.25rem 1.25rem 1rem;
+    overflow-y: auto;
+  }
+
+  &__note {
+    margin: 0;
+    padding: 0.625rem 0.75rem;
+    border-left: 3px solid var(--c-violet);
+    border-radius: 0 10px 10px 0;
+    background: rgba(108, 92, 231, 0.07);
+    color: var(--c-muted);
+    font-size: 0.78rem;
+    line-height: 1.5;
+  }
+
+  &__lede {
+    margin: 0;
+    color: var(--c-text);
+    font-size: 0.9rem;
+  }
+
+  &__text {
+    margin: 0;
+    color: var(--c-muted);
+    font-size: 0.85rem;
+    line-height: 1.55;
+  }
+
+  &__warn {
+    margin: 0;
+    padding: 0.625rem 0.75rem;
+    border-left: 3px solid var(--c-error);
+    border-radius: 0 10px 10px 0;
+    background: rgba(239, 68, 68, 0.08);
+    color: #B91C1C;
+    font-size: 0.8rem;
+    line-height: 1.55;
+  }
+
+  &__foot {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.625rem;
+    padding: 0.875rem 1.25rem;
+    border-top: 1px solid var(--c-border);
+    background: var(--c-bg);
+  }
+}
+
+@keyframes cats-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes cats-pop {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ------------------------------------------------------------ champs */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+
+  &__label {
+    color: var(--c-dark);
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
+
+  &__req {
+    color: var(--c-error);
+  }
+
+  &__opt {
+    color: var(--c-muted);
+    font-size: 0.72rem;
+    font-weight: 600;
+  }
+
+  &__row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  &__input {
+    width: 100%;
+    min-height: 42px;
+    padding: 0.625rem 0.75rem;
+    border: 1px solid var(--c-border);
+    border-radius: 12px;
+    background: var(--c-surface);
+    color: var(--c-text);
+    font: 500 0.88rem var(--evf-font-body, 'Inter'), sans-serif;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+
+    &--area {
+      min-height: 78px;
+      resize: vertical;
+      line-height: 1.5;
+    }
+
+    &::placeholder {
+      color: var(--c-muted);
+      opacity: 0.85;
+    }
+
+    &:hover {
+      border-color: #CBD5E1;
+    }
+
+    &:focus {
+      border-color: rgba(108, 92, 231, 0.55);
+      box-shadow: 0 0 0 4px rgba(108, 92, 231, 0.12);
+      outline: none;
+    }
+
+    &--invalid {
+      border-color: rgba(239, 68, 68, 0.6);
+
+      &:focus {
+        box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.14);
+      }
+    }
+  }
+
+  &__foot {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  &__hint {
+    margin: 0;
+    color: var(--c-muted);
+    font-size: 0.75rem;
+    line-height: 1.45;
+
+    code {
+      padding: 0.0625rem 0.25rem;
+      border-radius: 4px;
+      background: rgba(108, 92, 231, 0.08);
+      color: var(--c-violet);
+      font: 600 0.72rem ui-monospace, 'SFMono-Regular', Menlo, monospace;
+    }
+
+    em {
+      font-style: normal;
+      color: var(--c-text);
+      font-weight: 700;
+    }
+  }
+
+  &__error {
+    margin: 0;
+    color: var(--c-error);
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1.45;
+  }
+
+  &__count {
+    flex-shrink: 0;
+    color: var(--c-muted);
+    font-size: 0.7rem;
+    font-variant-numeric: tabular-nums;
+
+    &[data-over='true'] {
+      color: var(--c-error);
+      font-weight: 700;
+    }
+  }
+}
+
+.preview {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  border: 1px dashed var(--c-border);
+  border-radius: 12px;
+  background: rgba(108, 92, 231, 0.08);
+  color: var(--c-violet);
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.form-error {
+  margin: 0;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 10px;
+  background: rgba(239, 68, 68, 0.08);
+  color: #B91C1C;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.field-status {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin: 0;
+  padding: 0.625rem 0.75rem;
+  border-radius: 12px;
+  background: var(--c-bg);
+  color: var(--c-muted);
+  font-size: 0.75rem;
+  line-height: 1.45;
+
+  > span:last-child {
+    min-width: 0;
+  }
+}
+
+.badge {
+  --b: var(--c-muted);
+  --b-bg: rgba(100, 116, 139, 0.12);
+
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 26px;
+  padding: 0 0.75rem;
+  border-radius: 999px;
+  background: var(--b-bg);
+  color: var(--b);
+  font-size: 0.72rem;
+  font-weight: 800;
+  white-space: nowrap;
+
+  &[data-tone='success'] {
+    --b: #059669;
+    --b-bg: rgba(16, 185, 129, 0.12);
+  }
+
+  &__dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+}
+
+/* ================================================================
+   DENSE (page embarquee dans un autre ecran)
+   ================================================================ */
+.cats--dense {
+  .hero {
+    display: none;
+  }
+}
+
+/* ================================================================
+   RESPONSIVE
+   ----------------------------------------------------------------
+   Les seuils reprennent ceux du layout admin (sidebar repliee <= 1240 px,
+   menu mobile <= 900 px) pour qu'aucun etat intermediaire ne casse.
+   ================================================================ */
+@media (max-width: 1100px) {
+  .stats {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+
+  .hero__content {
+    max-width: 52ch;
+  }
+}
+
+@media (max-width: 900px) {
+  .hero {
+    min-height: 0;
+    padding: 1.25rem;
+  }
+
+}
+
+@media (max-width: 760px) {
+  .hero {
+    flex-direction: column;
+    align-items: stretch;
+
+    &__wave {
+      width: 100%;
+      opacity: 0.5;
+    }
+
+    &__actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    &__btn {
+      justify-content: center;
+    }
+  }
+
+  /* On bascule du tableau vers les cartes : le <table> garde sa sémantique
+     là où il est lisible, et disparaît entièrement sinon. */
+  .table-wrap {
+    display: none;
+  }
+
+  .cats-cards {
+    display: block;
+  }
+
+  .panel {
+    &__head {
+      padding: 0 1rem 0.75rem;
+    }
+  }
+
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search {
+    max-width: none;
+  }
+
+  .search__field,
+  .search__go {
+    height: 46px;
+  }
+
+  .toolbar__side {
+    justify-content: space-between;
+    margin-left: 0;
+  }
+
+  .pager {
+    padding: 0.75rem 1rem;
+
+    &__controls {
+      width: 100%;
+      justify-content: space-between;
+    }
+  }
+
+  .sign {
+    height: 34px;
+  }
+}
+
+@media (max-width: 520px) {
+  .stats {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hero {
+    padding: 1.125rem;
+    border-radius: 16px;
+
+    &__actions {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    &__text {
+      font-size: 0.8rem;
+    }
+  }
+
+  .stat {
+    padding: 0.875rem 1rem;
+
+    &__value {
+      font-size: 1.35rem;
+    }
+  }
+
+  .search__go {
+    padding: 0 0.75rem;
+  }
+
+  .cats-cards,
+  .panel__head {
+    padding-left: 0.875rem;
+    padding-right: 0.875rem;
+  }
+
+  .dialog {
+    max-height: 92vh;
+    border-radius: 16px;
+
+    &__head,
+    &__body {
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+
+    &__foot {
+      padding: 0.75rem 1rem;
+
+      .btn {
+        flex: 1 1 0;
+      }
+    }
+  }
+
+  .pager__list {
+    gap: 0.125rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .seg__btn {
+    padding: 0 0.5rem;
+    font-size: 0.72rem;
+  }
+}
+
+/* Impression du catalogue (l'admin le joint parfois a un compte rendu). */
+@media print {
+  .hero__actions,
+  .toolbar,
+  .pager,
+  .cats-cards,
+  .sign,
+  .backdrop {
+    display: none !important;
+  }
+
+  .table-wrap {
+    display: block;
+    overflow: visible;
+    max-height: none;
+  }
+
+  .panel {
+    border: 0;
+    box-shadow: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton,
+  .icon--spin {
+    animation: none;
+  }
+
+  .backdrop,
+  .dialog {
+    animation: none;
+  }
+
+  .hero__btn:hover,
+  .btn:hover {
+    transform: none;
+  }
+}
