@@ -9,6 +9,9 @@ import {
   AdminOrganizerDto,
   AdminOrganizerFilters,
   AdminOrganizerList,
+  AdminUserDto,
+  AdminUserFilters,
+  AdminUserList,
   OrganizerAction,
   OrganizerActionPayload,
 } from '../models/admin.model';
@@ -45,6 +48,53 @@ export class AdminApiService {
   private readonly http = inject(HttpClient);
   private readonly logger = inject(AppLoggerService);
   private readonly baseUrl = environment.apiUrl;
+    listUsers(
+    filters: AdminUserFilters,
+  ): Observable<ApiResponse<AdminUserList>> {
+    let params = new HttpParams();
+
+    const entries: [
+      string,
+      string | number | boolean | null | undefined,
+    ][] = [
+      ['page', filters.page],
+      ['page_size', filters.pageSize],
+      ['search', filters.search?.trim()],
+      ['role', filters.role],
+      ['is_active', filters.isActive],
+      ['joined_from', filters.joinedFrom],
+      ['joined_to', filters.joinedTo],
+      ['ordering', filters.ordering],
+    ];
+
+    for (const [key, value] of entries) {
+      if (value !== null && value !== undefined && value !== '') {
+        params = params.set(key, String(value));
+      }
+    }
+
+    return this.http
+      .get<ApiResponse<AdminUserList>>(
+        `${this.baseUrl}/supervision/users/`,
+        { params },
+      )
+      .pipe(this.failWith('Chargement des utilisateurs'));
+  }
+  
+  suspendUser(userId: string, reason: string) {
+    return this.http.post(
+      `${this.baseUrl}/supervision/users/${userId}/suspend/`,
+      { reason },
+    ).pipe(this.failWith('Suspension de l’utilisateur'));
+  }
+
+  activateUser(userId: string, reason: string) {
+    return this.http.post(
+      `${this.baseUrl}/supervision/users/${userId}/activate/`,
+      { reason },
+    ).pipe(this.failWith('Activation de l’utilisateur'));
+  }
+
 
   getDashboard(days: number): Observable<ApiResponse<AdminDashboardDto>> {
     const params = new HttpParams().set('days', String(days));

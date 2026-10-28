@@ -1,1 +1,209 @@
-<p>utilisateurs works!</p>
+
+<main class="users-page">
+  <section class="users-banner">
+    <div class="banner-content">
+      <span class="eyebrow">ESPACE ADMINISTRATION</span>
+      <h1>Gestion des utilisateurs</h1>
+      <p>Gérez les comptes utilisateurs de la plateforme EVENTFLOW.</p>
+    </div>
+
+    <div class="banner-decoration" aria-hidden="true">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+  </section>
+
+  <section class="users-toolbar" aria-label="Recherche et filtres">
+    <label class="search-box">
+      <span aria-hidden="true">⌕</span>
+      <input
+        type="search"
+        placeholder="Rechercher par nom, prénom ou e-mail..."
+        [(ngModel)]="recherche"
+        (ngModelChange)="reinitialiserPage()"
+        aria-label="Rechercher un utilisateur"
+      />
+      <button
+        *ngIf="recherche"
+        type="button"
+        class="clear-search"
+        (click)="recherche = ''; reinitialiserPage()"
+        aria-label="Effacer la recherche"
+      >×</button>
+    </label>
+
+    <div class="filters">
+      <label class="filter-control">
+        <span>Rôle</span>
+        <select [(ngModel)]="roleFiltre" (ngModelChange)="reinitialiserPage()">
+          <option value="Tous">Tous les rôles</option>
+          <option value="Participant">Participants</option>
+          <option value="Organisateur">Organisateurs</option>
+          <option value="Administrateur">Administrateurs</option>
+        </select>
+      </label>
+
+      <label class="filter-control">
+        <span>Statut</span>
+        <select [(ngModel)]="statutFiltre" (ngModelChange)="reinitialiserPage()">
+          <option value="Tous">Tous les statuts</option>
+          <option value="Actif">Actifs</option>
+          <option value="Suspendu">Suspendus</option>
+        </select>
+      </label>
+
+      <label class="filter-control">
+        <span>Inscription</span>
+        <select [(ngModel)]="dateFiltre" (ngModelChange)="reinitialiserPage()">
+          <option value="Toutes">Toutes les dates</option>
+          <option value="7 jours">7 derniers jours</option>
+          <option value="30 jours">30 derniers jours</option>
+        </select>
+      </label>
+    </div>
+  </section>
+
+  <section class="stats-grid" aria-label="Statistiques utilisateurs">
+    <article class="stat-card stat-purple">
+      <div class="stat-icon" aria-hidden="true">♙</div>
+      <div>
+        <strong>{{ utilisateurs.length | number }}</strong>
+        <span>Comptes</span>
+      </div>
+    </article>
+
+    <article class="stat-card stat-green">
+      <div class="stat-icon" aria-hidden="true">♟</div>
+      <div>
+        <strong>{{ nombreParticipants | number }}</strong>
+        <span>Participants</span>
+      </div>
+    </article>
+
+    <article class="stat-card stat-blue">
+      <div class="stat-icon" aria-hidden="true">♙</div>
+      <div>
+        <strong>{{ nombreOrganisateurs | number }}</strong>
+        <span>Organisateurs</span>
+      </div>
+    </article>
+
+    <article class="stat-card stat-red">
+      <div class="stat-icon" aria-hidden="true">⊖</div>
+      <div>
+        <strong>{{ nombreSuspendus | number }}</strong>
+        <span>Suspendus</span>
+      </div>
+    </article>
+  </section>
+
+  <section class="users-table-card">
+    <div class="table-heading">
+      <div>
+        <h2>Liste des utilisateurs</h2>
+        <p>Consultez les comptes et leur statut.</p>
+      </div>
+      <span class="result-count">
+        {{ utilisateursFiltres.length }} résultat(s)
+      </span>
+    </div>
+
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Utilisateur</th>
+            <th scope="col">Rôle</th>
+            <th scope="col">Inscription</th>
+            <th scope="col">Statut</th>
+            <th scope="col">Actions</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr *ngFor="let utilisateur of utilisateursPagines">
+            <td>
+              <div class="user-cell">
+                <div class="avatar">{{ utilisateur.avatar }}</div>
+                <div class="user-info">
+                  <strong>{{ utilisateur.prenom }} {{ utilisateur.nom }}</strong>
+                  <span>{{ utilisateur.email }}</span>
+                </div>
+              </div>
+            </td>
+
+            <td>
+              <span class="role-badge" [ngClass]="'role-' + utilisateur.role.toLowerCase()">
+                {{ utilisateur.role }}
+              </span>
+            </td>
+
+            <td class="date-cell">
+              {{ utilisateur.dateInscription | date:'dd MMM yyyy' }}
+            </td>
+
+            <td>
+              <span class="status-badge"
+                [class.status-active]="utilisateur.statut === 'Actif'"
+                [class.status-suspended]="utilisateur.statut === 'Suspendu'">
+                <span class="status-dot"></span>
+                {{ utilisateur.statut }}
+              </span>
+            </td>
+
+            <td>
+              <button
+                type="button"
+                class="action-button"
+                [attr.aria-label]="'Changer le statut de ' + utilisateur.prenom + ' ' + utilisateur.nom"
+                (click)="changerStatut(utilisateur)"
+                [title]="utilisateur.statut === 'Actif' ? 'Suspendre ce compte' : 'Réactiver ce compte'"
+              >
+                {{ utilisateur.statut === 'Actif' ? 'Suspendre' : 'Réactiver' }}
+              </button>
+            </td>
+          </tr>
+
+          <tr *ngIf="utilisateursFiltres.length === 0">
+            <td colspan="5" class="empty-state">
+              <span aria-hidden="true">⌕</span>
+              <strong>Aucun utilisateur trouvé</strong>
+              <p>Essayez de modifier votre recherche ou vos filtres.</p>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <footer class="table-footer">
+      <span>
+        Page {{ page }} sur {{ nombrePages }}
+      </span>
+
+      <nav class="pagination" aria-label="Pagination">
+        <button
+          type="button"
+          [disabled]="page === 1"
+          (click)="changerPage(page - 1)"
+          aria-label="Page précédente"
+        >‹</button>
+
+        <button
+          *ngFor="let numero of [].constructor(nombrePages); let i = index"
+          type="button"
+          [class.current-page]="page === i + 1"
+          [attr.aria-current]="page === i + 1 ? 'page' : null"
+          (click)="changerPage(i + 1)"
+        >{{ i + 1 }}</button>
+
+        <button
+          type="button"
+          [disabled]="page === nombrePages"
+          (click)="changerPage(page + 1)"
+          aria-label="Page suivante"
+        >›</button> 
+      </nav>
+    </footer>
+  </section>
+</main>

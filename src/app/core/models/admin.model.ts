@@ -118,3 +118,49 @@ export interface OrganizerActionPayload {
   reason?: string;
   notify?: boolean;
 }
+
+
+/* ------------------------------------------------------------------
+ * Utilisateurs — supervision
+ * ------------------------------------------------------------------ */
+
+export interface AdminUserDto {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  full_name: string;
+  phone: string;
+  roles: string[];
+  is_active: boolean;
+  is_staff: boolean;
+  is_superuser: boolean;
+  is_admin: boolean;
+  last_login: string | null;
+  created_at: string;
+}
+
+export interface AdminUserList {
+  count: number;
+  total_pages: number;
+  current_page: number;
+  page_size: number;
+  next: string | null;
+  previous: string | null;
+  results: AdminUserDto[];
+}
+
+export interface AdminUserFilters {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  role?: string | null;
+  isActive?: boolean | null;
+  joinedFrom?: string | null;
+  joinedTo?: string | null;
+  ordering?: string | null;
+}
+
+export interface AdminUserActionPayload {
+  reason: string;
+}
