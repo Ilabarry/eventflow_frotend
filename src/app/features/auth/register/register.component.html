@@ -71,21 +71,52 @@
        PARTIE DROITE : Formulaire
        ================================================================ -->
   <main class="register__main">
-    <!-- Lien retour -->
     <a routerLink="/" class="register__back">
-      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-        <line x1="19" y1="12" x2="5" y2="12"></line>
-        <polyline points="12 19 5 12 12 5"></polyline>
-      </svg>
-      Aller ver acceuil
+      <svg ...></svg>
+      Aller vers accueil
     </a>
 
-    <!-- Titre -->
-    <div class="register__header">
-      <h1 class="register__title">CRÉER VOTRE COMPTE</h1>
-      <p class="register__subtitle">Rejoignez la flow EVENTFLOW.</p>
-    </div>
+    @if (success()) {
+      <!-- ✅ MESSAGE DE SUCCÈS -->
+      <div class="register__success">
+        <div class="register__success-icon">
+          <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+            <polyline points="22,6 12,13 2,6"></polyline>
+          </svg>
+        </div>
 
+        <h1 class="register__title">Vérifiez votre boîte mail</h1>
+        <p class="register__subtitle">
+          Un email de vérification a été envoyé à
+          <strong>{{ registeredEmail() }}</strong>.
+        </p>
+
+        <div class="register__success-hint">
+          <p>
+            Cliquez sur le lien dans l'email pour activer votre compte.
+            Vous pourrez ensuite vous connecter.
+          </p>
+          <p class="register__success-small">
+            Vous ne trouvez pas l'email ? Vérifiez vos spams ou demandez un nouveau lien depuis la page de connexion.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          class="register__submit"
+          (click)="goToLogin()"
+        >
+          Aller à la connexion
+        </button>
+      </div>
+    } @else {
+      <!-- FORMULAIRE EXISTANT -->
+      <div class="register__header">
+        <h1 class="register__title">CRÉER VOTRE COMPTE</h1>
+        <p class="register__subtitle">Rejoignez la flow EVENTFLOW.</p>
+      </div>
+    }
     <!-- Formulaire -->
     <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="register__form" novalidate>
       <!-- Prénom + Nom -->
