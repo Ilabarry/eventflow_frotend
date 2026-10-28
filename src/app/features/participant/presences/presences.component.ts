@@ -7,6 +7,7 @@ import {
   AttendanceService,
   MyAttendanceDto,
 } from '../../../core/services/attendance.service';
+import { environment } from '../../../../environments/environment';
 
 type LoadState = 'loading' | 'ready' | 'error';
 type AttendanceFilter = 'all' | 'PRESENT' | 'ABSENT';
@@ -42,6 +43,13 @@ export class ParticipantPresencesComponent implements OnInit {
     { value: 'ABSENT', label: 'Absences' },
   ];
 
+  private absoluteMediaUrl(url: string | null | undefined): string | null {
+    if (!url) return null;
+    if (/^https?:\/\//i.test(url)) return url;
+    const backendOrigin = environment.apiUrl.replace(/\/api\/?$/, '');
+    return `${backendOrigin}${url.startsWith('/') ? url : '/' + url}`;
+  }
+
   ngOnInit(): void {
     this.load();
   }
@@ -55,7 +63,11 @@ export class ParticipantPresencesComponent implements OnInit {
       .subscribe({
         next: (res) => {
           const page = res.data;
-          this.items.set(page?.results ?? []);
+          const items = (page?.results ?? []).map((a) => ({
+            ...a,
+            event_cover_image: this.absoluteMediaUrl(a.event_cover_image),
+          }));
+          this.items.set(items);
           this.totalCount.set(page?.count ?? 0);
           this.totalPages.set(Math.max(1, page?.total_pages ?? 1));
           this.currentPage.set(page?.current_page ?? 1);

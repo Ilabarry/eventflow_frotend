@@ -3,6 +3,10 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom, forkJoin, of, catchError } from 'rxjs';
 
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../../environments/environment';
+import { ApiResponse } from '../../../core/models/api-response.model';
+
 import { EventService } from '../../../core/services/event.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import {
@@ -32,6 +36,7 @@ interface EventOption {
   location: string;
   capacity: number | null;
   tickets: string[];
+  endAt: string;
 }
 
 interface Participant {
@@ -91,6 +96,7 @@ const toUiAttendance = (s: string | null | undefined): AttendanceState =>
 export class OrganizerParticipantsComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly http = inject(HttpClient);
 
   private readonly eventService = inject(EventService);
   private readonly registrationService = inject(RegistrationService);
@@ -151,6 +157,19 @@ export class OrganizerParticipantsComponent {
   private lastLoaded: string | null = null;
   private toastTimer: ReturnType<typeof setTimeout> | undefined;
 
+  readonly canGenerateCertificates = computed(() => {
+    const ev = this.currentEvent();
+    if (!ev) return false;
+    const end = (ev as any).endAt as string | undefined;
+    const now = Date.now();
+    const endTs = end ? new Date(end).getTime() : NaN;
+    console.log('[Certificats] end:', end, '| now:', new Date(now).toISOString(),
+                '| endTs:', isNaN(endTs) ? 'INVALIDE' : new Date(endTs).toISOString(),
+                '| résultat:', !isNaN(endTs) && endTs < now);
+    if (!end) return false;
+    return !isNaN(endTs) && endTs < now;
+  });
+
   constructor() {
     this.loadEvents();
 
@@ -179,6 +198,7 @@ export class OrganizerParticipantsComponent {
           location: e.format === 'ONLINE' ? 'En ligne' : (e.city || '—'),
           capacity: e.capacity_type === 'LIMITED' ? e.capacity_limit ?? null : null,
           tickets: [],
+          endAt: e.end_at,
         }));
         this.events.set(list);
         this.eventsLoading.set(false);
@@ -618,6 +638,66 @@ export class OrganizerParticipantsComponent {
       this.notification.success(`${emails.length} adresse(s) copiée(s).`, 'Export');
     } catch {
       this.notification.error('Impossible de copier : autorisez l\'accès au presse-papiers.', 'Erreur');
+    }
+  }
+
+  async generateCertificates(): Promise<void> {
+    const ev = this.currentEvent();
+    if (!ev) return;
+
+    if (!this.canGenerateCertificates()) {
+      this.notification.warning(
+        "L'événement n'est pas encore terminé. Les certificats ne peuvent être générés qu'après la fin de l'événement.",
+        'Génération impossible',
+      );
+      return;
+    }
+
+    if (!confirm(
+      `Générer les certificats pour tous les participants présents à « ${ev.title} » ?`
+    )) return;
+
+    try {
+      const res = await firstValueFrom(
+        this.http.post<ApiResponse<{
+          generated_count: number;
+          error_count: number;
+          generated: { reference: string; participant: string }[];
+          errors: { registration: string; error: string }[];
+        }>>(
+          `${environment.apiUrl}/events/${ev.id}/certificates/generate-all/`,
+          {},
+        ),
+      );
+
+      const data = res.data;
+      if (!data) {
+        this.notification.error('Réponse invalide du serveur.', 'Certificats');
+        return;
+      }
+
+      if (data.generated_count === 0 && data.error_count === 0) {
+        this.notification.info(
+          'Aucun participant éligible. Les certificats ne sont générés que pour les participants marqués présents.',
+          'Certificats',
+        );
+        return;
+      }
+
+      this.notification.success(
+        `${data.generated_count} certificat(s) généré(s).${data.error_count > 0 ? ' ' + data.error_count + ' erreur(s).' : ''}`,
+        'Certificats',
+      );
+    } catch (err: any) {
+      // Cas particulier : événement non terminé (400 côté backend)
+      if (err?.status === 400 && err?.error?.message?.includes('terminé')) {
+        this.notification.warning(
+          "L'événement n'est pas encore terminé.",
+          'Génération impossible',
+        );
+        return;
+      }
+      this.notification.httpError(err);
     }
   }
 

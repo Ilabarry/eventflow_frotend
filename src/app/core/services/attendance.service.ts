@@ -48,6 +48,7 @@ export interface MyAttendanceDto {
   event_title: string;
   event_start_at: string;
   event_end_at: string;
+  event_cover_image: string | null;
 }
 
 @Injectable({ providedIn: 'root' })

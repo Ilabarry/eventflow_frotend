@@ -1,4 +1,3 @@
-
 <main class="attestations-page">
   <header class="page-banner">
     <div class="banner-content">
@@ -18,26 +17,34 @@
     <div class="filter-tabs" role="group" aria-label="Statut">
       <button
         type="button"
-        [class.active]="filtreActif === 'TOUTES'"
-        [attr.aria-pressed]="filtreActif === 'TOUTES'"
-        (click)="changerFiltre('TOUTES')">
+        [class.active]="filter() === 'all'"
+        [attr.aria-pressed]="filter() === 'all'"
+        (click)="setFilter('all')">
         Toutes
       </button>
 
       <button
         type="button"
-        [class.active]="filtreActif === 'DISPONIBLE'"
-        [attr.aria-pressed]="filtreActif === 'DISPONIBLE'"
-        (click)="changerFiltre('DISPONIBLE')">
+        [class.active]="filter() === 'ISSUED'"
+        [attr.aria-pressed]="filter() === 'ISSUED'"
+        (click)="setFilter('ISSUED')">
         Disponibles
       </button>
 
       <button
         type="button"
-        [class.active]="filtreActif === 'EN_ATTENTE'"
-        [attr.aria-pressed]="filtreActif === 'EN_ATTENTE'"
-        (click)="changerFiltre('EN_ATTENTE')">
+        [class.active]="filter() === 'PENDING'"
+        [attr.aria-pressed]="filter() === 'PENDING'"
+        (click)="setFilter('PENDING')">
         En attente
+      </button>
+
+      <button
+        type="button"
+        [class.active]="filter() === 'REVOKED'"
+        [attr.aria-pressed]="filter() === 'REVOKED'"
+        (click)="setFilter('REVOKED')">
+        Révoqués
       </button>
     </div>
 
@@ -45,7 +52,8 @@
       <span aria-hidden="true">⌕</span>
       <input
         type="search"
-        [(ngModel)]="recherche"
+        [ngModel]="search()"
+        (ngModelChange)="search.set($event)"
         placeholder="Rechercher une attestation"
         aria-label="Rechercher par événement ou référence">
     </label>
@@ -56,7 +64,7 @@
       <span class="section-kicker">VOTRE ESPACE</span>
       <h2>Mes documents</h2>
       <p>
-        {{ attestationsFiltrees.length }}
+        {{ filtered().length }}
         attestation(s) affichée(s)
       </p>
     </div>
@@ -64,104 +72,122 @@
     <button
       type="button"
       class="reset-button"
-      (click)="reinitialiserRecherche()">
+      (click)="reset()">
       Réinitialiser
     </button>
   </section>
 
-  <section
-    class="attestations-grid"
-    aria-label="Liste des attestations">
-
-    <article
-      class="attestation-card certificate-card"
-      *ngFor="let attestation of attestationsFiltrees; trackBy: trackById"
-      [class.pending-card]="attestation.statut === 'EN_ATTENTE'">
-
-      <ng-container *ngIf="attestation.statut === 'DISPONIBLE'; else pending">
-        <div class="certificate-topline">
-          <span class="brand-wordmark">
-            EVENT<span>FLOW</span>
-          </span>
-
-          <span class="status status-available">
-            <span aria-hidden="true">✓</span> DISPONIBLE
-          </span>
-        </div>
-
-        <div class="certificate-body">
-          <p class="event-name">{{ attestation.evenement }}</p>
-
-          <div class="certificate-title">
-            <span class="document-icon" aria-hidden="true">▤</span>
-            <h3>ATTESTATION</h3>
-          </div>
-
-          <p class="issued-to">Cette attestation est délivrée à</p>
-          <p class="participant-name">{{ attestation.participant }}</p>
-
-          <div class="certificate-seal" aria-label="Sceau décoratif">
-            ✦
-          </div>
-
-          <div class="certificate-meta">
-            <span>▦ {{ attestation.date }}</span>
-            <span>⌖ {{ attestation.lieu }}</span>
-          </div>
-
-          <p class="reference">
-            Référence : {{ attestation.reference }}
-          </p>
-        </div>
-
-        <div class="card-actions">
-          <button
-            type="button"
-            class="button-outline"
-            (click)="voirAttestation(attestation)">
-            Voir
-          </button>
-
-          <button
-            type="button"
-            class="button-download"
-            (click)="telechargerAttestation(attestation)">
-            ↓ Télécharger
-          </button>
-        </div>
-      </ng-container>
-
-      <ng-template #pending>
-        <div class="pending-heading">
-          <span class="pending-icon" aria-hidden="true">▤</span>
-
-          <div class="pending-event">
-            <h3>{{ attestation.evenement }}</h3>
-            <p>{{ attestation.type }}</p>
-          </div>
-
-          <span class="status status-pending">EN ATTENTE</span>
-        </div>
-
-        <div class="pending-message">
-          <span class="pending-clock" aria-hidden="true">◷</span>
-          <h4>Votre attestation sera disponible prochainement.</h4>
-          <p>Vous recevrez une notification lorsqu’elle sera prête.</p>
-        </div>
-
-        <p class="pending-reference">
-          Référence : {{ attestation.reference }}
-        </p>
-      </ng-template>
-    </article>
-
-    <div class="empty-state" *ngIf="attestationsFiltrees.length === 0">
-      <span aria-hidden="true">▤</span>
-      <h3>Aucune attestation trouvée</h3>
-      <p>Modifiez votre recherche ou choisissez un autre filtre.</p>
-      <button type="button" class="button-outline" (click)="reinitialiserRecherche()">
-        Afficher toutes les attestations
-      </button>
+  @if (loading()) {
+    <div class="loading-state">
+      <span class="spinner" aria-hidden="true"></span>
+      <p>Chargement de vos attestations…</p>
     </div>
-  </section>
+  } @else if (error()) {
+    <div class="error-state">
+      <p>{{ error() }}</p>
+      <button type="button" class="button-outline" (click)="load()">Réessayer</button>
+    </div>
+  } @else {
+    <section class="attestations-grid" aria-label="Liste des attestations">
+      @for (cert of filtered(); track cert.id) {
+        <article
+          class="attestation-card certificate-card"
+          [class.pending-card]="cert.status === 'PENDING'">
+
+          @if (cert.status === 'ISSUED') {
+            <div class="certificate-topline">
+              <span class="brand-wordmark">
+                EVENT<span>FLOW</span>
+              </span>
+
+              <span class="status status-available">
+                <span aria-hidden="true">✓</span> DISPONIBLE
+              </span>
+            </div>
+
+            <div class="certificate-body">
+              <p class="event-name">{{ cert.event_title }}</p>
+
+              <div class="certificate-title">
+                <span class="document-icon" aria-hidden="true">▤</span>
+                <h3>ATTESTATION</h3>
+              </div>
+
+              <p class="issued-to">Cette attestation est délivrée à</p>
+              <p class="participant-name">{{ cert.registration_reference }}</p>
+
+              <div class="certificate-seal" aria-label="Sceau décoratif">
+                ✦
+              </div>
+
+              <div class="certificate-meta">
+                <span>▦ {{ cert.event_start_at | date:'dd/MM/yyyy' }}</span>
+                <span>⌖ {{ cert.event_city }}</span>
+              </div>
+
+              <p class="reference">
+                Référence : {{ cert.reference }}
+              </p>
+            </div>
+
+            <div class="card-actions">
+              <button
+                type="button"
+                class="button-outline"
+                (click)="open(cert)">
+                Voir
+              </button>
+
+              <button
+                type="button"
+                class="button-download"
+                (click)="download(cert)">
+                ↓ Télécharger
+              </button>
+            </div>
+          } @else {
+            <div class="pending-heading">
+              <span class="pending-icon" aria-hidden="true">▤</span>
+
+              <div class="pending-event">
+                <h3>{{ cert.event_title }}</h3>
+                <p>Participation</p>
+              </div>
+
+              <span class="status status-pending">{{ label(cert.status).toUpperCase() }}</span>
+            </div>
+
+            <div class="pending-message">
+              <span class="pending-clock" aria-hidden="true">◷</span>
+              <h4>
+                @if (cert.status === 'PENDING') {
+                  Votre attestation sera disponible prochainement.
+                } @else {
+                  Cette attestation a été révoquée.
+                }
+              </h4>
+              @if (cert.status === 'PENDING') {
+                <p>Vous recevrez une notification lorsqu’elle sera prête.</p>
+              }
+            </div>
+
+            <p class="pending-reference">
+              Référence : {{ cert.reference }}
+            </p>
+          }
+        </article>
+      }
+
+      @if (filtered().length === 0) {
+        <div class="empty-state">
+          <span aria-hidden="true">▤</span>
+          <h3>Aucune attestation trouvée</h3>
+          <p>Modifiez votre recherche ou choisissez un autre filtre.</p>
+          <button type="button" class="button-outline" (click)="reset()">
+            Afficher toutes les attestations
+          </button>
+        </div>
+      }
+    </section>
+  }
 </main>

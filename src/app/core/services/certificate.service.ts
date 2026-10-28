@@ -32,4 +32,14 @@ export class CertificateService {
     const params = new HttpParams().set('page', page).set('page_size', pageSize);
     return this.http.get<ApiResponse<PaginatedResponse<MyCertificateDto>>>(`${this.BASE}/me/`, { params });
   }
+
+  downloadPdf(certificateId: string): Observable<Blob> {
+    return this.http.get(`${this.BASE}/${certificateId}/download/`, {
+      responseType: 'blob',
+    });
+  }
 }
+
+
+
+

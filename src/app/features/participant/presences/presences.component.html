@@ -1,9 +1,13 @@
 <section class="pres" aria-labelledby="pres-title">
+  <!-- ============================================================
+       BANDEAU : titre, filtres de statut, lien vers les tickets
+       ============================================================ -->
   <header class="hero">
-    <svg class="hero__flow" viewBox="0 0 400 140" preserveAspectRatio="none" aria-hidden="true">
+    <svg class="hero__flow" viewBox="0 0 400 140" preserveAspectRatio="none" aria-hidden="true" focusable="false">
       <path d="M0 120 C 60 60, 110 40, 170 70 S 280 120, 330 50 S 380 10, 400 18" class="hero__flow-line" />
       <path d="M0 132 C 80 90, 140 80, 200 100 S 300 130, 400 70" class="hero__flow-line hero__flow-line--soft" />
     </svg>
+
     <div class="hero__content">
       <h1 id="pres-title" class="hero__title">Mes présences</h1>
       <p class="hero__subtitle">Vos participations enregistrées à la porte de chaque événement.</p>
@@ -17,83 +21,161 @@
               [class.filters__chip--active]="activeFilter() === f.value"
               [attr.aria-pressed]="activeFilter() === f.value"
               (click)="selectFilter(f.value)"
-            >{{ f.label }}</button>
+            >
+              {{ f.label }}
+            </button>
           }
         </div>
 
-        <a routerLink="/participant/tickets" class="btn btn--outline btn--sm">
+        <a routerLink="/participant/tickets" class="hero__link">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M3 8a2 2 0 0 0 0 4v4h18v-4a2 2 0 0 1 0-4V4H3z" />
+          </svg>
           Voir mes tickets
         </a>
       </div>
     </div>
   </header>
 
-  @switch (loadState()) {
-    @case ('loading') {
-      <div class="state"><span class="spinner"></span> Chargement…</div>
-    }
-    @case ('error') {
-      <div class="state state--error">
-        <p>Impossible de charger vos présences.</p>
-        <a routerLink="/participant/dashboard" class="btn btn--solid">Retour</a>
-      </div>
-    }
-    @default {
-      @if (items().length === 0) {
-        <div class="state">
-          @if (activeFilter() !== 'all') {
-            <p>Aucune présence ne correspond à ce filtre.</p>
-            <button type="button" class="btn btn--primary" (click)="selectFilter('all')">
-              Voir toutes mes présences
-            </button>
-          } @else {
-            <p>Vous n'avez encore aucune présence enregistrée.</p>
-            <p class="state__text">Votre présence est enregistrée par l'organisateur le jour de l'événement.</p>
-            <a routerLink="/participant/evenements" class="btn btn--primary">Découvrir les événements</a>
-          }
-        </div>
-      } @else {
-        <p class="pres__count">
-          {{ totalCount() }} présence{{ totalCount() > 1 ? 's' : '' }}
-        </p>
-
-        <ul class="list">
-          @for (a of items(); track a.id) {
-            <li>
-              <article class="card">
-                <div class="card__body">
-                  <h2 class="card__title">{{ a.event_title }}</h2>
-                  <p class="card__meta">
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M3 10h18M8 3v4M16 3v4"></path></svg>
-                    {{ whenLabel(a.event_start_at) }}
-                  </p>
-                  <p class="card__ref">Réf. inscription : {{ a.registration_reference }}</p>
-                  @if (a.status === 'PRESENT' && checkedInLabel(a.checked_in_at); as time) {
-                    <p class="card__checkedin">Scanné à {{ time }}</p>
-                  }
-                </div>
-                <span [class]="'badge badge--' + statusTone(a.status)">
-                  <span class="badge__dot"></span> {{ statusLabel(a.status) }}
-                </span>
-              </article>
+  <!-- ============================================================
+       CONTENU : chargement, erreur, vide ou liste
+       ============================================================ -->
+  <div class="pres__content" aria-live="polite" [attr.aria-busy]="loadState() === 'loading'">
+    @switch (loadState()) {
+      @case ('loading') {
+        <ul class="list" aria-label="Chargement des présences">
+          @for (placeholder of [1, 2, 3]; track placeholder) {
+            <li class="card card--skeleton" aria-hidden="true">
+              <div class="card__media skeleton"></div>
+              <div class="card__body">
+                <div class="skeleton skeleton--title"></div>
+                <div class="skeleton skeleton--line"></div>
+              </div>
             </li>
           }
         </ul>
+      }
 
-        @if (totalPages() > 1) {
-          <nav class="pagination" aria-label="Pagination des présences">
-            <button type="button" class="pagination__btn" aria-label="Page précédente"
-              [disabled]="currentPage() === 1" (click)="goToPage(currentPage() - 1)">
-              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m6-6-6 6 6 6" /></svg>
-            </button>
-            <p class="pagination__summary">Page {{ currentPage() }} sur {{ totalPages() }}</p>
-            <button type="button" class="pagination__btn" aria-label="Page suivante"
-              [disabled]="currentPage() === totalPages()" (click)="goToPage(currentPage() + 1)">
-              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" /></svg>
-            </button>
-          </nav>
+      @case ('error') {
+        <div class="state state--error" role="alert">
+          <p class="state__title">Impossible de charger vos présences.</p>
+          <p class="state__text">Vérifiez votre connexion internet, puis réessayez.</p>
+          <a routerLink="/participant/dashboard" class="btn btn--primary">Retour au tableau de bord</a>
+        </div>
+      }
+
+      @default {
+        @if (items().length === 0) {
+          <div class="state">
+            @if (activeFilter() !== 'all') {
+              <p class="state__title">Aucune présence ne correspond à ce filtre.</p>
+              <button type="button" class="btn btn--primary" (click)="selectFilter('all')">
+                Voir toutes mes présences
+              </button>
+            } @else {
+              <p class="state__title">Vous n'avez encore aucune présence enregistrée.</p>
+              <p class="state__text">Votre présence est enregistrée par l'organisateur le jour de l'événement.</p>
+              <a routerLink="/participant/evenements" class="btn btn--primary">Découvrir les événements</a>
+            }
+          </div>
+        } @else {
+          <p class="pres__count">
+            {{ totalCount() }} présence{{ totalCount() > 1 ? 's' : '' }}
+          </p>
+
+          <ul class="list">
+            @for (a of items(); track a.id) {
+              <li>
+                <article class="card" [attr.aria-labelledby]="'presence-' + a.id">
+                  <!-- Affiche -->
+                  <div class="card__media">
+                    @if (a.event_cover_image) {
+                      <img
+                        class="card__image"
+                        [src]="a.event_cover_image"
+                        [alt]="'Affiche : ' + a.event_title"
+                        width="400"
+                        height="300"
+                        loading="lazy"
+                        decoding="async"
+                        (error)="$any($event.target).style.display = 'none'"
+                      />
+                    } @else {
+                      <div class="card__placeholder" aria-hidden="true">EVENTFLOW</div>
+                    }
+                  </div>
+
+                  <!-- Informations de l'événement -->
+                  <div class="card__body">
+                    <h2 class="card__title" [id]="'presence-' + a.id">{{ a.event_title }}</h2>
+
+                    <ul class="card__meta">
+                      <li class="card__meta-item">
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <rect x="3" y="5" width="18" height="16" rx="2" />
+                          <path d="M3 10h18M8 3v4M16 3v4" />
+                        </svg>
+                        <time [attr.datetime]="a.event_start_at">{{ whenLabel(a.event_start_at) }}</time>
+                      </li>
+                      <li class="card__meta-item">
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M3 8a2 2 0 0 0 0 4v4h18v-4a2 2 0 0 1 0-4V4H3z" />
+                        </svg>
+                        <span>Réf. {{ a.registration_reference }}</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  <!-- Statut et heure du scan -->
+                  <div class="card__side">
+                    <span [class]="'badge badge--' + statusTone(a.status)">
+                      <span class="badge__dot" aria-hidden="true"></span>
+                      {{ statusLabel(a.status) }}
+                    </span>
+
+                    @if (a.status === 'PRESENT' && checkedInLabel(a.checked_in_at); as time) {
+                      <p class="card__scan">
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <circle cx="12" cy="12" r="9" />
+                          <path d="M12 7v5l3 2" />
+                        </svg>
+                        Scanné à {{ time }}
+                      </p>
+                    }
+                  </div>
+                </article>
+              </li>
+            }
+          </ul>
+
+          <!-- Pagination -->
+          @if (totalPages() > 1) {
+            <nav class="pagination" aria-label="Pagination des présences">
+              <button
+                type="button"
+                class="pagination__btn"
+                aria-label="Page précédente"
+                [disabled]="currentPage() === 1"
+                (click)="goToPage(currentPage() - 1)"
+              >
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19 12H5m6-6-6 6 6 6" /></svg>
+              </button>
+
+              <p class="pagination__summary">Page {{ currentPage() }} sur {{ totalPages() }}</p>
+
+              <button
+                type="button"
+                class="pagination__btn"
+                aria-label="Page suivante"
+                [disabled]="currentPage() === totalPages()"
+                (click)="goToPage(currentPage() + 1)"
+              >
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14m-6-6 6 6-6 6" /></svg>
+              </button>
+            </nav>
+          }
         }
       }
     }
-  }
+  </div>
 </section>

@@ -200,6 +200,24 @@
       }
 
       <div class="menu-wrap export">
+        @if (currentEvent(); as ev) {
+          @if (canGenerateCertificates()) {
+            <button
+              type="button"
+              class="btn btn--outline btn--sm certificates-unavailable "
+              (click)="generateCertificates()"
+            >
+              📜 Générer les certificats
+            </button>
+          } @else {
+            <span class="certificates-unavailable" role="note">
+              📜 Certificats disponibles après l'événement
+            </span>
+          }
+        }
+      </div>
+
+      <div class="menu-wrap export">
         <button
           type="button" class="btn btn--outline btn--sm"
           aria-haspopup="menu" [attr.aria-expanded]="exportOpen()"
