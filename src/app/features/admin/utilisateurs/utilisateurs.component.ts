@@ -1,4 +1,3 @@
-
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, inject } from '@angular/core';
@@ -6,16 +5,9 @@ import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 
 import { AdminApiService } from '../../../core/services/admin.service';
-import {
-  AdminUserDto,
-  AdminUserFilters,
-} from '../../../core/models/admin.model';
+import { AdminUserDto, AdminUserFilters } from '../../../core/models/admin.model';
 
-type RoleUtilisateur =
-  | 'Participant'
-  | 'Organisateur'
-  | 'Administrateur';
-
+type RoleUtilisateur = 'Participant' | 'Organisateur' | 'Administrateur';
 type StatutUtilisateur = 'Actif' | 'Suspendu';
 
 interface Utilisateur {
@@ -47,7 +39,6 @@ export class AdminUsersComponent implements OnInit {
   utilisateurs: Utilisateur[] = [];
 
   page = 1;
-  pageServeur = 1;
   elementsParPage = 5;
   totalUtilisateurs = 0;
   nombrePages = 1;
@@ -66,15 +57,12 @@ export class AdminUsersComponent implements OnInit {
     const filtres: AdminUserFilters = {
       page: this.page,
       pageSize: this.elementsParPage,
-      search: this.recherche.trim() || undefined,
-      role: this.roleFiltre === 'Tous' ? undefined : this.roleFiltre,
+      search: this.recherche.trim() || null,
+      role: this.roleFiltre === 'Tous' ? null : this.roleFiltre.toLowerCase(),
       isActive:
-        this.statutFiltre === 'Tous'
-          ? undefined
-          : this.statutFiltre === 'Actif',
+        this.statutFiltre === 'Tous' ? null : this.statutFiltre === 'Actif',
       joinedFrom: this.dateDepuisJours(),
-      joinedTo:
-        this.dateFiltre === 'Toutes' ? undefined : this.dateDuJour(),
+      joinedTo: this.dateFiltre === 'Toutes' ? null : this.dateDuJour(),
       ordering: '-created_at',
     };
 
@@ -93,13 +81,9 @@ export class AdminUsersComponent implements OnInit {
           }
 
           const pageData = response.data;
-
           this.utilisateurs = pageData.results.map((user) =>
             this.convertirUtilisateur(user),
           );
-
-          this.totalUtilisateurs = pageData.count;
-          this.nombrePages = Math.max(1, pageData.total_pages);
           this.totalUtilisateurs = pageData.count;
           this.nombrePages = Math.max(1, pageData.total_pages);
 
@@ -124,23 +108,16 @@ export class AdminUsersComponent implements OnInit {
   }
 
   private convertirUtilisateur(user: AdminUserDto): Utilisateur {
-    const roles = user.roles.map((role) => role.toLowerCase());
+    const roles = user.roles.map((r) => r.toLowerCase());
 
     let role: RoleUtilisateur = 'Participant';
-
     if (
       user.is_superuser ||
       user.is_admin ||
-      roles.some((r) =>
-        ['administrateur', 'admin', 'administrator'].includes(r),
-      )
+      roles.some((r) => ['administrateur', 'admin', 'administrator'].includes(r))
     ) {
       role = 'Administrateur';
-    } else if (
-      roles.some((r) =>
-        ['organisateur', 'organizer'].includes(r),
-      )
-    ) {
+    } else if (roles.some((r) => ['organisateur', 'organizer'].includes(r))) {
       role = 'Organisateur';
     }
 
@@ -164,15 +141,11 @@ export class AdminUsersComponent implements OnInit {
     return this.formaterDate(new Date());
   }
 
-  private dateDepuisJours(): string | undefined {
-    if (this.dateFiltre === 'Toutes') {
-      return undefined;
-    }
-
+  private dateDepuisJours(): string | null {
+    if (this.dateFiltre === 'Toutes') return null;
     const jours = this.dateFiltre === '7 jours' ? 7 : 30;
     const date = new Date();
     date.setDate(date.getDate() - jours);
-
     return this.formaterDate(date);
   }
 
@@ -180,7 +153,6 @@ export class AdminUsersComponent implements OnInit {
     const annee = date.getFullYear();
     const mois = String(date.getMonth() + 1).padStart(2, '0');
     const jour = String(date.getDate()).padStart(2, '0');
-
     return `${annee}-${mois}-${jour}`;
   }
 
@@ -193,29 +165,19 @@ export class AdminUsersComponent implements OnInit {
   }
 
   get nombreParticipants(): number {
-    return this.utilisateurs.filter(
-      (user) => user.role === 'Participant',
-    ).length;
+    return this.utilisateurs.filter((u) => u.role === 'Participant').length;
   }
 
   get nombreOrganisateurs(): number {
-    return this.utilisateurs.filter(
-      (user) => user.role === 'Organisateur',
-    ).length;
+    return this.utilisateurs.filter((u) => u.role === 'Organisateur').length;
   }
 
   get nombreSuspendus(): number {
-    return this.utilisateurs.filter(
-      (user) => user.statut === 'Suspendu',
-    ).length;
+    return this.utilisateurs.filter((u) => u.statut === 'Suspendu').length;
   }
 
   changerPage(page: number): void {
-    if (
-      page >= 1 &&
-      page <= this.nombrePages &&
-      page !== this.page
-    ) {
+    if (page >= 1 && page <= this.nombrePages && page !== this.page) {
       this.page = page;
       this.chargerUtilisateurs();
     }
@@ -233,32 +195,22 @@ export class AdminUsersComponent implements OnInit {
     const motif = window.prompt(
       `Pourquoi voulez-vous ${action} cet utilisateur ?`,
     );
-
-    if (motif === null) {
-      return;
-    }
+    if (motif === null) return;
 
     const reason = motif.trim();
-
     if (reason.length < 5) {
-      this.erreurChargement =
-        'Le motif doit contenir au moins 5 caractères.';
+      this.erreurChargement = 'Le motif doit contenir au moins 5 caractères.';
       return;
     }
-
     if (reason.length > 500) {
-      this.erreurChargement =
-        'Le motif ne doit pas dépasser 500 caractères.';
+      this.erreurChargement = 'Le motif ne doit pas dépasser 500 caractères.';
       return;
     }
 
     const confirmation = window.confirm(
       `Confirmer l'action : ${action} ${utilisateur.email} ?`,
     );
-
-    if (!confirmation) {
-      return;
-    }
+    if (!confirmation) return;
 
     this.chargement = true;
     this.erreurChargement = '';
@@ -270,9 +222,7 @@ export class AdminUsersComponent implements OnInit {
     requete
       .pipe(finalize(() => (this.chargement = false)))
       .subscribe({
-        next: () => {
-          this.chargerUtilisateurs();
-        },
+        next: () => this.chargerUtilisateurs(),
         error: (erreur: HttpErrorResponse) => {
           if (erreur.status === 400) {
             this.erreurChargement =

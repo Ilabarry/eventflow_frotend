@@ -9,88 +9,82 @@ import {
   AdminOrganizerDto,
   AdminOrganizerFilters,
   AdminOrganizerList,
-<<<<<<< HEAD
+  AdminOrganizerStats,
   AdminUserDto,
   AdminUserFilters,
   AdminUserList,
-=======
-  AdminOrganizerStats,
->>>>>>> 726ec0ec69c7d6b2fea4babc70a9d83b16032fda
   OrganizerAction,
   OrganizerActionPayload,
 } from '../models/admin.model';
 import { ApiResponse } from '../models/api-response.model';
 import { AppLoggerService } from './app-logger.service';
 
-const SUPERVISION_ORGANIZERS_PATH = 'supervision/organizers/';
-const SUPERVISION_USERS_PATH = 'supervision/users/';
+/* ------------------------------------------------------------------
+ * Endpoints backend (alignés sur apps/supervision/urls.py)
+ * ------------------------------------------------------------------ */
+const SUPERVISION_USERS = 'supervision/users/';
+const SUPERVISION_ORGANIZERS = 'supervision/organizers/';
+const ADMIN_DASHBOARD = 'admin/supervision/';
 
 @Injectable({ providedIn: 'root' })
 export class AdminApiService {
   private readonly http = inject(HttpClient);
   private readonly logger = inject(AppLoggerService);
   private readonly baseUrl = environment.apiUrl;
-    listUsers(
-    filters: AdminUserFilters,
-  ): Observable<ApiResponse<AdminUserList>> {
-    let params = new HttpParams();
 
-    const entries: [
-      string,
-      string | number | boolean | null | undefined,
-    ][] = [
-      ['page', filters.page],
-      ['page_size', filters.pageSize],
-      ['search', filters.search?.trim()],
-      ['role', filters.role],
-      ['is_active', filters.isActive],
-      ['joined_from', filters.joinedFrom],
-      ['joined_to', filters.joinedTo],
-      ['ordering', filters.ordering],
-    ];
-
-    for (const [key, value] of entries) {
-      if (value !== null && value !== undefined && value !== '') {
-        params = params.set(key, String(value));
-      }
-    }
-
-    return this.http
-      .get<ApiResponse<AdminUserList>>(
-        `${this.baseUrl}/supervision/users/`,
-        { params },
-      )
-      .pipe(this.failWith('Chargement des utilisateurs'));
-  }
-  
-  suspendUser(userId: string, reason: string) {
-    return this.http.post(
-      `${this.baseUrl}/supervision/users/${userId}/suspend/`,
-      { reason },
-    ).pipe(this.failWith('Suspension de l’utilisateur'));
-  }
-
-  activateUser(userId: string, reason: string) {
-    return this.http.post(
-      `${this.baseUrl}/supervision/users/${userId}/activate/`,
-      { reason },
-    ).pipe(this.failWith('Activation de l’utilisateur'));
-  }
-
-
-  /* ------------------------------------------------------------------
-   * Dashboard admin — GET /api/admin/supervision/?days=30
-   * ------------------------------------------------------------------ */
+  /* ==================================================================
+   * Dashboard admin
+   * ================================================================== */
   getDashboard(days: number): Observable<ApiResponse<AdminDashboardDto>> {
     const params = new HttpParams().set('days', String(days));
     return this.http
-      .get<ApiResponse<AdminDashboardDto>>(`${this.baseUrl}/admin/supervision/`, { params })
+      .get<ApiResponse<AdminDashboardDto>>(`${this.baseUrl}/${ADMIN_DASHBOARD}`, { params })
       .pipe(this.failWith('Chargement du dashboard admin'));
   }
 
-  /* ------------------------------------------------------------------
-   * Liste paginée des organisateurs
-   * ------------------------------------------------------------------ */
+  /* ==================================================================
+   * Utilisateurs
+   * ================================================================== */
+  listUsers(filters: AdminUserFilters): Observable<ApiResponse<AdminUserList>> {
+    let params = new HttpParams()
+      .set('page', String(filters.page))
+      .set('page_size', String(filters.pageSize));
+
+    if (filters.search?.trim()) params = params.set('search', filters.search.trim());
+    if (filters.role) params = params.set('role', filters.role);
+    if (filters.isActive !== null && filters.isActive !== undefined) {
+      params = params.set('is_active', String(filters.isActive));
+    }
+    if (filters.joinedFrom) params = params.set('joined_from', filters.joinedFrom);
+    if (filters.joinedTo) params = params.set('joined_to', filters.joinedTo);
+    if (filters.ordering) params = params.set('ordering', filters.ordering);
+
+    return this.http
+      .get<ApiResponse<AdminUserList>>(`${this.baseUrl}/${SUPERVISION_USERS}`, { params })
+      .pipe(this.failWith('Chargement des utilisateurs'));
+  }
+
+  suspendUser(userId: string, reason: string): Observable<ApiResponse<AdminUserDto>> {
+    return this.http
+      .post<ApiResponse<AdminUserDto>>(
+        `${this.baseUrl}/${SUPERVISION_USERS}${encodeURIComponent(userId)}/suspend/`,
+        { reason },
+      )
+      .pipe(this.failWith('Suspension de l’utilisateur'));
+  }
+
+  activateUser(userId: string, reason: string): Observable<ApiResponse<AdminUserDto>> {
+    return this.http
+      .post<ApiResponse<AdminUserDto>>(
+        `${this.baseUrl}/${SUPERVISION_USERS}${encodeURIComponent(userId)}/activate/`,
+        { reason },
+      )
+      .pipe(this.failWith('Activation de l’utilisateur'));
+  }
+
+  /* ==================================================================
+   * Organisateurs
+   * ================================================================== */
   listOrganizers(filters: AdminOrganizerFilters): Observable<ApiResponse<AdminOrganizerList>> {
     let params = new HttpParams()
       .set('page', String(filters.page))
@@ -103,7 +97,7 @@ export class AdminApiService {
     if (filters.ordering) params = params.set('ordering', filters.ordering);
 
     return this.http
-      .get<ApiResponse<AdminOrganizerList>>(`${this.baseUrl}/${SUPERVISION_ORGANIZERS_PATH}`, { params })
+      .get<ApiResponse<AdminOrganizerList>>(`${this.baseUrl}/${SUPERVISION_ORGANIZERS}`, { params })
       .pipe(
         map((response) => {
           if (!response.data) return response;
@@ -120,14 +114,10 @@ export class AdminApiService {
       );
   }
 
-  /* ------------------------------------------------------------------
-   * Fiche d'un organisateur
-   * GET /api/supervision/organizers/{id}/
-   * ------------------------------------------------------------------ */
   getOrganizerDetail(id: string): Observable<ApiResponse<AdminOrganizerDetail>> {
     return this.http
       .get<ApiResponse<AdminOrganizerDto>>(
-        `${this.baseUrl}/${SUPERVISION_ORGANIZERS_PATH}${encodeURIComponent(id)}/`,
+        `${this.baseUrl}/${SUPERVISION_ORGANIZERS}${encodeURIComponent(id)}/`,
       )
       .pipe(
         map((response) => ({
@@ -140,9 +130,6 @@ export class AdminApiService {
       );
   }
 
-  /* ------------------------------------------------------------------
-   * Actions : suspendre / réactiver
-   * ------------------------------------------------------------------ */
   updateOrganizerStatus(
     id: string,
     action: OrganizerAction,
@@ -151,7 +138,7 @@ export class AdminApiService {
     const endpoint = action === 'suspend' ? 'suspend' : 'activate';
     return this.http
       .post<ApiResponse<AdminOrganizerDto>>(
-        `${this.baseUrl}/${SUPERVISION_USERS_PATH}${encodeURIComponent(id)}/${endpoint}/`,
+        `${this.baseUrl}/${SUPERVISION_USERS}${encodeURIComponent(id)}/${endpoint}/`,
         { reason: payload.reason },
       )
       .pipe(this.failWith(`Organisateur : ${action}`));
@@ -173,9 +160,6 @@ export class AdminApiService {
     );
   }
 
-  /* ------------------------------------------------------------------
-   * Export CSV
-   * ------------------------------------------------------------------ */
   exportOrganizers(filters: AdminOrganizerFilters): Observable<Blob> {
     return this.listOrganizers({ ...filters, page: 1, pageSize: 10_000 }).pipe(
       map((response) => {
@@ -199,6 +183,9 @@ export class AdminApiService {
     );
   }
 
+  /* ==================================================================
+   * Utilitaire d'erreur
+   * ================================================================== */
   private failWith<T>(operation: string): OperatorFunction<T, T> {
     return catchError((error: unknown) => {
       if (error instanceof HttpErrorResponse) {

@@ -39,7 +39,11 @@ type SortField = 'name' | 'events_total' | 'created_at';
 type SortDir = 'asc' | 'desc';
 
 /** null = le parametre n'est pas envoye : le back n'a pas de valeur « les deux ». */
-const IS_ACTIVE_PARAM: Record<StatusFilter, boolean | null> = { all: null, active: true, inactive: false };
+const IS_ACTIVE_PARAM: Record<StatusFilter, boolean | null> = {
+  all: null,
+  active: true,
+  inactive: false,
+};
 
 /** Format commun aux compteurs (les cellules elles-memes vivent dans `CategoryRowComponent`). */
 const NUMBER = new Intl.NumberFormat('fr-FR');
@@ -87,11 +91,11 @@ interface StatsState {
 
 /**
  * Traduit l'enveloppe `{ success: false, errors: { champ: [...] } }` du backend
- * en erreurs de champ affichables. `non_field_errors` est ramene sur `detail`
- * (`NON_FIELD_ERRORS_KEY` cote supervision).
+ * en erreurs de champ affichables. `non_field_errors` est ramene sur `detail`.
  */
 function fieldErrorsOf(error: unknown): CategoryFieldErrors {
-  const errors = (error as { error?: { errors?: Record<string, string[] | string> } })?.error?.errors;
+  const errors = (error as { error?: { errors?: Record<string, string[] | string> } })?.error
+    ?.errors;
   if (!errors || typeof errors !== 'object') {
     return {};
   }
@@ -110,7 +114,10 @@ function messageOf(error: unknown, fallback: string): string {
 @Component({
   selector: 'app-categories',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  // ⚠️ CategoryRowComponent DOIT être importé, sinon Angular ignore
+  // l'attribut `app-category-row` et traite <tr>/<div> comme des éléments
+  // natifs → NG8002 + NG5.
+  imports: [CommonModule, FormsModule, CategoryRowComponent],
   templateUrl: './categories.component.html',
   styleUrl: './categories.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -125,15 +132,12 @@ export class AdminCategoriesComponent implements OnInit {
   private readonly searchTrigger = new SearchTrigger();
 
   readonly limits = LIMITS;
-  /** 6 lignes de squelette : la hauteur du bloc ne bouge pas au 1er rendu. */
   readonly skeletonRows = [1, 2, 3, 4, 5, 6];
-  /** Seules ces trois valeurs existent côté `SupervisionCategoryFilter`. */
   readonly statusOptions: readonly { value: StatusFilter; label: string }[] = [
     { value: 'all', label: 'Tous' },
     { value: 'active', label: 'Actifs' },
     { value: 'inactive', label: 'Inactifs' },
   ];
-  /** 50 = `StandardPagination.max_page_size` : proposer plus serait ramene a 50. */
   readonly pageSizeOptions: readonly number[] = [5, 12, 24, 50];
 
   /* ------------------- etat de liste ------------------- */
@@ -145,9 +149,7 @@ export class AdminCategoriesComponent implements OnInit {
   readonly sort = signal<SortState>({ field: 'created_at', dir: 'desc' });
   readonly page = signal(1);
   readonly pageSize = signal(12);
-  /** Incrementee pour relancer volontairement le chargement. */
   private readonly reloadToken = signal(0);
-  /** Identifiant de la derniere requete partie : la plus vieille reponse est jetee. */
   private requestId = 0;
 
   /* ------------------- etat d'action ------------------- */
@@ -158,7 +160,13 @@ export class AdminCategoriesComponent implements OnInit {
   readonly modalErrors = signal<CategoryFieldErrors>({});
   readonly reason = signal<ReasonState | null>(null);
   readonly reasonSaving = signal(false);
-  readonly stats = signal<StatsState>({ total: 0, active: 0, events: 0, loading: true, failed: false });
+  readonly stats = signal<StatsState>({
+    total: 0,
+    active: 0,
+    events: 0,
+    loading: true,
+    failed: false,
+  });
 
   private readonly tableHost = viewChild<ElementRef<HTMLElement>>('tableHost');
   private readonly firstField = viewChild<ElementRef<HTMLInputElement>>('firstField');
@@ -181,14 +189,12 @@ export class AdminCategoriesComponent implements OnInit {
     const end = Math.min(count, start + size - 1);
     return `${start}\u2009–\u2009${end} sur ${count}`;
   });
-  /** Le tableau HTML est une region roulable : elle doit etre nommee. */
   readonly tableLabel = computed(() =>
     this.list() ? `Catégories — ${this.rangeLabel()}` : 'Chargement des catégories',
   );
   readonly canPrev = computed(() => this.currentPage() > 1);
   readonly canNext = computed(() => this.currentPage() < this.totalPages());
 
-  /** Fenetre de pagination : 1 … n-1 n n+1 … last, avec de vrais points de suspension. */
   readonly pages = computed<(number | '…')[]>(() => {
     const last = this.totalPages();
     const current = this.currentPage();
@@ -213,12 +219,10 @@ export class AdminCategoriesComponent implements OnInit {
     return out;
   });
 
-  readonly orderingParam = computed(() => `${this.sort().dir === 'desc' ? '-' : ''}${this.sort().field}`);
+  readonly orderingParam = computed(
+    () => `${this.sort().dir === 'desc' ? '-' : ''}${this.sort().field}`,
+  );
 
-  /**
-   * Les compteurs de la maquette (total / actifs / evenements) viennent d'une
-   * portee globale, pas de la page affichee : voir `loadStats()`.
-   */
   readonly statCards = computed<
     { label: string; value: string; tone: string; icon: string[]; hint?: string; muted?: boolean }[]
   >(() => {
@@ -235,7 +239,10 @@ export class AdminCategoriesComponent implements OnInit {
         value: value(stats.total),
         tone: 'green',
         hint: stats.failed ? 'indisponible' : 'toutes, actives et inactives',
-        icon: ['M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z', 'M7 7h.01'],
+        icon: [
+          'M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z',
+          'M7 7h.01',
+        ],
       },
       {
         label: 'Actives',
@@ -249,29 +256,29 @@ export class AdminCategoriesComponent implements OnInit {
         value: value(stats.events),
         tone: 'green',
         hint: stats.failed ? 'indisponible' : 'tous statuts, brouillons inclus',
-        icon: ['M8 2v4M16 2v4M3 10h18', 'M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z'],
+        icon: [
+          'M8 2v4M16 2v4M3 10h18',
+          'M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z',
+        ],
       },
     ];
   });
 
-  /** Le bouton « Effacer » n'a de sens que si un filtre est actif. */
   readonly canClear = computed(() => this.isFiltered());
 
-  /** Formulaire : on ne laisse fermer que si rien n'a ete tape. */
   readonly modalDirty = computed(() => {
     const model = this.modal();
     const origin = this.origin;
-    return !!model && !!origin && (model.name !== origin.name || model.description !== origin.description || model.icon !== origin.icon);
+    return (
+      !!model &&
+      !!origin &&
+      (model.name !== origin.name ||
+        model.description !== origin.description ||
+        model.icon !== origin.icon)
+    );
   });
   private origin: Pick<ModalState, 'name' | 'description' | 'icon'> | null = null;
 
-  /**
-   * Un seul chemin de chargement : cet effet relit les signaux de filtre a chaque
-   * changement. Volontairement, il n'ECRIT aucun de ces signaux — un `page.set()`
-   * ici meme ferait boucler l'effet (changement -> rechargement -> changement).
-   * Si le backend corrige une page hors limites, on affiche `current_page` sans
-   * jamais re-ecrire l'etat.
-   */
   constructor() {
     effect(
       () => {
@@ -296,10 +303,7 @@ export class AdminCategoriesComponent implements OnInit {
   /* ------------------------------------------------------------------
      Filtres
      ------------------------------------------------------------------ */
-  /** L'input est en `ngModel` (deux-voies) ; on retarde seulement la requete. */
   onSearchChange(value: string): void {
-    // La page revient a 1 immediatement : sinon un « page 7 » filtre une recherche
-    // qui n'a que 2 resultats et l'admin voit un etat vide.
     this.page.set(1);
     this.searchDebounced(value);
   }
@@ -321,12 +325,6 @@ export class AdminCategoriesComponent implements OnInit {
     }
   }
 
-  /**
-   * Après une création, on écarte ce qui pourrait masquer la nouvelle ligne :
-   * une recherche encore saisie ou un filtre d'état. Sans ça, l'administrateur
-   * voit un toast « créée » suivi d'une liste qui ne l'affiche pas — le pire
-   * des signaux. Le tri choisi, lui, est respecté.
-   */
   private revealCreatedRow(): void {
     if (this.search() !== '') {
       this.search.set('');
@@ -354,8 +352,6 @@ export class AdminCategoriesComponent implements OnInit {
   toggleSort(field: SortField): void {
     const current = this.sort();
     if (current.field !== field) {
-      // Sens « naturel » par colonne : A→Z pour le nom, decroissant pour les
-      // compteurs et les dates (le plus recent / le plus fourni d'abord).
       this.sort.set({ field, dir: field === 'name' ? 'asc' : 'desc' });
     } else {
       this.sort.update((state) => ({ ...state, dir: state.dir === 'asc' ? 'desc' : 'asc' }));
@@ -363,7 +359,6 @@ export class AdminCategoriesComponent implements OnInit {
     this.page.set(1);
   }
 
-  /** Libelle d'etat de tri, pour l'info-bulle et le lecteur d'ecran. */
   sortLabel(field: SortField): string {
     switch (this.sortState(field)) {
       case 'asc':
@@ -380,7 +375,6 @@ export class AdminCategoriesComponent implements OnInit {
     return current.field === field ? current.dir : 'none';
   }
 
-  /** Apercu du champ `icon` dans la modale : glyphe connu, sinon l'entree brute. */
   iconPreview(value: string): string {
     const raw = value.trim().toLowerCase();
     return ICON_GLYPHS[raw] ?? (raw.charAt(0) || '?').toUpperCase();
@@ -410,7 +404,6 @@ export class AdminCategoriesComponent implements OnInit {
     }
   }
 
-  /** Recharge la liste et les compteurs (les deux ont des sources differentes). */
   reload(): void {
     this.reloadToken.update((value) => value + 1);
     void this.loadStats();
@@ -445,7 +438,7 @@ export class AdminCategoriesComponent implements OnInit {
       .subscribe({
         next: (response) => {
           if (id !== this.requestId) {
-            return; // une frappe plus recente a déjà gagné
+            return;
           }
           const data = response.data;
           if (!data) {
@@ -461,19 +454,17 @@ export class AdminCategoriesComponent implements OnInit {
           if (id !== this.requestId) {
             return;
           }
-          this.errorMessage.set(messageOf(error, 'Impossible de joindre le serveur. Vérifiez votre connexion, puis réessayez.'));
+          this.errorMessage.set(
+            messageOf(
+              error,
+              'Impossible de joindre le serveur. Vérifiez votre connexion, puis réessayez.',
+            ),
+          );
           this.loadState.set('error');
         },
       });
   }
 
-  /**
-   * Les trois cartes du haut ne peuvent pas etre calculees sur la page
-   * affichee : « 12 categories / 12 actives / 342 evenements » est une vue
-   * d'ensemble, alors que le tableau est filtre. On les demande donc sur une
-   * portee separate, en pages entieres de 50 (le plafond du back), en s'arretant
-   * des qu'un seul appel a suffit — le cas reel d'EVENTFLOW.
-   */
   private async loadStats(): Promise<void> {
     this.stats.update((state) => ({ ...state, loading: true }));
     const seen: SupervisionCategoryDto[] = [];
@@ -500,8 +491,6 @@ export class AdminCategoriesComponent implements OnInit {
         failed: false,
       });
     } catch {
-      // Les compteurs ne doivent jamais transformer une page utile en page
-      // cassée : on masque les valeurs, la liste reste exploitable.
       this.stats.update((state) => ({
         ...state,
         loading: false,
@@ -517,7 +506,15 @@ export class AdminCategoriesComponent implements OnInit {
   openCreate(): void {
     this.origin = { name: '', description: '', icon: '' };
     this.modalErrors.set({});
-    this.modal.set({ mode: 'create', id: null, name: '', description: '', icon: '', slug: '', isActive: true });
+    this.modal.set({
+      mode: 'create',
+      id: null,
+      name: '',
+      description: '',
+      icon: '',
+      slug: '',
+      isActive: true,
+    });
     this.focusLater(this.firstField);
   }
 
@@ -543,9 +540,12 @@ export class AdminCategoriesComponent implements OnInit {
 
   closeModal(): boolean {
     if (this.modalSaving()) {
-      return false; // une écriture en cours ne s'interrompt pas
+      return false;
     }
-    if (this.modalDirty() && !window.confirm('Vos modifications seront perdues. Fermer quand même ?')) {
+    if (
+      this.modalDirty() &&
+      !window.confirm('Vos modifications seront perdues. Fermer quand même ?')
+    ) {
       return false;
     }
     this.modal.set(null);
@@ -580,13 +580,13 @@ export class AdminCategoriesComponent implements OnInit {
     };
     const isCreate = model.mode === 'create';
     this.modalSaving.set(true);
-    // Deux souscriptions separees (et non un ternaire sur l'Observable) : le type
-    // resultant d'`Observable<A> | Observable<B>` rend `subscribe({next, error})`
-    // non surchargeable, et le compilateur perd l'inference sur les callbacks.
     const onOk = (message?: string) => {
       this.modalSaving.set(false);
       this.modal.set(null);
-      this.notifier.success(message || (isCreate ? 'Catégorie créée.' : 'Catégorie modifiée.'), isCreate ? 'Création' : 'Enregistrement');
+      this.notifier.success(
+        message || (isCreate ? 'Catégorie créée.' : 'Catégorie modifiée.'),
+        isCreate ? 'Création' : 'Enregistrement',
+      );
       if (isCreate) {
         this.revealCreatedRow();
       }
@@ -594,9 +594,6 @@ export class AdminCategoriesComponent implements OnInit {
     };
     const onKo = (error: unknown) => {
       this.modalSaving.set(false);
-      // 400 : on garde la fenetre ouverte et on colle le message du backend sous le
-      // champ concerne — c'est lui qui connait la regle (nom unique ; nom « trop
-      // proche » -> 409 ; slug en conflit).
       this.modalErrors.set(fieldErrorsOf(error));
     };
 
@@ -650,7 +647,10 @@ export class AdminCategoriesComponent implements OnInit {
     if (state.action !== 'delete' && reason.length < CATEGORY_REASON_MIN) {
       this.reason.update((current) =>
         current
-          ? { ...current, error: `La raison est obligatoire (${CATEGORY_REASON_MIN} caractères minimum).` }
+          ? {
+              ...current,
+              error: `La raison est obligatoire (${CATEGORY_REASON_MIN} caractères minimum).`,
+            }
           : current,
       );
       return;
@@ -667,9 +667,6 @@ export class AdminCategoriesComponent implements OnInit {
       this.reload();
     };
 
-    // Un refus de suppression d'une categorie utilisee (409) n'est pas une
-    // impasse : le contrat du back prevoit la desactivation a la place, on
-    // rebascule donc la meme fenetre sur cette action, motif a l'appui.
     const onKo = (error: unknown) => {
       this.reasonSaving.set(false);
       this.busyId.set(null);
@@ -688,7 +685,9 @@ export class AdminCategoriesComponent implements OnInit {
         return;
       }
       this.reason.update((current) =>
-        current ? { ...current, error: messageOf(error, "L'action a été refusée par le serveur.") } : current,
+        current
+          ? { ...current, error: messageOf(error, "L'action a été refusée par le serveur.") }
+          : current,
       );
     };
 
@@ -737,7 +736,6 @@ export class AdminCategoriesComponent implements OnInit {
     }
   }
 
-  /** Le menu se ferme au clic ailleurs : on teste l'ancre data-* plutôt qu'un ViewChild par ligne. */
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
     if (!this.menuOpenFor()) {
@@ -749,7 +747,6 @@ export class AdminCategoriesComponent implements OnInit {
     }
   }
 
-  /** Echap ferme le plus prioritaire des calques ouverts. */
   @HostListener('document:keydown.escape')
   onEscape(): void {
     if (this.reason()) {
@@ -780,13 +777,6 @@ export class AdminCategoriesComponent implements OnInit {
   }
 }
 
-/**
- * Debounce de recherche maison (350 ms) : le composant est en OnPush et l'etat
- * vit dans des signaux, un `Subject` + `debounceTime` oblige a gérer
- * manuellement la souscription. Cet objet garde le meme contrat — la derniere
- * frappe gagne, une frape « égale à la requete en cours » ne relance rien — sans
- * cycle de vie a surveiller.
- */
 class SearchTrigger {
   private timer: ReturnType<typeof setTimeout> | null = null;
 

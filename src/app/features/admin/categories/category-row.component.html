@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <!-- ======================================================================
      Ligne de categorie — un seul gabarit, deux mises en page.
      La variante `table` rend des <td>/<th> (le <tr> est l'hote meme), la
@@ -63,6 +64,24 @@
         }
         @case ('letter') {
           <span aria-hidden="true">{{ avatar().value }}</span>
+=======
+<!-- =========================================================
+     VERSION TABLE
+     Les <td> sont les seuls enfants directs valides d'un <tr>.
+     ========================================================= -->
+@if (variant() === 'table') {
+  <td class="cell cell--identity">
+    <span class="avatar" [attr.data-tone]="avatar().tone" aria-hidden="true">
+      @switch (avatar().kind) {
+        @case ('image') {
+          <img [src]="avatar().value" [alt]="row().name" />
+        }
+        @case ('glyph') {
+          {{ avatar().value }}
+        }
+        @default {
+          {{ avatar().value }}
+>>>>>>> 3400d3cc8a03951314513b381abc3b0da472615c
         }
       }
     </span>
@@ -71,6 +90,7 @@
       @if (row().description) {
         <span class="identity__desc">{{ row().description }}</span>
       }
+<<<<<<< HEAD
       <span class="identity__slug">/{{ row().slug }}</span>
     </span>
     <span class="rc__actions" data-menu-root>
@@ -85,10 +105,119 @@
     </li>
     <li class="rc__metaItem">
       <span class="rc__key">Statut</span>
+=======
+    </span>
+  </td>
+
+  <td class="cell cell--num" [attr.title]="eventsHint()">{{ count() }}</td>
+
+  <td class="cell cell--status">
+    <span class="badge" [attr.data-tone]="row().is_active ? 'success' : 'neutral'">
+      <span class="badge__dot" aria-hidden="true"></span>
+      {{ row().is_active ? 'Actif' : 'Inactif' }}
+    </span>
+  </td>
+
+  <td class="cell cell--date" [attr.title]="createdLong()">{{ created() }}</td>
+
+  <td class="cell cell--actions">
+    <div class="menu" data-menu-root>
+      <button
+        type="button"
+        class="menu__trigger"
+        [attr.aria-expanded]="menuOpen()"
+        [attr.aria-haspopup]="true"
+        [disabled]="busy()"
+        aria-label="Actions de la catégorie"
+        (click)="toggleMenu.emit()"
+      >
+        @if (busy()) {
+          <svg class="icon icon--xs icon--spin" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M21 12a9 9 0 1 1-6.22-8.56" />
+          </svg>
+        } @else {
+          <svg class="icon icon--xs" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="5" r="1.6" />
+            <circle cx="12" cy="12" r="1.6" />
+            <circle cx="12" cy="19" r="1.6" />
+          </svg>
+        }
+      </button>
+
+      @if (menuOpen()) {
+        <ul class="menu__panel" role="menu">
+          <li role="none">
+            <button type="button" class="menu__item" role="menuitem" (click)="edit.emit()">
+              <svg class="icon icon--xs" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z" />
+              </svg>
+              Modifier
+            </button>
+          </li>
+          @if (row().is_active) {
+            <li role="none">
+              <button type="button" class="menu__item" role="menuitem" (click)="changeState.emit('deactivate')">
+                <svg class="icon icon--xs" viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10" /><path d="M4.93 4.93l14.14 14.14" />
+                </svg>
+                Désactiver
+              </button>
+            </li>
+          } @else {
+            <li role="none">
+              <button type="button" class="menu__item" role="menuitem" (click)="changeState.emit('activate')">
+                <svg class="icon icon--xs" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><path d="M22 4L12 14.01l-3-3" />
+                </svg>
+                Réactiver
+              </button>
+            </li>
+          }
+          <li role="none">
+            <button
+              type="button"
+              class="menu__item menu__item--danger"
+              role="menuitem"
+              (click)="remove.emit()"
+            >
+              <svg class="icon icon--xs" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M3 6h18" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+              </svg>
+              Supprimer
+            </button>
+          </li>
+        </ul>
+      }
+    </div>
+  </td>
+}
+
+<!-- =========================================================
+     VERSION CARTE
+     ========================================================= -->
+@if (variant() === 'card') {
+  <div class="rc-card">
+    <div class="rc-card__head">
+      <span class="avatar" [attr.data-tone]="avatar().tone" aria-hidden="true">
+        @switch (avatar().kind) {
+          @case ('image') { <img [src]="avatar().value" [alt]="row().name" /> }
+          @case ('glyph') { {{ avatar().value }} }
+          @default { {{ avatar().value }} }
+        }
+      </span>
+      <div class="rc-card__identity">
+        <p class="rc-card__name">{{ row().name }}</p>
+        @if (row().description) {
+          <p class="rc-card__desc">{{ row().description }}</p>
+        }
+      </div>
+>>>>>>> 3400d3cc8a03951314513b381abc3b0da472615c
       <span class="badge" [attr.data-tone]="row().is_active ? 'success' : 'neutral'">
         <span class="badge__dot" aria-hidden="true"></span>
         {{ row().is_active ? 'Actif' : 'Inactif' }}
       </span>
+<<<<<<< HEAD
     </li>
     <li class="rc__metaItem">
       <span class="rc__key">Créé le</span>
@@ -157,3 +286,27 @@
     </div>
   }
 </ng-template>
+=======
+    </div>
+
+    <dl class="rc-card__meta">
+      <div><dt>Événements</dt><dd [attr.title]="eventsHint()">{{ count() }}</dd></div>
+      <div><dt>Créé le</dt><dd [attr.title]="createdLong()">{{ created() }}</dd></div>
+    </dl>
+
+    <div class="rc-card__actions">
+      <button type="button" class="btn btn--ghost btn--sm" (click)="edit.emit()">Modifier</button>
+      @if (row().is_active) {
+        <button type="button" class="btn btn--ghost btn--sm" (click)="changeState.emit('deactivate')">
+          Désactiver
+        </button>
+      } @else {
+        <button type="button" class="btn btn--ghost btn--sm" (click)="changeState.emit('activate')">
+          Réactiver
+        </button>
+      }
+      <button type="button" class="btn btn--danger btn--sm" (click)="remove.emit()">Supprimer</button>
+    </div>
+  </div>
+}
+>>>>>>> 3400d3cc8a03951314513b381abc3b0da472615c
