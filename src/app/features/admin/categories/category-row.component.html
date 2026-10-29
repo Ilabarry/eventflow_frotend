@@ -1,0 +1,159 @@
+<!-- ======================================================================
+     Ligne de categorie — un seul gabarit, deux mises en page.
+     La variante `table` rend des <td>/<th> (le <tr> est l'hote meme), la
+     variante `card` rend les memes blocs empiles. Les deux lisent les memes
+     signaux derives : rien ne peut diverger entre mobile et desktop.
+     ====================================================================== -->
+@if (variant() === 'table') {
+  <!-- identite -->
+  <th scope="row" class="cell cell--identity">
+    <span class="avatar" [attr.data-tone]="avatar().tone">
+      @switch (avatar().kind) {
+        @case ('image') {
+          <img [src]="avatar().value" alt="" loading="lazy" width="38" height="38" />
+        }
+        @case ('glyph') {
+          <span aria-hidden="true">{{ avatar().value }}</span>
+        }
+        @case ('letter') {
+          <span aria-hidden="true">{{ avatar().value }}</span>
+        }
+      }
+    </span>
+    <span class="identity">
+      <span class="identity__name" [title]="row().name">{{ row().name }}</span>
+      @if (row().description) {
+        <span class="identity__desc">{{ row().description }}</span>
+      }
+      <span class="identity__slug">/{{ row().slug }}</span>
+    </span>
+  </th>
+
+  <!-- evenements -->
+  <td class="cell cell--num">
+    <span class="count" [attr.data-soft]="row().events_total === 0" [title]="eventsHint()">
+      {{ count() }}
+    </span>
+  </td>
+
+  <!-- statut -->
+  <td class="cell cell--status">
+    <span class="badge" [attr.data-tone]="row().is_active ? 'success' : 'neutral'">
+      <span class="badge__dot" aria-hidden="true"></span>
+      {{ row().is_active ? 'Actif' : 'Inactif' }}
+    </span>
+  </td>
+
+  <!-- cree le -->
+  <td class="cell cell--date" [title]="createdLong()">{{ created() }}</td>
+
+  <!-- actions -->
+  <td class="cell cell--actions" data-menu-root>
+    <ng-container *ngTemplateOutlet="actionsTpl" />
+  </td>
+} @else {
+  <header class="rc__head">
+    <span class="avatar" [attr.data-tone]="avatar().tone">
+      @switch (avatar().kind) {
+        @case ('image') {
+          <img [src]="avatar().value" alt="" loading="lazy" width="38" height="38" />
+        }
+        @case ('glyph') {
+          <span aria-hidden="true">{{ avatar().value }}</span>
+        }
+        @case ('letter') {
+          <span aria-hidden="true">{{ avatar().value }}</span>
+        }
+      }
+    </span>
+    <span class="identity">
+      <span class="identity__name">{{ row().name }}</span>
+      @if (row().description) {
+        <span class="identity__desc">{{ row().description }}</span>
+      }
+      <span class="identity__slug">/{{ row().slug }}</span>
+    </span>
+    <span class="rc__actions" data-menu-root>
+      <ng-container *ngTemplateOutlet="actionsTpl" />
+    </span>
+  </header>
+
+  <ul class="rc__meta">
+    <li class="rc__metaItem">
+      <span class="rc__key">Événements</span>
+      <span class="count" [attr.data-soft]="row().events_total === 0" [title]="eventsHint()">{{ count() }}</span>
+    </li>
+    <li class="rc__metaItem">
+      <span class="rc__key">Statut</span>
+      <span class="badge" [attr.data-tone]="row().is_active ? 'success' : 'neutral'">
+        <span class="badge__dot" aria-hidden="true"></span>
+        {{ row().is_active ? 'Actif' : 'Inactif' }}
+      </span>
+    </li>
+    <li class="rc__metaItem">
+      <span class="rc__key">Créé le</span>
+      <span class="rc__val" [title]="createdLong()">{{ created() }}</span>
+    </li>
+  </ul>
+}
+
+<!-- Le menu est partage par les deux variantes : une seule implementation des
+     actions, trois points d'entree maximum, meme libelle partout. -->
+<ng-template #actionsTpl>
+  <button
+    type="button"
+    class="kebab"
+    [class.kebab--open]="menuOpen()"
+    [attr.aria-expanded]="menuOpen()"
+    [attr.aria-label]="'Actions pour la catégorie ' + row().name"
+    [disabled]="busy()"
+    (click)="toggleMenu.emit()"
+  >
+    @if (busy()) {
+      <svg class="icon icon--xs icon--spin" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M21 12a9 9 0 1 1-6.22-8.56" />
+      </svg>
+    } @else {
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <circle cx="5" cy="12" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="19" cy="12" r="1.6" />
+      </svg>
+    }
+  </button>
+
+  @if (menuOpen()) {
+    <div class="menu" role="menu" [attr.aria-label]="'Actions — ' + row().name">
+      <button type="button" class="menu__item" role="menuitem" (click)="edit.emit()">
+        <svg class="icon icon--xs" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+          <path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z" />
+        </svg>
+        Modifier
+      </button>
+
+      @if (row().is_active) {
+        <button type="button" class="menu__item" role="menuitem" (click)="changeState.emit('deactivate')">
+          <svg class="icon icon--xs" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M18.36 6.64A9 9 0 1 1 5.64 6.64" /><path d="M12 2v10" />
+          </svg>
+          Désactiver
+        </button>
+      } @else {
+        <button type="button" class="menu__item" role="menuitem" (click)="changeState.emit('activate')">
+          <svg class="icon icon--xs" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 2v10" /><path d="M18.36 6.64A9 9 0 1 1 5.64 6.64" />
+          </svg>
+          Réactiver
+        </button>
+      }
+
+      <span class="menu__sep" role="separator"></span>
+
+      <button type="button" class="menu__item menu__item--danger" role="menuitem" (click)="remove.emit()">
+        <svg class="icon icon--xs" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" /><path d="M10 11v6M14 11v6" />
+        </svg>
+        Supprimer
+      </button>
+    </div>
+  }
+</ng-template>

@@ -1,0 +1,423 @@
+/* ================================================================
+   Ligne de catégorie — présentation commune aux deux rendus.
+   Les tokens (--c-*) sont hérités du :host de la page : cette feuille ne
+   fait que LES UTILISER, elle n'en redéfinit aucun.
+   ================================================================ */
+/* L'hôte n'impose AUCUN display : en mode tableau il EST le <tr> (le
+   display naturel `table-row` empile les lignes verticalement) ; en mode
+   carte il redevient `block` via :host-context(.cats-cards) plus bas.
+   L'ancien `display: contents` fusionnait les cellules de TOUTES les
+   lignes dans une seule ligne anonyme du <tbody> : la liste sortait en
+   largeur (défilement horizontal) au lieu de dérouler verticalement. */
+
+:host(.row) {
+  transition: background 0.18s ease, opacity 0.18s ease;
+
+  &:hover {
+    background: rgba(108, 92, 231, 0.04);
+  }
+}
+
+:host(.row--busy),
+:host-context(.row--busy) {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Mode carte : le conteneur devient visible et card-like. */
+:host-context(.cats-cards) {
+  display: block;
+}
+
+/* ================================================================
+   CELLULES (tableau)
+   ================================================================ */
+.cell {
+  /* 0.5rem au lieu de 0.75rem : une ligne = l'avatar + une rangee de texte,
+     comme sur la maquette (les anciennes lignes hautes de trois rangs
+     donnaient une liste deux fois plus longue a faire defiler). */
+  padding: 0.5rem 0.75rem;
+  vertical-align: middle;
+  font-size: 0.88rem;
+
+  &--identity {
+    /* Avatar à gauche du nom, comme la maquette : la cellule est une rangée
+       flex. Plus de sticky horizontal — l'axe X ne défile plus (le tableau
+       est en `table-layout: fixed`, largeurs portées par les <th>). */
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: inherit;
+    text-align: left;
+  }
+
+  &--num {
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  &--date {
+    color: var(--c-muted, #64748b);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  &--actions {
+    position: relative;
+    text-align: right;
+  }
+}
+
+/* Mode tableau : UNE seule ligne par catégorie (avatar + nom), exactement
+   comme la maquette. `:host(.row)` : la classe `row` est posée par la page
+   sur le <tr> — le mode carte (hôte = <div class="rc">) n'est pas concerné
+   et garde description + slug, plus visibles sur un écran étroit. */
+:host(.row) {
+  .identity__desc,
+  .identity__slug {
+    display: none;
+  }
+}
+
+/* ================================================================
+   AVATAR + NOM
+   ================================================================ */
+.avatar {
+  --a-bg: rgba(108, 92, 231, 0.12);
+  --a-fg: var(--c-violet, #6c5ce7);
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--a-bg);
+  color: var(--a-fg);
+  font: 800 0.95rem/1 var(--evf-font-heading, 'Sora'), sans-serif;
+
+  &[data-tone='cyan'] { --a-bg: rgba(34, 199, 214, 0.14); --a-fg: #0e8f9c; }
+  &[data-tone='green'] { --a-bg: rgba(16, 185, 129, 0.14); --a-fg: #059669; }
+  &[data-tone='amber'] { --a-bg: rgba(245, 158, 11, 0.16); --a-fg: #b45309; }
+  &[data-tone='rose'] { --a-bg: rgba(239, 68, 68, 0.12); --a-fg: #dc2626; }
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* Glyphe (nom d'icône traduit) : on le garde discret, jamais plus gros que le nom. */
+  > span:not(.identity) {
+    font-size: 1.05rem;
+    line-height: 1;
+  }
+}
+
+.identity {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.125rem;
+
+  &__name {
+    max-width: 34ch;
+    overflow: hidden;
+    color: var(--c-dark, #0a0a12);
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__desc {
+    max-width: 46ch;
+    overflow: hidden;
+    color: var(--c-muted, #64748b);
+    font-size: 0.78rem;
+    line-height: 1.4;
+    text-overflow: ellipsis;
+    /* Deux lignes max : une description de 2000 caractères ne doit pas
+     transformer une ligne de tableau en paragraphe. */
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    white-space: normal;
+  }
+
+  &__slug {
+    color: var(--c-muted, #64748b);
+    font: 500 0.72rem/1.2 ui-monospace, 'SFMono-Regular', Menlo, monospace;
+    opacity: 0.85;
+  }
+}
+
+/* Compteur nu : la maquette affiche le chiffre seul, sans pastille. */
+.count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 2.5rem;
+  color: var(--c-dark, #0a0a12);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+
+  &[data-soft='true'] {
+    color: var(--c-muted, #64748b);
+    font-weight: 500;
+  }
+}
+
+.badge {
+  --b: var(--c-muted, #64748b);
+  --b-bg: rgba(100, 116, 139, 0.12);
+
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 26px;
+  padding: 0 0.75rem;
+  border-radius: 999px;
+  background: var(--b-bg);
+  color: var(--b);
+  font-size: 0.72rem;
+  font-weight: 800;
+  white-space: nowrap;
+
+  &[data-tone='success'] {
+    --b: #059669;
+    --b-bg: rgba(16, 185, 129, 0.12);
+  }
+
+  &__dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+}
+
+/* ================================================================
+   MENU PAR LIGNE
+   ================================================================ */
+.kebab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--c-muted, #64748b);
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+
+  &:hover:not(:disabled) {
+    border-color: var(--c-border, #e2e8f0);
+    background: var(--c-bg, #f8fafc);
+    color: var(--c-violet, #6c5ce7);
+  }
+
+  &[aria-expanded='true'] {
+    border-color: rgba(108, 92, 231, 0.35);
+    background: rgba(108, 92, 231, 0.08);
+    color: var(--c-violet, #6c5ce7);
+  }
+
+  &:focus-visible {
+    outline: 3px solid rgba(108, 92, 231, 0.45);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    cursor: progress;
+    opacity: 0.6;
+  }
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0.875rem;
+  z-index: 30;
+  display: flex;
+  min-width: 178px;
+  padding: 0.3125rem;
+  flex-direction: column;
+  border: 1px solid var(--c-border, #e2e8f0);
+  border-radius: 12px;
+  background: var(--c-surface, #fff);
+  box-shadow: var(--evf-shadow-lg, 0 10px 15px -3px rgba(0, 0, 0, 0.1));
+  animation: cats-menu-in 0.16s ease-out;
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.625rem;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--c-text, #1f2937);
+    font: 600 0.82rem var(--evf-font-body, 'Inter'), sans-serif;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover {
+      background: rgba(108, 92, 231, 0.08);
+      color: var(--c-violet, #6c5ce7);
+    }
+
+    &:focus-visible {
+      outline: 3px solid rgba(108, 92, 231, 0.45);
+      outline-offset: -2px;
+    }
+
+    &--danger {
+      color: var(--c-error, #ef4444);
+
+      &:hover {
+        background: rgba(239, 68, 68, 0.1);
+        color: #b91c1c;
+      }
+    }
+  }
+
+  &__sep {
+    margin: 0.25rem 0.375rem;
+    border-top: 1px solid var(--c-border, #e2e8f0);
+  }
+}
+
+@keyframes cats-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ================================================================
+   CARTE (mobile)
+   ================================================================ */
+.rc__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.rc__actions {
+  position: relative;
+  margin-left: auto;
+  flex-shrink: 0;
+
+  .menu {
+    right: 0;
+  }
+}
+
+.rc__meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.375rem 0.75rem;
+  margin: 0.75rem 0 0;
+  padding: 0.75rem 0 0;
+  list-style: none;
+  border-top: 1px dashed var(--c-border, #e2e8f0);
+}
+
+.rc__metaItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+/* La premiere carte occupe toute la largeur : le compteur d'événements est
+   l'information la plus consultée, elle ne doit pas être tronquée. */
+.rc__metaItem:first-child {
+  grid-column: 1 / -1;
+}
+
+.rc__key {
+  color: var(--c-muted, #64748b);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.rc__val {
+  color: var(--c-text, #1f2937);
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Icônes — mêmes règles que la page, redéclarées ici parce que le style est
+   encapsulé par composant (l'inverse voudrait une feuille globale partagée,
+   donc une modification hors périmètre). */
+.icon {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+
+  &--xs {
+    width: 14px;
+    height: 14px;
+  }
+
+  &--spin {
+    animation: cats-spin 0.9s linear infinite;
+  }
+}
+
+@keyframes cats-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu {
+    animation: none;
+  }
+
+  .icon--spin {
+    animation: none;
+  }
+
+  tr.row {
+    transition: none;
+  }
+}
+
+/* ------------------------------------------------------------------
+   Etat inactive + tres petit ecran.
+   La classe `.row--off` est posee par la page : sur le <tr> en mode
+   tableau, sur le <li> enveloppant en mode cartes. Un selecteur
+   descendant simple ne traverserait pas l'encapsulation (le parent ne
+   porte pas les attributs de portee de nos elements internes) ;
+   `:host-context()` est le seul qui lise un etat de l'ancetre.
+   ------------------------------------------------------------------ */
+:host(.row--off) .identity__name,
+:host-context(.row--off) .identity__name {
+  color: var(--c-muted, #64748b);
+  opacity: 0.9;
+}
+
+@media (max-width: 380px) {
+  .rc__meta {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
