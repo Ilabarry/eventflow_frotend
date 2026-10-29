@@ -135,6 +135,54 @@ $bp-mobile: 640px;
       outline-offset: 2px;
     }
   }
+
+  .view-toggle {
+    display: inline-flex;
+    gap: 0.25rem;
+    margin-left: auto;
+    padding: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(6px);
+
+    @media (max-width: $bp-mobile) {
+      margin-left: 0;
+      margin-top: 8px;
+    }
+
+    &__btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 32px;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      color: rgba(255, 255, 255, 0.75);
+      cursor: pointer;
+      transition: background 0.2s ease, color 0.2s ease;
+
+      &:hover {
+        color: #fff;
+      }
+
+      &:focus-visible {
+        outline: 3px solid var(--cyan);
+        outline-offset: 2px;
+      }
+
+      &--active {
+        background: var(--violet);
+        color: #fff;
+
+        &:hover {
+          color: #fff;
+        }
+      }
+    }
+  }
 }
 
 // Onglets de statut
@@ -266,6 +314,54 @@ $bp-mobile: 640px;
     font-weight: 600;
     color: #15803d;
   }
+}
+
+/* ================================================================
+   MODE GRILLE : cartes verticales en 2-3 colonnes
+   ================================================================ */
+.list--grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+
+  .card {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      'media'
+      'body'
+      'side';
+    row-gap: 12px;
+
+    &__media {
+      aspect-ratio: 16 / 10;
+    }
+
+    &__body {
+      gap: 8px;
+    }
+
+    // Statut en bas, aligné à gauche
+    &__side {
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      text-align: left;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+    }
+  }
+
+  // Sur mobile : 1 colonne
+  @media (max-width: $bp-mobile) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.list--grid .card--skeleton {
+  grid-template-areas:
+    'media'
+    'body';
 }
 
 // Badge de statut (texte + pastille : la couleur n'est jamais le seul indice)

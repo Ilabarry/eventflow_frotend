@@ -8,6 +8,7 @@ import {
   MyAttendanceDto,
 } from '../../../core/services/attendance.service';
 import { environment } from '../../../../environments/environment';
+type ViewMode = 'list' | 'grid';
 
 type LoadState = 'loading' | 'ready' | 'error';
 type AttendanceFilter = 'all' | 'PRESENT' | 'ABSENT';
@@ -42,6 +43,16 @@ export class ParticipantPresencesComponent implements OnInit {
     { value: 'PRESENT', label: 'Présences' },
     { value: 'ABSENT', label: 'Absences' },
   ];
+
+  /** Mode d'affichage : liste (défaut) ou grille */
+  readonly view = signal<ViewMode>(
+    (localStorage.getItem('evf.participant.presences.view') as ViewMode) ?? 'list'
+  );
+
+  setView(mode: ViewMode): void {
+    this.view.set(mode);
+    localStorage.setItem('evf.participant.presences.view', mode);
+  }
 
   private absoluteMediaUrl(url: string | null | undefined): string | null {
     if (!url) return null;

@@ -20,6 +20,7 @@ import {
   TicketDetailDto,
   TicketService,
 } from '../../../core/services/ticket.service';
+type ViewMode = 'list' | 'grid';
 
 /* ------------------------------------------------------------------
  * Constantes de la page
@@ -163,6 +164,16 @@ export class ParticipantTicketsComponent {
 
   private readonly query$ = new Subject<Query>();
   private readonly searchInput$ = new Subject<string>();
+
+  /** Mode d'affichage : liste (défaut) ou grille */
+  readonly view = signal<ViewMode>(
+    (localStorage.getItem('evf.participant.tickets.view') as ViewMode) ?? 'list'
+  );
+
+  setView(mode: ViewMode): void {
+    this.view.set(mode);
+    localStorage.setItem('evf.participant.tickets.view', mode);
+  }
 
   constructor() {
     // switchMap annule le chargement précédent si un filtre change entre-temps.

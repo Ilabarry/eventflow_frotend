@@ -12,6 +12,7 @@ import {
   MyRegistrationsFilters,
   RegistrationService,
 } from '../../../core/services/registration.service';
+type ViewMode = 'grid' | 'list';
 
 /* ------------------------------------------------------------------
  * Constantes de la page
@@ -141,6 +142,16 @@ export class ParticipantRegistrationsComponent {
   // Valeurs dérivées
   readonly pages = computed(() => visiblePages(this.currentPage(), this.totalPages()));
   readonly hasActiveFilter = computed(() => this.activeStatus() !== null || this.searchTerm() !== '');
+
+  // affichage grid `| list`
+  readonly view = signal<ViewMode>(
+    (localStorage.getItem('evf.participant.registrations.view') as ViewMode) ?? 'list'
+  );
+
+  setView(mode: ViewMode): void {
+    this.view.set(mode);
+    localStorage.setItem('evf.participant.registrations.view', mode);
+  }
   
 
   constructor() {

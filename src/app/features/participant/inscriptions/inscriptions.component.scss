@@ -119,6 +119,53 @@ $bp-small: 400px;
   }
 }
 
+// ==================================================================
+// TOGGLE GRILLE / LISTE
+// ==================================================================
+.view-toggle {
+  display: inline-flex;
+  gap: 0.25rem;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  flex-shrink: 0;
+
+  &__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 32px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease;
+
+    &:hover {
+      color: var(--violet);
+      background: rgba(108, 92, 231, 0.08);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.2);
+    }
+
+    &--active {
+      background: var(--violet);
+      color: #fff;
+
+      &:hover {
+        background: var(--violet);
+        color: #fff;
+      }
+    }
+  }
+}
+
 // Recherche
 .search {
   display: flex;
@@ -298,6 +345,56 @@ $bp-small: 400px;
   &__action-ticket {
     grid-area: ticket;
     justify-self: center;
+  }
+}
+
+/* ================================================================
+   MODE GRILLE : cartes verticales en 2-3 colonnes
+   ================================================================ */
+.list--grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+
+  .card {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      'media'
+      'body'
+      'side'
+      'event'
+      'ticket';
+    row-gap: 10px;
+
+    &__media {
+      aspect-ratio: 16 / 10;
+    }
+
+    &__side {
+      align-items: flex-start;
+      text-align: left;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+    }
+
+    &__action-event,
+    &__action-ticket {
+      align-self: stretch;
+      justify-self: stretch;
+      min-width: 0;
+    }
+  }
+
+  // Sur mobile, garder les boutons côte à côte
+  @media (max-width: $bp-small) {
+    .card {
+      grid-template-areas:
+        'media'
+        'body'
+        'side'
+        'event'
+        'ticket';
+    }
   }
 }
 
@@ -506,7 +603,7 @@ $bp-small: 400px;
 
   .hero__toolbar {
     flex-direction: column;
-    flex-wrap: nowrap; // en colonne, « wrap » élargirait les éléments au-delà du bandeau
+    flex-wrap: nowrap;
     align-items: stretch;
   }
 
@@ -515,97 +612,12 @@ $bp-small: 400px;
   }
 }
 
-// ==================================================================
-// MOBILE (≤ 640 px) : carte empilée, onglets défilants
-// ==================================================================
-@media (max-width: $bp-mobile) {
-  .hero {
-    padding: 20px 16px;
+.list--grid .card--skeleton {
+  grid-template-areas:
+    'media'
+    'body';
 
-    &__flow {
-      width: 100%;
-      opacity: 0.5;
-    }
-  }
-
-  // Les onglets défilent horizontalement au lieu de passer à la ligne
-  .filters {
-    overflow-x: auto;
-    margin: 0 -16px;
-    padding: 2px 16px 6px;
-    scrollbar-width: none;
-
-    &__chip {
-      min-height: 44px; // cible tactile
-    }
-  }
-
-  .search {
-    min-height: 44px;
-  }
-
-  .card {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    grid-template-areas:
-      'media media'
-      'body  body'
-      'side  side'
-      'event ticket';
-    padding: 12px;
-
-    &__media {
-      aspect-ratio: 16 / 9;
-    }
-  }
-
-  .btn,
-  .pagination__btn {
-    min-height: 44px;
-  }
-
-  .pagination__pages {
-    display: none;
-  }
-
-  .pagination__summary {
-    display: block;
-  }
-}
-
-// Très petits écrans : un bouton par ligne
-@media (max-width: $bp-small) {
-  .card {
-    grid-template-areas:
-      'media media'
-      'body  body'
-      'side  side'
-      'event event'
-      'ticket ticket';
-  }
-}
-
-.btn--access {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  border-radius: var(--evf-radius-full, 999px);
-  background: var(--evf-gradient-flow, linear-gradient(135deg, #8B7CF6, #22C7D6));
-  color: #fff;
-  font-weight: 600;
-  font-size: 0.875rem;
-  border: none;
-  cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-
-  &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 6px 16px rgba(139, 124, 246, 0.25);
-  }
-
-  .icon {
-    width: 16px;
-    height: 16px;
-    stroke-width: 2;
+  .card__media {
+    aspect-ratio: 16 / 10;
   }
 }

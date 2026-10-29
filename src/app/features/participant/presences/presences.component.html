@@ -27,12 +27,40 @@
           }
         </div>
 
-        <a routerLink="/participant/tickets" class="hero__link">
-          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path d="M3 8a2 2 0 0 0 0 4v4h18v-4a2 2 0 0 1 0-4V4H3z" />
-          </svg>
-          Voir mes tickets
-        </a>
+        <div class="view-toggle" role="group" aria-label="Mode d'affichage">
+          <button
+            type="button"
+            class="view-toggle__btn"
+            [class.view-toggle__btn--active]="view() === 'grid'"
+            [attr.aria-pressed]="view() === 'grid'"
+            aria-label="Affichage en grille"
+            (click)="setView('grid')"
+          >
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 3h7v7H3z"></path>
+              <path d="M14 3h7v7h-7z"></path>
+              <path d="M14 14h7v7h-7z"></path>
+              <path d="M3 14h7v7H3z"></path>
+            </svg>
+          </button>
+          <button
+            type="button"
+            class="view-toggle__btn"
+            [class.view-toggle__btn--active]="view() === 'list'"
+            [attr.aria-pressed]="view() === 'list'"
+            aria-label="Affichage en liste"
+            (click)="setView('list')"
+          >
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+              <path d="M8 6h13"></path>
+              <path d="M8 12h13"></path>
+              <path d="M8 18h13"></path>
+              <path d="M3 6h.01"></path>
+              <path d="M3 12h.01"></path>
+              <path d="M3 18h.01"></path>
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
   </header>
@@ -43,7 +71,7 @@
   <div class="pres__content" aria-live="polite" [attr.aria-busy]="loadState() === 'loading'">
     @switch (loadState()) {
       @case ('loading') {
-        <ul class="list" aria-label="Chargement des présences">
+        <ul class="list" [class.list--grid]="view() === 'grid'" aria-label="Chargement des présences">
           @for (placeholder of [1, 2, 3]; track placeholder) {
             <li class="card card--skeleton" aria-hidden="true">
               <div class="card__media skeleton"></div>
@@ -83,7 +111,7 @@
             {{ totalCount() }} présence{{ totalCount() > 1 ? 's' : '' }}
           </p>
 
-          <ul class="list">
+          <ul class="list" [class.list--grid]="view() === 'grid'">
             @for (a of items(); track a.id) {
               <li>
                 <article class="card" [attr.aria-labelledby]="'presence-' + a.id">

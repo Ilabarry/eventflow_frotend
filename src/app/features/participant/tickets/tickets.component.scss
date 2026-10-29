@@ -86,6 +86,53 @@ $bp-mobile: 640px;
     justify-content: space-between;
     gap: 12px;
   }
+
+  .view-toggle {
+    display: inline-flex;
+    gap: 0.25rem;
+    margin-left: auto;
+    padding: 4px;
+    border: 1px solid var(--evf-border);
+    border-radius: 10px;
+    background: var(--evf-surface);
+
+    @media (max-width: $bp-mobile) {
+      margin-left: 0;
+      margin-top: 8px;
+    }
+
+    &__btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 32px;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--evf-text-muted);
+      cursor: pointer;
+      transition: background 0.2s ease, color 0.2s ease;
+
+      &:hover {
+        color: var(--evf-violet);
+      }
+
+      &:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.2);
+      }
+
+      &--active {
+        background: var(--evf-violet);
+        color: white;
+
+        &:hover {
+          color: white;
+        }
+      }
+    }
+  }
 }
 
 .filters {
@@ -279,6 +326,55 @@ $bp-mobile: 640px;
     font-size: 0.85rem;
     color: var(--evf-text-muted);
     text-align: center;
+  }
+}
+
+/* ================================================================
+   MODE GRILLE : cartes verticales en 2-3 colonnes
+   ================================================================ */
+.list--grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+
+  .card {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 14px;
+
+    // Ordre vertical : média, corps, QR
+    .card__media {
+      aspect-ratio: 16 / 10;
+    }
+
+    .card__body {
+      gap: 6px;
+    }
+
+    .card__qr {
+      padding: 10px;
+
+      img,
+      .card__qr-btn img {
+        width: 100px;
+        height: auto;
+      }
+    }
+
+    .card__action {
+      align-self: stretch;
+      min-width: 0;
+      width: 100%;
+    }
+  }
+
+  // Sur mobile : 1 colonne
+  @media (max-width: $bp-mobile) {
+    grid-template-columns: 1fr;
+
+    .card__media--empty {
+      display: grid;   // on garde le placeholder en mode grille
+    }
   }
 }
 
@@ -568,4 +664,7 @@ $bp-mobile: 640px;
   .pagination__summary {
     display: block;
   }
+}
+.list--grid .skeleton {
+  height: 320px;
 }

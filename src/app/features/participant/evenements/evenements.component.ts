@@ -15,6 +15,7 @@ type LoadState = 'loading' | 'ready' | 'error';
 type FormatFilter = 'IN_PERSON' | 'ONLINE' | 'HYBRID' | 'all';
 type PriceFilter = 'FREE' | 'PAID' | 'all';
 type DateFilter = 'today' | 'week' | 'month' | 'all';
+type ViewMode = 'grid' | 'list';
 
 const PAGE_SIZE = 12;
 const SEARCH_DEBOUNCE_MS = 400;
@@ -97,6 +98,19 @@ export class ParticipantEventsComponent {
     first = Math.min(first, total - count + 1);
     return Array.from({ length: count }, (_, i) => first + i);
   });
+
+
+  // ------------------------------------------------------------------
+  // affichage 'grid' | 'list'
+  // ------------------------------------------------------------------
+  readonly view = signal<ViewMode>(
+    (localStorage.getItem('evf.participant.events.view') as ViewMode) ?? 'grid'
+  );
+
+  setView(mode: ViewMode): void {
+    this.view.set(mode);
+    localStorage.setItem('evf.participant.events.view', mode);
+  }
 
   // ------------------------------------------------------------------
   // PIPELINE DE CHARGEMENT

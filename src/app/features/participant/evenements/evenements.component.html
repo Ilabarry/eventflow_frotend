@@ -99,6 +99,41 @@
         {{ ordering() === '-start_at' ? 'Plus récents' : 'Plus proches' }}
       </button>
     </div>
+    
+    <div class="view-toggle" role="group" aria-label="Mode d'affichage">
+      <button
+        type="button"
+        class="view-toggle__btn"
+        [class.view-toggle__btn--active]="view() === 'grid'"
+        [attr.aria-pressed]="view() === 'grid'"
+        aria-label="Affichage en grille"
+        (click)="view.set('grid')"
+      >
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 3h7v7H3z"></path>
+          <path d="M14 3h7v7h-7z"></path>
+          <path d="M14 14h7v7h-7z"></path>
+          <path d="M3 14h7v7H3z"></path>
+        </svg>
+      </button>
+      <button
+        type="button"
+        class="view-toggle__btn"
+        [class.view-toggle__btn--active]="view() === 'list'"
+        [attr.aria-pressed]="view() === 'list'"
+        aria-label="Affichage en liste"
+        (click)="view.set('list')"
+      >
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <path d="M8 6h13"></path>
+          <path d="M8 12h13"></path>
+          <path d="M8 18h13"></path>
+          <path d="M3 6h.01"></path>
+          <path d="M3 12h.01"></path>
+          <path d="M3 18h.01"></path>
+        </svg>
+      </button>
+    </div>
   </section>
 
   <!-- ============================ RÉSULTATS ============================ -->
@@ -157,7 +192,7 @@
             }
         </section>
         } @else {
-        <div class="grid">
+        <div class="grid"  [class.grid--list]="view() === 'list'">
           @for (e of upcomingEvents(); track e.id) {
             <article class="card">
               <a [routerLink]="['/events', e.id]" class="card__media" [attr.aria-label]="'Voir ' + e.title">
