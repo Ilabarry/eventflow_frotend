@@ -16,6 +16,7 @@ export const ICON_GLYPHS: Record<string, string> = {
   nature: '🌿', environnement: '🌿',
   social: '🤝', association: '🤝',
 };
+
 const AVATAR_TONES = ['violet', 'cyan', 'green', 'amber', 'rose'] as const;
 
 const NUMBER = new Intl.NumberFormat('fr-FR');
@@ -40,13 +41,15 @@ function hash(value: string): number {
  * Une ligne de la liste des catégories.
  *
  * Le composant existe parce que la maquette demande DEUX rendus du même
- * contenu : un vrai `<table>` sur écran large (structure correcte pour des
- * données tabulaires) et des cartes en dessous de 760 px (un `<td>` ne sait pas
- * se recycler en block sans perdre ses rôles d'accessibilité). Un seul fichier =
- * une seule source de vérité pour l'affichage d'une catégorie.
+ * contenu : un vrai `<table>` sur écran large et des cartes en dessous de
+ * 760 px. Un seul fichier = une seule source de vérité pour l'affichage.
  *
- * `variant` ne change QUE la mise en page ; les actions, les formats et les
- * info-bulles sont identiques, pour qu'aucun écran ne cache une information.
+ * ⚠️ IMPORTANT :
+ *   Le sélecteur est `[app-category-row]` (attribut, pas élément), donc
+ *   on l'applique sur un `<tr>` (mode table) ou un `<div>` (mode carte).
+ *   Le template doit TOUJOURS être appliqué sur un élément qui accepte
+ *   `app-category-row` comme attribut — sinon les bindings `[row]`,
+ *   `[busy]`, `[menuOpen]` provoquent NG8002.
  */
 @Component({
   selector: '[app-category-row]',
@@ -64,6 +67,7 @@ export class CategoryRowComponent {
   readonly menuOpen = input(false);
 
   readonly edit = output<void>();
+  /** ⚠️ Le type est `'activate' | 'deactivate'` — JAMAIS `Event`. */
   readonly changeState = output<'activate' | 'deactivate'>();
   readonly remove = output<void>();
   readonly toggleMenu = output<void>();
@@ -83,14 +87,17 @@ export class CategoryRowComponent {
   });
 
   readonly count = computed(() => NUMBER.format(this.row().events_total ?? 0));
+
   readonly created = computed(() => {
     const date = this.row().created_at ? new Date(this.row().created_at) : null;
     return date && !Number.isNaN(date.getTime()) ? DATE_SHORT.format(date) : '—';
   });
+
   readonly createdLong = computed(() => {
     const date = this.row().created_at ? new Date(this.row().created_at) : null;
     return date && !Number.isNaN(date.getTime()) ? DATE_LONG.format(date) : '';
   });
+
   readonly eventsHint = computed(() => {
     const value = this.row();
     return `${NUMBER.format(value.events_published ?? 0)} événement(s) publié(s) sur ${NUMBER.format(value.events_total ?? 0)} — le total inclut les brouillons.`;

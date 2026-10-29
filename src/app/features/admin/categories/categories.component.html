@@ -1,8 +1,5 @@
 <!-- ======================================================================
      PAGE « CATÉGORIES » — administration
-     Maquette : bannière + recherche + 3 compteurs + tableau + pagination.
-     Le chrome (navbar, sidebar, vague de bas de page) vient du layout admin :
-     cette vue ne dessine QUE la zone de contenu.
      ====================================================================== -->
 <section class="cats" [class.cats--dense]="dense()" aria-labelledby="cats-title">
   <!-- ==================== BANNIÈRE ==================== -->
@@ -52,7 +49,7 @@
     </header>
   }
 
-  <!-- ==================== OUTILS : recherche + statut ==================== -->
+  <!-- ==================== OUTILS ==================== -->
   <div class="toolbar">
     <form class="search" role="search" (ngSubmit)="$event.preventDefault()">
       <label class="sr-only" for="cats-search">Rechercher une catégorie par nom</label>
@@ -127,7 +124,7 @@
     }
   </ul>
 
-  <!-- ==================== ERREUR DE CHARGEMENT ==================== -->
+  <!-- ==================== ERREUR ==================== -->
   @if (loadState() === 'error') {
     <div class="state" role="alert">
       <span class="state__icon" aria-hidden="true">
@@ -140,7 +137,6 @@
       <button type="button" class="btn btn--solid" (click)="retry()">Réessayer</button>
     </div>
   } @else {
-    <!-- ==================== TABLEAU ==================== -->
     <section class="panel" [class.panel--busy]="loadState() === 'loading'">
       <header class="panel__head">
         <h2 class="panel__title">Catégories</h2>
@@ -149,8 +145,7 @@
         </p>
       </header>
 
-      <!-- Version tableau : >= 760 px. Les donnees sont tabulaires, le <table>
-           reste la structure semantique ; la region est roulable au clavier. -->
+      <!-- ==================== TABLEAU (>= 760 px) ==================== -->
       <div class="table-wrap" #tableHost tabindex="0" role="region" [attr.aria-label]="tableLabel()">
         <table class="table" [class.table--dim]="loadState() === 'loading' && rows().length > 0">
           <caption class="sr-only">
@@ -204,8 +199,6 @@
           </thead>
 
           <tbody>
-            <!-- Squelette : 6 lignes de meme gabarit que le tableau reel, pour
-                 qu'aucun saut de mise en page ne suive le remplacement. -->
             @if (loadState() === 'loading' && rows().length === 0) {
               @for (placeholder of skeletonRows; track placeholder) {
                 <tr class="row row--skeleton" aria-hidden="true">
@@ -221,12 +214,12 @@
             @for (row of rows(); track row.id) {
               <tr
                 app-category-row
-                class="row"
                 variant="table"
+                class="row"
                 [row]="row"
                 [busy]="busyId() === row.id"
-                [class.row--busy]="busyId() === row.id"
                 [menuOpen]="menuOpenFor() === row.id"
+                [class.row--busy]="busyId() === row.id"
                 [class.row--off]="!row.is_active"
                 (edit)="openEdit(row)"
                 (changeState)="openReason(row, $event)"
@@ -258,9 +251,7 @@
         }
       </div>
 
-      <!-- Version cartes : < 760 px. Un <td> ne se recycle pas en bloc sans
-           perdre ses roles ; on rend donc le MEME composant de ligne, avec le
-           MEME contexte, dans une liste. -->
+      <!-- ==================== CARTES (< 760 px) ==================== -->
       <ul class="cats-cards" aria-label="Catégories">
         @if (loadState() === 'loading' && rows().length === 0) {
           @for (placeholder of skeletonRows; track placeholder) {
@@ -273,7 +264,6 @@
           <li class="rc" [class.row--off]="!row.is_active" [class.row--busy]="busyId() === row.id">
             <div
               app-category-row
-              class="rc"
               variant="card"
               [row]="row"
               [busy]="busyId() === row.id"
@@ -308,9 +298,6 @@
               (ngModelChange)="setPageSize($event)"
             >
               @for (size of pageSizeOptions; track size) {
-                <!-- value (et non ngValue) : le <select> ne transporte que du
-                     texte, le handler convertit — un option[ngValue] numérique
-                     rend l'option introuvable pour l'API DOM (et les tests). -->
                 <option [value]="size">{{ size }} / page</option>
               }
             </select>
@@ -351,8 +338,6 @@
     </section>
   }
 
-  <!-- Signature de la maquette (vague + baseline) : element decoratif de page,
-       le texte principal etant deja porte par la sidebar de l'administration. -->
   <footer class="sign" aria-hidden="true">
     <svg class="sign__wave" viewBox="0 0 220 60" preserveAspectRatio="none">
       <path d="M0 50 C 30 10, 55 55, 90 30 S 150 5, 220 28" fill="none" stroke="#22C7D6" stroke-width="2" />
@@ -375,11 +360,6 @@
         </button>
       </header>
 
-      <!-- `name` est OBLIGATOIRE sur chaque [ngModel] d'un <form> : sans lui,
-           Angular lève NG01352 et la liaison ne se met jamais en place — le champ
-           reste vide côté modèle et l'envoi perd la valeur saisie.
-           Pas de (ngSubmit) non plus : le pied est hors du <form>, le bouton du bas
-           n'est donc pas un submit natif — un seul chemin d'envoi, pas de double POST. -->
       <form class="dialog__body">
         <p class="dialog__note">
           Nom unique (insensible à la casse). Le slug est dérivé du nom par le serveur : deux noms qui
@@ -449,7 +429,7 @@
               [ngModel]="model.icon"
               (ngModelChange)="updateModal({ icon: $event })"
             />
-            <span class="preview" [attr.data-tone]="'violet'">
+            <span class="preview" data-tone="violet">
               {{ model.icon.trim() ? iconPreview(model.icon) : 'A' }}
             </span>
           </div>
@@ -458,8 +438,7 @@
               <p class="field__error" role="alert">{{ errorText('icon') }}</p>
             } @else {
               <p class="field__hint">
-                Le backend stocke un <em>nom</em> d'icône (100 caractères max), pas une image. La page traduit
-                « tech », « music »… en glyphe, et affiche l'image si vous saisissez une URL.
+                Le backend stocke un <em>nom</em> d'icône (100 caractères max), pas une image.
               </p>
             }
             <span class="field__count">{{ model.icon.length }}/{{ limits.icon }}</span>
@@ -515,15 +494,14 @@
         @switch (state.action) {
           @case ('delete') {
             <p class="dialog__warn">
-              Suppression possible seulement si <strong>aucun événement</strong> n'utilise cette catégorie : le
-              serveur protège les données existantes et renvoie un conflit sinon. L'action est définitive.
+              Suppression possible seulement si <strong>aucun événement</strong> n'utilise cette catégorie.
             </p>
           }
           @case ('deactivate') {
-            <p class="dialog__text">La catégorie disparaît des listes publiques ; ses événements existants ne sont pas modifiés.</p>
+            <p class="dialog__text">La catégorie disparaît des listes publiques.</p>
           }
           @case ('activate') {
-            <p class="dialog__text">La catégorie redevient visible et sélectionnable côté participant.</p>
+            <p class="dialog__text">La catégorie redevient visible et sélectionnable.</p>
           }
         }
 
@@ -545,7 +523,7 @@
             type="text"
             maxlength="500"
             autocomplete="off"
-            placeholder="Ex. Doublon avec « Culture », fusion en cours"
+            placeholder="Ex. Doublon avec « Culture »"
             [ngModel]="state.reason"
             (ngModelChange)="updateReason($event)"
           />
@@ -576,15 +554,9 @@
             <svg class="icon icon--xs icon--spin" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-6.22-8.56" /></svg>
           }
           @switch (state.action) {
-            @case ('delete') {
-              Confirmer la suppression
-            }
-            @case ('deactivate') {
-              Désactiver
-            }
-            @case ('activate') {
-              Réactiver
-            }
+            @case ('delete') { Confirmer la suppression }
+            @case ('deactivate') { Désactiver }
+            @case ('activate') { Réactiver }
           }
         </button>
       </footer>
@@ -596,15 +568,9 @@
 <ng-template #sortIconTpl let-field="field">
   <svg class="icon icon--xs sort-icon" [attr.data-dir]="sortState(field)" viewBox="0 0 24 24" aria-hidden="true">
     @switch (sortState(field)) {
-      @case ('asc') {
-        <path d="M12 19V5M5 12l7-7 7 7" />
-      }
-      @case ('desc') {
-        <path d="M12 5v14M19 12l-7 7-7-7" />
-      }
-      @default {
-        <path d="M8 9l4-4 4 4M8 15l4 4 4-4" />
-      }
+      @case ('asc') { <path d="M12 19V5M5 12l7-7 7 7" /> }
+      @case ('desc') { <path d="M12 5v14M19 12l-7 7-7-7" /> }
+      @default { <path d="M8 9l4-4 4 4M8 15l4 4 4-4" /> }
     }
   </svg>
 </ng-template>
