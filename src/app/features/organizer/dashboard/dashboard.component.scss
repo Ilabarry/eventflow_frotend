@@ -748,3 +748,76 @@
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* ================================================================
+   Sélecteur de métrique + résumé du graphique
+   ================================================================ */
+.chart-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+
+  @media (max-width: 640px) {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+
+    .seg {
+      justify-content: space-between;
+    }
+
+    .panel__select {
+      width: 100%;
+    }
+  }
+}
+
+.seg {
+  display: inline-flex;
+  gap: 0.125rem;
+  padding: 3px;
+  border: 1px solid var(--evf-border);
+  border-radius: 999px;
+  background: var(--evf-bg);
+
+  &__btn {
+    height: 30px;
+    padding: 0 0.875rem;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--evf-text-muted);
+    font: 600 0.78rem var(--evf-font-body);
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover:not(&--active) {
+      color: var(--evf-violet);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.2);
+    }
+
+    &--active {
+      background: var(--evf-violet);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(108, 92, 231, 0.3);
+    }
+  }
+}
+
+.chart-summary {
+  margin: 0.75rem 0 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--evf-border);
+  font-size: 0.85rem;
+  color: var(--evf-text-muted);
+
+  strong {
+    color: var(--evf-dark);
+  }
+}

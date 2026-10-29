@@ -17,6 +17,7 @@ import {
 } from '../../../core/services/dashboard.service';
 
 type Tone = 'violet' | 'green' | 'cyan';
+type Metric = 'registrations' | 'events';
 
 interface StatCard {
   label: string;
@@ -131,8 +132,19 @@ export class OrganizerDashboardComponent implements OnInit, AfterViewInit {
   readonly activities = signal<Activity[]>([]);
 
   /* ------------------------------------------------------------------
-     GRAPHIQUE (période et état)
+     GRAPHIQUE — métriques + périodes
      ------------------------------------------------------------------ */
+  readonly METRICS: readonly { value: Metric; label: string; one: string; many: string }[] = [
+    { value: 'registrations', label: 'Inscriptions', one: 'inscription', many: 'inscriptions' },
+    { value: 'events', label: 'Événements créés', one: 'événement', many: 'événements' },
+  ];
+
+  readonly metric = signal<Metric>('registrations');
+
+  readonly metricMeta = computed(() =>
+    this.METRICS.find((m) => m.value === this.metric()) ?? this.METRICS[0],
+  );
+
   readonly periods: { value: ChartPeriod; label: string }[] = [
     { value: 'last_30_days', label: '30 derniers jours' },
     { value: 'last_6_months', label: '6 derniers mois' },
@@ -140,14 +152,20 @@ export class OrganizerDashboardComponent implements OnInit, AfterViewInit {
   ];
   readonly period = signal<ChartPeriod>('last_6_months');
 
-  private readonly rawChartData = signal<ChartPoint[]>([]);
+  /** Séries brutes par métrique */
+  private readonly rawSeries = signal<{
+    registrations: ChartPoint[];
+    events: ChartPoint[];
+  }>({ registrations: [], events: [] });
+
+  /** Série active selon la métrique sélectionnée */
+  private readonly data = computed(() => this.rawSeries()[this.metric()]);
 
   readonly pad = { top: 16, right: 16, bottom: 30, left: 40 };
   readonly width = signal(600);
   readonly height = computed(() => (this.width() < 480 ? 200 : 240));
   readonly hovered = signal<number | null>(null);
 
-  private readonly data = computed(() => this.rawChartData());
   private readonly innerW = computed(() => Math.max(this.width() - this.pad.left - this.pad.right, 1));
   private readonly innerH = computed(() => this.height() - this.pad.top - this.pad.bottom);
 
@@ -214,6 +232,15 @@ export class OrganizerDashboardComponent implements OnInit, AfterViewInit {
     return i === null ? null : (this.points()[i] ?? null);
   });
 
+  readonly periodTotal = computed(() =>
+    this.data().reduce((sum, p) => sum + p.value, 0),
+  );
+
+  readonly dailyAverage = computed(() => {
+    const n = this.data().length;
+    return n ? Math.round(this.periodTotal() / n) : 0;
+  });
+
   tooltipX(x: number): number {
     return Math.min(Math.max(x, 56), this.width() - 56);
   }
@@ -242,9 +269,8 @@ export class OrganizerDashboardComponent implements OnInit, AfterViewInit {
           }
 
           this.stats.set(this.buildStats(data));
-          this.upcomingEvents.set(data.upcoming_events .slice(0, 1) .map((e) => this.toUpcomingEvent(e)));
+          this.upcomingEvents.set(data.upcoming_events.slice(0, 1).map((e) => this.toUpcomingEvent(e)));
           this.activities.set(data.recent_registrations.map((r) => this.toActivity(r)));
-          
         },
         error: (err) => {
           this.loading.set(false);
@@ -271,15 +297,29 @@ export class OrganizerDashboardComponent implements OnInit, AfterViewInit {
       .subscribe((res) => {
         const stats: OrganizerStatisticsDto | undefined = res.data;
         if (stats) {
-          const series = stats.registrations_over_time.map((p) => ({
-            label: this.formatPointLabel(p.period, stats.period.granularity),
-            value: p.count,
-          }));
-          this.rawChartData.set(series);
-          console.info(`[Dashboard] ${series.length} points chargés pour le graphique`);
+          const mapSeries = (arr: { period: string; count: number }[]) =>
+            arr.map((p) => ({
+              label: this.formatPointLabel(p.period, stats.period.granularity),
+              value: p.count,
+            }));
+
+          this.rawSeries.set({
+            registrations: mapSeries(stats.registrations_over_time ?? []),
+            events: mapSeries(stats.events_created_over_time ?? []),
+          });
+
+          console.info('[Dashboard] Séries chargées :', {
+            registrations: this.rawSeries().registrations.length,
+            events: this.rawSeries().events.length,
+          });
         }
         this.chartLoading.set(false);
       });
+  }
+
+  setMetric(metric: Metric): void {
+    this.metric.set(metric);
+    this.hovered.set(null);
   }
 
   /* ------------------------------------------------------------------
@@ -342,11 +382,9 @@ export class OrganizerDashboardComponent implements OnInit, AfterViewInit {
 
   private formatPointLabel(period: string, granularity: 'day' | 'month'): string {
     if (granularity === 'month') {
-      // "2026-10" → "Oct"
       const [y, m] = period.split('-').map(Number);
       return new Date(y, m - 1, 1).toLocaleDateString('fr-FR', { month: 'short' });
     }
-    // "2026-10-22" → "22 Oct"
     const date = new Date(period);
     return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
   }
