@@ -485,6 +485,18 @@ $bp-mobile: 640px;
   }
 }
 
+// Coordonnées : valeur + bouton « Copier » sur la même ligne
+.contact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  // S'appuie sur .btn--secondary (styles globaux) : seule la taille change
+  &__copy {
+    padding: 2px 12px;
+  }
+}
+
 // Rouge plus foncé que --evf-error : texte blanc lisible (contraste AA)
 .btn--danger {
   background: #b91c1c;
