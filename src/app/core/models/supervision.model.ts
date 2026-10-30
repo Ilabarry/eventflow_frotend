@@ -55,6 +55,7 @@ export interface SupervisionEventDto {
   organizer_id: string;
   organizer_email: string;
   organizer_name: string;
+  organizer_phone: string;
   category_id: string | null;
   category_name: string | null;
   published_at: string | null;
