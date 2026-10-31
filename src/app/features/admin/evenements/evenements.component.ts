@@ -115,6 +115,7 @@ interface EventRow {
   coverImage: string | null;
   organizerName: string;
   organizerEmail: string;
+  organizerPhone: string;
   startIso: string;
   dateLabel: string;
   isOnline: boolean;
@@ -138,6 +139,7 @@ function toRow(event: SupervisionEventDto): EventRow {
     coverImage: event.cover_image,
     organizerName: event.organizer_name || event.organizer_email,
     organizerEmail: event.organizer_email,
+    organizerPhone: event.organizer_phone ?? '',
     startIso: event.start_at,
     dateLabel: DATE_FORMAT.format(new Date(event.start_at)),
     isOnline,
@@ -182,6 +184,7 @@ export class AdminEventsComponent {
 
   private readonly detailDialog = viewChild.required<ElementRef<HTMLDialogElement>>('detailDialog');
   private readonly cancelDialog = viewChild.required<ElementRef<HTMLDialogElement>>('cancelDialog');
+  private readonly contactDialog = viewChild.required<ElementRef<HTMLDialogElement>>('contactDialog');
 
   readonly statusOptions = STATUS_OPTIONS;
   readonly formatOptions = FORMAT_OPTIONS;
@@ -210,6 +213,7 @@ export class AdminEventsComponent {
   readonly detail = signal<SupervisionEventDetailDto | null>(null);
   readonly detailLoading = signal(false);
   readonly cancelTarget = signal<EventRow | null>(null);
+  readonly contactTarget = signal<EventRow | null>(null);
   readonly cancelReason = signal('');
   readonly cancelError = signal<string | null>(null);
   readonly cancelling = signal(false);
@@ -373,6 +377,38 @@ export class AdminEventsComponent {
 
   formatLabel(format: EventFormat): string {
     return FORMAT_LABELS[format];
+  }
+
+  /* --- Contact de l'organisateur ------------------------------------ */
+  openContact(row: EventRow): void {
+    this.closeMenu();
+    this.contactTarget.set(row);
+    this.contactDialog().nativeElement.showModal();
+  }
+
+  closeContact(): void {
+    this.contactDialog().nativeElement.close();
+  }
+
+  /** « +221 77 123 45 67 » → « tel:+221771234567 » (espaces retirés). */
+  phoneHref(phone: string): string {
+    return `tel:${phone.replace(/[^\d+]/g, '')}`;
+  }
+
+  /** Ouvre la messagerie avec un objet qui rappelle l'événement concerné. */
+  mailHref(row: EventRow): string {
+    const subject = encodeURIComponent(`[EventFlow] Votre événement « ${row.title} »`);
+    return `mailto:${row.organizerEmail}?subject=${subject}`;
+  }
+
+  async copy(value: string, label: string): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(value);
+      this.notification.success(`${label} copié dans le presse-papiers.`, 'Copié');
+    } catch {
+      // Le presse-papiers est refusé hors HTTPS ou si le navigateur le bloque.
+      this.notification.error(`Impossible de copier : sélectionnez le texte à la main.`);
+    }
   }
 
   /* --- Annulation ---------------------------------------------------- */

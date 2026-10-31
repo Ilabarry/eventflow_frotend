@@ -167,11 +167,11 @@
                           </li>
                           @if (row.isPublished) {
                             <li role="none">
-                              <a role="menuitem" class="menu__item" [routerLink]="['/events', row.id]">Voir la page publique</a>
+                              <a role="menuitem" class="menu__item" [routerLink]="['/events', row.id]">Voir l'évènement</a>
                             </li>
                           }
                           <li role="none">
-                            <a role="menuitem" class="menu__item" [href]="'mailto:' + row.organizerEmail">Contacter l'organisateur</a>
+                            <button type="button" role="menuitem" class="menu__item" (click)="openContact(row)">Contacter l'organisateur</button>
                           </li>
                           @if (row.canCancel) {
                             <li role="none">
@@ -244,6 +244,46 @@
         <h2 id="detail-title" class="dialog__title">Chargement…</h2>
       }
     </div>
+  </dialog>
+
+  <!-- ============================================================
+       FENÊTRE : coordonnées de l'organisateur
+       ============================================================ -->
+  <dialog #contactDialog class="dialog" aria-labelledby="contact-title">
+    @if (contactTarget(); as target) {
+      <div class="dialog__panel">
+        <button type="button" class="dialog__close" aria-label="Fermer" (click)="closeContact()">✕</button>
+        <h2 id="contact-title" class="dialog__title">Contacter l'organisateur</h2>
+        <p class="dialog__text">Événement : « {{ target.title }} »</p>
+        <dl class="facts">
+          <div><dt>Nom</dt><dd>{{ target.organizerName }}</dd></div>
+          <div>
+            <dt>Téléphone</dt>
+            <dd class="contact">
+              @if (target.organizerPhone) {
+                <a [href]="phoneHref(target.organizerPhone)">{{ target.organizerPhone }}</a>
+                <button type="button" class="btn btn--secondary contact__copy" aria-label="Copier le numéro de téléphone" (click)="copy(target.organizerPhone, 'Numéro')">Copier</button>
+              } @else {
+                Non renseigné
+              }
+            </dd>
+          </div>
+          <div>
+            <dt>Adresse e-mail</dt>
+            <dd class="contact">
+              <a [href]="mailHref(target)">{{ target.organizerEmail }}</a>
+              <button type="button" class="btn btn--secondary contact__copy" aria-label="Copier l'adresse e-mail" (click)="copy(target.organizerEmail, 'Adresse e-mail')">Copier</button>
+            </dd>
+          </div>
+        </dl>
+        <div class="dialog__actions">
+          @if (target.organizerPhone) {
+            <a class="btn btn--ghost" [href]="phoneHref(target.organizerPhone)">Appeler</a>
+          }
+          <a class="btn btn--primary" [href]="mailHref(target)">Envoyer un e-mail</a>
+        </div>
+      </div>
+    }
   </dialog>
 
   <!-- ============================================================
