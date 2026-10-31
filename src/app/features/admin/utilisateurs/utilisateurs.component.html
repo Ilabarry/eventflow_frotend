@@ -1,42 +1,36 @@
-
 <main class="users-page">
+  <!-- ============================ BANNIÈRE ============================ -->
   <section class="users-banner">
     <div class="banner-content">
       <span class="eyebrow">ESPACE ADMINISTRATION</span>
       <h1>Gestion des utilisateurs</h1>
       <p>Gérez les comptes utilisateurs de la plateforme EVENTFLOW.</p>
     </div>
-
     <div class="banner-decoration" aria-hidden="true">
-      <span></span>
-      <span></span>
-      <span></span>
+      <span></span><span></span><span></span>
     </div>
   </section>
 
+  <!-- ============================ TOOLBAR ============================ -->
   <section class="users-toolbar" aria-label="Recherche et filtres">
     <label class="search-box">
       <span aria-hidden="true">⌕</span>
       <input
         type="search"
         placeholder="Rechercher par nom, prénom ou e-mail..."
-        [(ngModel)]="recherche"
-        (ngModelChange)="reinitialiserPage()"
+        [value]="recherche()"
+        (input)="onSearchChange($any($event.target).value)"
         aria-label="Rechercher un utilisateur"
       />
-      <button
-        *ngIf="recherche"
-        type="button"
-        class="clear-search"
-        (click)="recherche = ''; reinitialiserPage()"
-        aria-label="Effacer la recherche"
-      >×</button>
+      @if (recherche()) {
+        <button type="button" class="clear-search" (click)="clearSearch()" aria-label="Effacer la recherche">×</button>
+      }
     </label>
 
     <div class="filters">
       <label class="filter-control">
         <span>Rôle</span>
-        <select [(ngModel)]="roleFiltre" (ngModelChange)="reinitialiserPage()">
+        <select [value]="roleFiltre()" (change)="onRoleChange($any($event.target).value)">
           <option value="Tous">Tous les rôles</option>
           <option value="Participant">Participants</option>
           <option value="Organisateur">Organisateurs</option>
@@ -46,7 +40,7 @@
 
       <label class="filter-control">
         <span>Statut</span>
-        <select [(ngModel)]="statutFiltre" (ngModelChange)="reinitialiserPage()">
+        <select [value]="statutFiltre()" (change)="onStatutChange($any($event.target).value)">
           <option value="Tous">Tous les statuts</option>
           <option value="Actif">Actifs</option>
           <option value="Suspendu">Suspendus</option>
@@ -55,7 +49,7 @@
 
       <label class="filter-control">
         <span>Inscription</span>
-        <select [(ngModel)]="dateFiltre" (ngModelChange)="reinitialiserPage()">
+        <select [value]="dateFiltre()" (change)="onDateChange($any($event.target).value)">
           <option value="Toutes">Toutes les dates</option>
           <option value="7 jours">7 derniers jours</option>
           <option value="30 jours">30 derniers jours</option>
@@ -64,40 +58,51 @@
     </div>
   </section>
 
+  <!-- ============================ CARTES STATS ============================ -->
   <section class="stats-grid" aria-label="Statistiques utilisateurs">
-    <article class="stat-card stat-purple">
-      <div class="stat-icon" aria-hidden="true">♙</div>
-      <div>
-        <strong>{{ utilisateurs.length | number }}</strong>
-        <span>Comptes</span>
-      </div>
-    </article>
-
-    <article class="stat-card stat-green">
-      <div class="stat-icon" aria-hidden="true">♟</div>
-      <div>
-        <strong>{{ nombreParticipants | number }}</strong>
-        <span>Participants</span>
-      </div>
-    </article>
-
-    <article class="stat-card stat-blue">
-      <div class="stat-icon" aria-hidden="true">♙</div>
-      <div>
-        <strong>{{ nombreOrganisateurs | number }}</strong>
-        <span>Organisateurs</span>
-      </div>
-    </article>
-
-    <article class="stat-card stat-red">
-      <div class="stat-icon" aria-hidden="true">⊖</div>
-      <div>
-        <strong>{{ nombreSuspendus | number }}</strong>
-        <span>Suspendus</span>
-      </div>
-    </article>
+    @for (card of cards(); track card.key) {
+      <article class="stat-card" [class]="'stat-' + card.tone">
+        <div class="stat-icon" aria-hidden="true">
+          @switch (card.key) {
+            @case ('all') {
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg>
+            }
+            @case ('participants') {
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+            }
+            @case ('organisateurs') {
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                <line x1="16" y1="2" x2="16" y2="6" />
+                <line x1="8" y1="2" x2="8" y2="6" />
+                <line x1="3" y1="10" x2="21" y2="10" />
+              </svg>
+            }
+            @case ('suspendus') {
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+              </svg>
+            }
+          }
+        </div>
+        <div>
+          <strong>{{ formatNumber(card.value) }}</strong>
+          <span>{{ card.label }}</span>
+        </div>
+      </article>
+    }
   </section>
 
+  <!-- ============================ TABLEAU ============================ -->
   <section class="users-table-card">
     <div class="table-heading">
       <div>
@@ -105,105 +110,291 @@
         <p>Consultez les comptes et leur statut.</p>
       </div>
       <span class="result-count">
-        {{ utilisateursFiltres.length }} résultat(s)
+        {{ loadState() === 'loading' ? 'Chargement…' : (formatNumber(total()) + ' résultat(s)') }}
       </span>
     </div>
 
-    <div class="table-scroll">
-      <table>
-        <thead>
-          <tr>
-            <th scope="col">Utilisateur</th>
-            <th scope="col">Rôle</th>
-            <th scope="col">Inscription</th>
-            <th scope="col">Statut</th>
-            <th scope="col">Actions</th>
-          </tr>
-        </thead>
+    @if (loadState() === 'error') {
+      <div class="empty-state" role="alert">
+        <span aria-hidden="true">⚠</span>
+        <strong>Impossible de charger les utilisateurs</strong>
+        <p>{{ errorMessage() }}</p>
+        <button type="button" class="action-button" (click)="retry()">Réessayer</button>
+      </div>
+    } @else {
+      <div class="table-scroll" [attr.aria-busy]="loadState() === 'loading'">
+        <table>
+          <caption class="sr-only">Liste des utilisateurs de la plateforme</caption>
+          <thead>
+            <tr>
+              <th scope="col">Utilisateur</th>
+              <th scope="col">Rôle</th>
+              <th scope="col">Inscription</th>
+              <th scope="col">Statut</th>
+              <th scope="col" class="col-actions">Actions</th>
+            </tr>
+          </thead>
 
-        <tbody>
-          <tr *ngFor="let utilisateur of utilisateursPagines">
-            <td>
-              <div class="user-cell">
-                <div class="avatar">{{ utilisateur.avatar }}</div>
-                <div class="user-info">
-                  <strong>{{ utilisateur.prenom }} {{ utilisateur.nom }}</strong>
-                  <span>{{ utilisateur.email }}</span>
-                </div>
-              </div>
-            </td>
+          <tbody>
+            @if (loadState() === 'loading' && rows().length === 0) {
+              @for (i of [1, 2, 3, 4, 5]; track i) {
+                <tr aria-hidden="true">
+                  <td colspan="5"><span class="skeleton-row"></span></td>
+                </tr>
+              }
+            }
 
-            <td>
-              <span class="role-badge" [ngClass]="'role-' + utilisateur.role.toLowerCase()">
-                {{ utilisateur.role }}
-              </span>
-            </td>
+            @for (row of rows(); track row.id; let i = $index) {
+              <tr [class.row--suspended]="row.statut === 'Suspendu'">
+                <td>
+                  <div class="user-cell">
+                    <div class="avatar" [attr.data-tone]="avatarTone(row)">{{ initials(row) }}</div>
+                    <div class="user-info">
+                      <strong>{{ row.prenom }} {{ row.nom }}</strong>
+                      <span>{{ row.email }}</span>
+                    </div>
+                  </div>
+                </td>
 
-            <td class="date-cell">
-              {{ utilisateur.dateInscription | date:'dd MMM yyyy' }}
-            </td>
+                <td>
+                  <span class="role-badge" [attr.data-tone]="roleTone(row.role)">
+                    {{ row.role }}
+                  </span>
+                </td>
 
-            <td>
-              <span class="status-badge"
-                [class.status-active]="utilisateur.statut === 'Actif'"
-                [class.status-suspended]="utilisateur.statut === 'Suspendu'">
-                <span class="status-dot"></span>
-                {{ utilisateur.statut }}
-              </span>
-            </td>
+                <td class="date-cell">{{ formatDate(row.dateInscription) }}</td>
 
-            <td>
+                <td>
+                  <span class="status-badge"
+                        [class.status-active]="row.statut === 'Actif'"
+                        [class.status-suspended]="row.statut === 'Suspendu'">
+                    <span class="status-dot"></span>
+                    {{ row.statut }}
+                  </span>
+                </td>
+
+                <td class="col-actions">
+                  <div class="menu-wrap" data-menu-root>
+                    <button
+                      type="button"
+                      class="kebab"
+                      aria-haspopup="menu"
+                      [attr.aria-expanded]="menuOpenId() === row.id"
+                      [attr.aria-label]="'Actions pour ' + row.prenom + ' ' + row.nom"
+                      (click)="toggleMenu(row.id)"
+                    >
+                      <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+                        <circle cx="12" cy="5" r="1.7" />
+                        <circle cx="12" cy="12" r="1.7" />
+                        <circle cx="12" cy="19" r="1.7" />
+                      </svg>
+                    </button>
+
+                    @if (menuOpenId() === row.id) {
+                      <div class="menu" [class.menu--up]="menuUp(i, rows().length)" role="menu">
+                        <!-- ✅ Nouveau : voir le profil -->
+                        <button type="button" class="menu__item" role="menuitem" (click)="openProfile(row)">
+                          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                            <circle cx="12" cy="7" r="4" />
+                          </svg>
+                          Voir le profil
+                        </button>
+
+                        <!-- Contacter -->
+                        <button type="button" class="menu__item" role="menuitem" (click)="openContact(row)">
+                          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                            <polyline points="22,6 12,13 2,6" />
+                          </svg>
+                          Contacter
+                        </button>
+
+                        @if (!row.isAdmin) {
+                          @if (row.statut === 'Actif') {
+                            <button type="button" class="menu__item menu__item--danger" role="menuitem"
+                                    [disabled]="busyId() === row.id"
+                                    (click)="askSuspend(row)">
+                              Suspendre
+                            </button>
+                          } @else {
+                            <button type="button" class="menu__item menu__item--success" role="menuitem"
+                                    [disabled]="busyId() === row.id"
+                                    (click)="reactivate(row)">
+                              Réactiver
+                            </button>
+                          }
+                        } @else {
+                          <span class="menu__item menu__item--disabled" aria-disabled="true">
+                            Compte administrateur protégé
+                          </span>
+                        }
+                      </div>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+
+            @if (loadState() === 'ready' && isEmpty()) {
+              <tr>
+                <td colspan="5" class="empty-state">
+                  <span aria-hidden="true">⌕</span>
+                  <strong>Aucun utilisateur trouvé</strong>
+                  <p>Essayez de modifier votre recherche ou vos filtres.</p>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <footer class="table-footer">
+        <span>Page {{ currentPage() }} sur {{ totalPages() }} · {{ formatNumber(total()) }} compte(s)</span>
+
+        <nav class="pagination" aria-label="Pagination">
+          <label class="filter-control" aria-label="Nombre de lignes par page">
+            <span>Par page</span>
+            <select [value]="pageSize()" (change)="onPageSize($event)">
+              @for (size of pageSizeOptions; track size) {
+                <option [value]="size">{{ size }}</option>
+              }
+            </select>
+          </label>
+
+          <button type="button" [disabled]="!canPrev()" (click)="goToPage(currentPage() - 1)" aria-label="Page précédente">‹</button>
+          @for (p of [].constructor(totalPages()); let i = $index; track i) {
+            @if (totalPages() <= 7 || i === 0 || i === totalPages() - 1 || (i >= currentPage() - 2 && i <= currentPage())) {
               <button
                 type="button"
-                class="action-button"
-                [attr.aria-label]="'Changer le statut de ' + utilisateur.prenom + ' ' + utilisateur.nom"
-                (click)="changerStatut(utilisateur)"
-                [title]="utilisateur.statut === 'Actif' ? 'Suspendre ce compte' : 'Réactiver ce compte'"
-              >
-                {{ utilisateur.statut === 'Actif' ? 'Suspendre' : 'Réactiver' }}
-              </button>
-            </td>
-          </tr>
-
-          <tr *ngIf="utilisateursFiltres.length === 0">
-            <td colspan="5" class="empty-state">
-              <span aria-hidden="true">⌕</span>
-              <strong>Aucun utilisateur trouvé</strong>
-              <p>Essayez de modifier votre recherche ou vos filtres.</p>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <footer class="table-footer">
-      <span>
-        Page {{ page }} sur {{ nombrePages }}
-      </span>
-
-      <nav class="pagination" aria-label="Pagination">
-        <button
-          type="button"
-          [disabled]="page === 1"
-          (click)="changerPage(page - 1)"
-          aria-label="Page précédente"
-        >‹</button>
-
-        <button
-          *ngFor="let numero of [].constructor(nombrePages); let i = index"
-          type="button"
-          [class.current-page]="page === i + 1"
-          [attr.aria-current]="page === i + 1 ? 'page' : null"
-          (click)="changerPage(i + 1)"
-        >{{ i + 1 }}</button>
-
-        <button
-          type="button"
-          [disabled]="page === nombrePages"
-          (click)="changerPage(page + 1)"
-          aria-label="Page suivante"
-        >›</button> 
-      </nav>
-    </footer>
+                [class.current-page]="currentPage() === i + 1"
+                [attr.aria-current]="currentPage() === i + 1 ? 'page' : null"
+                (click)="goToPage(i + 1)"
+              >{{ i + 1 }}</button>
+            }
+          }
+          <button type="button" [disabled]="!canNext()" (click)="goToPage(currentPage() + 1)" aria-label="Page suivante">›</button>
+        </nav>
+      </footer>
+    }
   </section>
+
+  <!-- ============================ DIALOG MOTIF ============================ -->
+  <dialog
+    #reasonDialog
+    class="dialog"
+    aria-labelledby="reason-title"
+    (click)="onReasonBackdropClick($event)"
+    (cancel)="onReasonCancel($event)"
+    (close)="reasonRequest.set(null)"
+  >
+    @if (reasonRequest(); as request) {
+      <form class="dialog__panel" [formGroup]="reasonForm" (ngSubmit)="confirmReason()" novalidate>
+        <header class="dialog__head">
+          <h2 id="reason-title">Suspendre le compte</h2>
+          <button type="button" class="close" aria-label="Fermer" [disabled]="reasonSaving()" (click)="closeReason()">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12" /></svg>
+          </button>
+        </header>
+
+        <p class="dialog__text">
+          <strong>{{ request.target.prenom }} {{ request.target.nom }}</strong> ne pourra plus se connecter.
+          Vous pourrez réactiver le compte à tout moment.
+        </p>
+
+        <div class="field">
+          <label class="field__label" for="reason-select">Motif <span class="req">*</span></label>
+          <select id="reason-select" class="input" formControlName="reason"
+                  [class.input--error]="reasonAttempted() && reasonForm.controls.reason.invalid">
+            <option value="" disabled>Sélectionner un motif</option>
+            @for (option of reasonOptions; track option.value) {
+              <option [value]="option.value">{{ option.label }}</option>
+            }
+          </select>
+          @if (reasonAttempted() && reasonForm.controls.reason.invalid) {
+            <span class="field__error">Choisissez un motif.</span>
+          }
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="reason-details">
+            Précisions @if (detailsRequired()) { <span class="req">*</span> } @else { (facultatif) }
+          </label>
+          <textarea id="reason-details" class="input input--area" rows="3" maxlength="500"
+                    formControlName="details"
+                    [class.input--error]="reasonAttempted() && reasonForm.hasError('detailsRequired')"></textarea>
+          @if (reasonAttempted() && reasonForm.hasError('detailsRequired')) {
+            <span class="field__error">Précisez le motif (5 caractères minimum).</span>
+          }
+        </div>
+
+        <label class="check-row">
+          <input type="checkbox" class="check" formControlName="notify" />
+          <span>Prévenir l'utilisateur par e-mail</span>
+        </label>
+
+        <footer class="dialog__foot">
+          <button type="button" class="btn btn--ghost" [disabled]="reasonSaving()" (click)="closeReason()">Annuler</button>
+          <button type="submit" class="btn btn--danger" [disabled]="reasonSaving()">
+            @if (reasonSaving()) {
+              <span class="spinner" aria-hidden="true"></span> Envoi…
+            } @else {
+              Suspendre
+            }
+          </button>
+        </footer>
+      </form>
+    }
+  </dialog>
+
+  <!-- ============================ DIALOG CONTACT ============================ -->
+  <dialog
+    #contactDialog
+    class="dialog"
+    aria-labelledby="contact-title"
+    (click)="onContactBackdropClick($event)"
+    (close)="contactTarget.set(null)"
+  >
+    @if (contactTarget(); as target) {
+      <div class="dialog__panel">
+        <header class="dialog__head">
+          <h2 id="contact-title">Contacter l'utilisateur</h2>
+          <button type="button" class="close" aria-label="Fermer" (click)="closeContact()">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12" /></svg>
+          </button>
+        </header>
+
+        <p class="dialog__text"><strong>{{ target.full_name }}</strong></p>
+
+        <dl class="facts">
+          <div>
+            <dt>Téléphone</dt>
+            <dd class="contact">
+              @if (target.phone) {
+                <a [href]="phoneHref(target.phone)">{{ target.phone }}</a>
+                <button type="button" class="btn btn--ghost btn--sm" (click)="copy(target.phone, 'Numéro')">Copier</button>
+              } @else {
+                Non renseigné
+              }
+            </dd>
+          </div>
+          <div>
+            <dt>E-mail</dt>
+            <dd class="contact">
+              <a [href]="mailHref(target.email)">{{ target.email }}</a>
+              <button type="button" class="btn btn--ghost btn--sm" (click)="copy(target.email, 'Adresse e-mail')">Copier</button>
+            </dd>
+          </div>
+        </dl>
+
+        <div class="dialog__actions">
+          @if (target.phone) {
+            <a class="btn btn--ghost" [href]="phoneHref(target.phone)">Appeler</a>
+          }
+          <a class="btn btn--solid" [href]="mailHref(target.email)">Envoyer un e-mail</a>
+        </div>
+      </div>
+    }
+  </dialog>
 </main>
