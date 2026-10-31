@@ -285,7 +285,7 @@
                           <div class="menu" [class.menu--up]="menuUp(i)" role="menu">
                             <button type="button" class="menu__item" role="menuitem" (click)="openDetail(row)">Voir le profil</button>
                             <a class="menu__item" role="menuitem" routerLink="/admin/evenements" [queryParams]="{ organisateur: row.id }" (click)="openMenuId.set(null)">Voir ses événements</a>
-                            <a class="menu__item" role="menuitem" [href]="'mailto:' + row.email" (click)="openMenuId.set(null)">Contacter</a>
+                            <button type="button" class="menu__item" role="menuitem" (click)="openContact(row)"> Contacter </button>
 
                             @if (row.is_active) {
                               <button type="button" class="menu__item menu__item--danger" role="menuitem" (click)="askReason('suspend', [row])">Suspendre</button>
@@ -495,6 +495,75 @@
           </button>
         </footer>
       </form>
+    }
+  </dialog>
+  
+
+  <!-- ============================ CONTACTER L'ORGANISATEUR ============================ -->
+  <dialog
+    #contactDialog
+    class="dialog"
+    aria-labelledby="contact-title"
+    (click)="onBackdropClick($event, 'contact')"
+    (close)="contactTarget.set(null)"
+  >
+    @if (contactTarget(); as target) {
+      <div class="dialog__panel">
+        <header class="dialog__head">
+          <h2 id="contact-title">Contacter l'organisateur</h2>
+          <button type="button" class="close" aria-label="Fermer" (click)="closeContact()">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </header>
+
+        <p class="dialog__text">
+          <strong>{{ target.full_name }}</strong>
+        </p>
+
+        <dl class="facts">
+          <div>
+            <dt>Téléphone</dt>
+            <dd class="contact">
+              @if (target.phone) {
+                <a [href]="phoneHref(target.phone)">{{ target.phone }}</a>
+                <button
+                  type="button"
+                  class="btn btn--secondary contact__copy"
+                  aria-label="Copier le numéro"
+                  (click)="copy(target.phone, 'Numéro')"
+                >
+                  Copier
+                </button>
+              } @else {
+                Non renseigné
+              }
+            </dd>
+          </div>
+          <div>
+            <dt>E-mail</dt>
+            <dd class="contact">
+              <a [href]="mailHref(target)">{{ target.email }}</a>
+              <button
+                type="button"
+                class="btn btn--secondary contact__copy"
+                aria-label="Copier l'adresse e-mail"
+                (click)="copy(target.email, 'Adresse e-mail')"
+              >
+                Copier
+              </button>
+            </dd>
+          </div>
+        </dl>
+
+        <div class="dialog__actions">
+          @if (target.phone) {
+            <a class="btn btn--ghost" [href]="phoneHref(target.phone)">Appeler</a>
+          }
+          <a class="btn btn--primary" [href]="mailHref(target)">Envoyer un e-mail</a>
+        </div>
+      </div>
     }
   </dialog>
 </section>

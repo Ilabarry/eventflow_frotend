@@ -180,6 +180,9 @@ export class AdminOrganizersComponent {
 
   private readonly reasonDialog = viewChild.required<ElementRef<HTMLDialogElement>>('reasonDialog');
   private readonly detailDialog = viewChild.required<ElementRef<HTMLDialogElement>>('detailDialog');
+  private readonly contactDialog = viewChild.required<ElementRef<HTMLDialogElement>>('contactDialog');
+
+  readonly contactTarget = signal<AdminOrganizerDto | null>(null);
 
   readonly activityOptions = ACTIVITY_OPTIONS;
   readonly statusMeta = STATUS_META;
@@ -643,11 +646,16 @@ export class AdminOrganizersComponent {
     this.detailDialog().nativeElement.close();
   }
 
-  onBackdropClick(event: MouseEvent, kind: 'detail' | 'reason'): void {
-    const element = (kind === 'detail' ? this.detailDialog() : this.reasonDialog()).nativeElement;
-    if (event.target !== element) return;
+  onBackdropClick(event: MouseEvent, kind: 'detail' | 'reason' | 'contact'): void {
+    const dialog = kind === 'detail' ? this.detailDialog()
+      : kind === 'reason' ? this.reasonDialog()
+      : this.contactDialog();
+
+    if (event.target !== dialog.nativeElement) return;
+
     if (kind === 'detail') this.closeDetail();
-    else this.closeReason();
+    else if (kind === 'reason') this.closeReason();
+    else this.closeContact();
   }
 
   /* ------------------------------------------------------------------ */
@@ -778,4 +786,41 @@ export class AdminOrganizersComponent {
   onEscape(): void {
     this.openMenuId.set(null);
   }
+
+  openContact(row: AdminOrganizerDto): void {
+    this.openMenuId.set(null);
+    this.contactTarget.set(row);
+    this.contactDialog().nativeElement.showModal();
+  }
+
+  closeContact(): void {
+    this.contactDialog().nativeElement.close();
+  }
+
+  onContactBackdropClick(event: MouseEvent): void {
+    if (event.target === this.contactDialog().nativeElement) {
+      this.closeContact();
+    }
+  }
+
+  /** « +221 77 123 45 67 » → « tel:+221771234567 » (espaces retirés). */
+  phoneHref(phone: string): string {
+    return `tel:${phone.replace(/[^\d+]/g, '')}`;
+  }
+
+  /** Ouvre la messagerie avec un objet qui rappelle le contexte. */
+  mailHref(row: AdminOrganizerDto): string {
+    const subject = encodeURIComponent(`[EventFlow] Contact administrateur`);
+    return `mailto:${row.email}?subject=${subject}`;
+  }
+
+  async copy(value: string, label: string): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(value);
+      this.notification.success(`${label} copié dans le presse-papiers.`, 'Copié');
+    } catch {
+      this.notification.error(`Impossible de copier : sélectionnez le texte à la main.`);
+    }
+  }
+
 }
