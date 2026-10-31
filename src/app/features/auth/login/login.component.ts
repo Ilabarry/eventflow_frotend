@@ -1,15 +1,3 @@
-type LoginErrorType =
-  | 'invalid_credentials'
-  | 'account_disabled'
-  | 'email_not_verified'
-  | 'unknown';
-
-interface LoginError {
-  type: LoginErrorType;
-  message: string;
-  email?: string;  
-}
-
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
@@ -23,21 +11,18 @@ import { AuthService } from '../../../core/auth/auth.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { LoginPayload } from '../../../core/models/auth.model';
 
-/**
- * Page de connexion.
- *
- * Gère :
- *   - Validation côté client (email + mot de passe)
- *   - Appel HTTP au backend (AuthService.login)
- *   - Redirection selon le rôle après succès
- *   - Gestion des erreurs backend (toast)
- *   - Affichage/masquage du mot de passe
- *
- * ⚠️ SÉCURITÉ :
- *   - Aucune donnée sensible n'est stockée dans le composant.
- *   - Le mot de passe est envoyé en HTTPS au backend.
- *   - Les erreurs 401 sont gérées par l'intercepteur.
- */
+type LoginErrorType =
+  | 'invalid_credentials'
+  | 'account_disabled'
+  | 'email_not_verified'
+  | 'unknown';
+
+interface LoginError {
+  type: LoginErrorType;
+  message: string;
+  email?: string;
+}
+
 @Component({
   selector: 'app-login',
   standalone: true,
@@ -58,17 +43,10 @@ export class LoginComponent {
   /** État de visibilité du mot de passe */
   readonly showPassword = signal(false);
 
-  /** gestion des erreurs */
+  /** Gestion des erreurs */
   readonly loginError = signal<LoginError | null>(null);
   readonly resending = signal(false);
   readonly resendSuccess = signal(false);
-
-  /** Message d'info (si l'utilisateur vient de s'inscrire) */
-  readonly registeredMessage = signal<string | null>(
-    this.route.snapshot.queryParamMap.get('registered') === 'true'
-      ? 'Votre compte a été créé avec succès. Merci de vérifiez votre email pour activer votre compte.'
-      : null
-  );
 
   /** Formulaire réactif */
   readonly loginForm: FormGroup = this.fb.group({
@@ -109,36 +87,23 @@ export class LoginComponent {
         const loginError = this.parseLoginError(error, payload.email);
         this.loginError.set(loginError);
 
-        // ✅ Afficher le bon toast selon le type d'erreur
+        // Toast selon le type
         switch (loginError.type) {
           case 'email_not_verified':
-            this.notification.warning(
-              loginError.message,
-              'Email non vérifié',
-            );
+            this.notification.warning(loginError.message, 'Email non vérifié');
             break;
           case 'account_disabled':
-            this.notification.error(
-              loginError.message,
-              'Compte désactivé',
-            );
+            this.notification.error(loginError.message, 'Compte désactivé');
             break;
           case 'invalid_credentials':
-            this.notification.error(
-              loginError.message,
-              'Connexion échouée',
-            );
+            this.notification.error(loginError.message, 'Connexion échouée');
             break;
           default:
-            this.notification.error(
-              loginError.message,
-              'Erreur',
-            );
+            this.notification.error(loginError.message, 'Erreur');
         }
       },
     });
   }
-
 
   private parseLoginError(error: any, email: string): LoginError {
     const backendMessage: string =
@@ -146,7 +111,6 @@ export class LoginComponent {
       error?.error?.message ||
       '';
 
-    // Détection par mots-clés (le backend renvoie des messages explicites)
     if (
       backendMessage.toLowerCase().includes('pas encore vérifiée') ||
       backendMessage.toLowerCase().includes('not verified')
@@ -166,7 +130,7 @@ export class LoginComponent {
       return {
         type: 'account_disabled',
         message:
-          "Votre compte est désactivé. Contactez l'administrateur depuis le mail reçu",
+          "Votre compte est désactivé. Contactez l'administrateur pour plus d'informations.",
         email,
       };
     }
@@ -203,7 +167,7 @@ export class LoginComponent {
     if (target === '/') {
       this.notification.warning(
         "Votre compte n'a aucun rôle attribué. Contactez un administrateur.",
-        'Accès restreint'
+        'Accès restreint',
       );
     }
 

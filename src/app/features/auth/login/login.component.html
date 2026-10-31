@@ -3,12 +3,10 @@
        PARTIE GAUCHE : Visuel (Zone visuelle)
        ================================================================ -->
   <aside class="login__aside">
-    <!-- Logo -->
     <div class="login__logo">
       <img src="img/FFFFFF.svg" alt="EVENTFLOW" class="login__logo-img" />
     </div>
 
-    <!-- Titre -->
     <div class="login__aside-header">
       <span class="login__aside-tag">ZONE VISUELLE</span>
       <h2 class="login__aside-title">
@@ -16,7 +14,6 @@
       </h2>
     </div>
 
-    <!-- Étapes -->
     <ul class="login__steps">
       <li class="login__step">
         <span class="login__step-icon">
@@ -58,7 +55,6 @@
       </li>
     </ul>
 
-    <!-- Citation -->
     <blockquote class="login__quote">
       « Vos événements commencent ici. »
     </blockquote>
@@ -68,33 +64,72 @@
        PARTIE DROITE : Formulaire
        ================================================================ -->
   <main class="login__main">
-    <!-- Lien retour -->
     <a routerLink="/" class="login__back">
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
         <line x1="19" y1="12" x2="5" y2="12"></line>
         <polyline points="12 19 5 12 12 5"></polyline>
       </svg>
-      Aller ver acceuil
+      Aller vers accueil
     </a>
 
-    <!-- Message d'inscription réussie -->
-    @if (registeredMessage()) {
-      <div class="login__info-banner">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-          <polyline points="22 4 12 14.01 9 11.01"></polyline>
-        </svg>
-        <span>{{ registeredMessage() }}</span>
-      </div>
-    }
-
-    <!-- Titre -->
     <div class="login__header">
       <h1 class="login__title">BIENVENUE</h1>
       <p class="login__subtitle">Connectez-vous à votre compte.</p>
     </div>
 
-    <!-- Formulaire -->
+    <!-- ✅ Alerte contextuelle (dans la page) -->
+    @if (loginError(); as err) {
+      <div class="login__alert" [class]="'login__alert--' + err.type">
+        <span class="login__alert-icon">
+          @switch (err.type) {
+            @case ('email_not_verified') {
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                <polyline points="22,6 12,13 2,6"></polyline>
+              </svg>
+            }
+            @case ('account_disabled') {
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+              </svg>
+            }
+            @default {
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+            }
+          }
+        </span>
+
+        <div class="login__alert-content">
+          <p class="login__alert-message">{{ err.message }}</p>
+
+          @if (err.type === 'email_not_verified') {
+            @if (resendSuccess()) {
+              <p class="login__alert-success">✅ Email envoyé ! Vérifiez votre boîte de réception.</p>
+            } @else {
+              <button
+                type="button"
+                class="login__alert-action"
+                (click)="resendVerificationEmail()"
+                [disabled]="resending()"
+              >
+                @if (resending()) {
+                  <span class="login__spinner"></span>
+                  Envoi en cours…
+                } @else {
+                  Renvoyer l'email de vérification
+                }
+              </button>
+            }
+          }
+        </div>
+      </div>
+    }
+
     <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login__form" novalidate>
       <!-- Email -->
       <div class="login__field">
@@ -136,7 +171,6 @@
             [class.login__input--error]="isFieldInvalid('password')"
             autocomplete="current-password"
           />
-          <!-- Bouton voir/masquer -->
           <button
             type="button"
             class="login__toggle-password"
@@ -161,19 +195,13 @@
         }
       </div>
 
-      <!-- Mot de passe oublié -->
       <div class="login__forgot">
         <a routerLink="/forgot-password" class="login__forgot-link">
           Mot de passe oublié ?
         </a>
       </div>
 
-      <!-- Bouton soumettre -->
-      <button
-        type="submit"
-        class="login__submit"
-        [disabled]="isSubmitting()"
-      >
+      <button type="submit" class="login__submit" [disabled]="isSubmitting()">
         @if (isSubmitting()) {
           <span class="login__spinner"></span>
           Connexion en cours...
@@ -182,7 +210,6 @@
         }
       </button>
 
-      <!-- Lien inscription -->
       <p class="login__register-link">
         Pas encore de compte ?
         <a routerLink="/register" class="login__link login__link--bold">Créer un compte</a>

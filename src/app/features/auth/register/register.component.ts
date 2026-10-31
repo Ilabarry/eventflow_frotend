@@ -43,6 +43,8 @@ export class RegisterComponent {
 
   readonly isSubmitting = signal(false);
   readonly selectedRole = signal<'participant' | 'organisateur'>('participant');
+  readonly success = signal(false);
+  readonly registeredEmail = signal<string>('');
 
   readonly registerForm: FormGroup = this.fb.group(
     {
@@ -99,14 +101,12 @@ export class RegisterComponent {
       role: this.selectedRole(),
     };
 
-    console.log('[RegisterComponent] Submitting registration', { email: payload.email, role: payload.role });
-
     this.authService.register(payload).subscribe({
       next: () => {
         this.isSubmitting.set(false);
-        this.router.navigate(['/login'], {
-          queryParams: { registered: 'true' },
-        });
+        // ✅ Afficher l'écran de succès au lieu de rediriger
+        this.registeredEmail.set(payload.email);
+        this.success.set(true);
       },
       error: (err) => {
         this.isSubmitting.set(false);
