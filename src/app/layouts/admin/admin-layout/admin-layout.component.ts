@@ -1,8 +1,8 @@
-import { Component, DestroyRef, HostListener, effect, inject, signal } from '@angular/core';
+import { Component, DestroyRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
-import { Router, RouterOutlet } from '@angular/router';
+import { RouterOutlet } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Subject, interval, startWith, switchMap, catchError, of } from 'rxjs';
+import { interval, startWith, switchMap, catchError, of } from 'rxjs';
 
 import { AdminNavbarComponent } from '../navbar/navbar.component';
 import { AdminSidebarComponent } from '../sidebar/sidebar.component';
@@ -19,28 +19,25 @@ const DESKTOP_BREAKPOINT = 1024;
   styleUrl: './admin-layout.component.scss',
 })
 export class AdminLayoutComponent {
-  private readonly router = inject(Router);
   private readonly document = inject(DOCUMENT);
   private readonly authService = inject(AuthService);
   private readonly notificationApi = inject(NotificationApiService);
-  private readonly destroy$ = new Subject<void>();
 
   readonly sidebarOpen = signal(false);
 
-  // ✅ Données réactives
-  readonly userName = signal('');
-  readonly avatarUrl = signal<string | null>(null);
+  // ✅ Valeurs dérivées de l'utilisateur courant (pas d'écriture manuelle)
+  readonly userName = computed(() => {
+    const user = this.authService.currentUser();
+    return user?.full_name || user?.first_name || 'Admin';
+  });
+  readonly avatarUrl = computed<string | null>(
+    () => this.authService.currentUser()?.profile_picture ?? null,
+  );
+
   readonly notificationCount = signal(0);
   readonly messageCount = signal(0); // icône désactivée dans le HTML
 
   constructor() {
-    // Synchronisation du nom + avatar
-    effect(() => {
-      const user = this.authService.currentUser();
-      this.userName.set(user?.full_name || user?.first_name || 'Admin');
-      this.avatarUrl.set(user?.profile_picture ?? null);
-    });
-
     // Compteur de notifications rafraîchi toutes les 60 s
     interval(60_000)
       .pipe(
@@ -63,8 +60,6 @@ export class AdminLayoutComponent {
 
     inject(DestroyRef).onDestroy(() => {
       this.document.body.style.overflow = '';
-      this.destroy$.next();
-      this.destroy$.complete();
     });
   }
 
@@ -77,7 +72,7 @@ export class AdminLayoutComponent {
   }
 
   onLogout(): void {
-    // ✅ Délègue tout à AuthService (blacklist backend + clear state + redirection)
+    // Délègue tout à AuthService (blacklist backend + clear state + redirection)
     this.closeSidebar();
     this.authService.logout();
   }
