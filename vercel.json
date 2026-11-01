@@ -1,10 +1,7 @@
 {
   "buildCommand": "npm run build",
-  "outputDirectory": "dist/eventflow_frontend",
+  "outputDirectory": "dist/eventflow_frontend/browser",
   "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
