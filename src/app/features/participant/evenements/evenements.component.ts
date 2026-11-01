@@ -11,6 +11,7 @@ import {
 import { PaginatedResponse } from '../../../core/models/api-response.model';
 import { BackendEvent, EventCategory } from '../../../core/models/event.model';
 
+type OrderingOption = 'start_at' | '-start_at' | 'created_at' | '-created_at' | 'RANDOM';
 type LoadState = 'loading' | 'ready' | 'error';
 type FormatFilter = 'IN_PERSON' | 'ONLINE' | 'HYBRID' | 'all';
 type PriceFilter = 'FREE' | 'PAID' | 'all';
@@ -50,7 +51,8 @@ export class ParticipantEventsComponent {
   readonly selectedFormat = signal<FormatFilter>('all');
   readonly selectedPrice = signal<PriceFilter>('all');
   readonly selectedDate = signal<DateFilter>('all');
-  readonly ordering = signal<'-start_at' | 'start_at'>('start_at');
+  // readonly ordering = signal<'-start_at' | 'start_at'>('start_at');
+  readonly ordering = signal<OrderingOption>('start_at');
 
   // ------------------------------------------------------------------
   // OPTIONS

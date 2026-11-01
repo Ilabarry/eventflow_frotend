@@ -16,9 +16,10 @@ import { MyTicketDto, TicketService } from '../../../core/services/ticket.servic
 /* ------------------------------------------------------------------
  * Constantes de la page
  * ------------------------------------------------------------------ */
-/** Nombre de cartes sous « Prochains événements » (après le prochain). */
 const OTHER_EVENTS_COUNT = 2;
 const DAY_MS = 24 * 60 * 60 * 1000;
+/** Marge pour absorber les décalages timezone / cache serveur. */
+const UPCOMING_MARGIN_MS = 60 * 60 * 1000; // 1 heure
 
 const DATE_FORMAT = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long' });
 const TIME_FORMAT = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' });
@@ -26,7 +27,7 @@ const TIME_FORMAT = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: 
 type LoadState = 'loading' | 'ready' | 'error';
 
 /* ------------------------------------------------------------------
- * Modèles d'affichage (préparés ici, pas dans le HTML)
+ * Modèles d'affichage
  * ------------------------------------------------------------------ */
 interface EventCard {
   registrationId: string;
@@ -48,7 +49,7 @@ interface NextEvent extends EventCard {
 
 interface Counter {
   label: string;
-  value: number | null; // null : donnée indisponible
+  value: number | null;
   tone: 'success' | 'violet' | 'neutral';
   link: string;
 }
@@ -85,13 +86,16 @@ function countdownLabel(startIso: string, now: Date): string {
   const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
   const days = Math.round((startDay - today) / DAY_MS);
 
-  if (days <= 0) {
-    return "Aujourd'hui";
-  }
+  if (days <= 0) return "Aujourd'hui";
   return days === 1 ? 'Demain' : `Dans ${days} jours`;
 }
 
-/** Un compteur secondaire en échec n'empêche pas d'afficher la page. */
+/** Vrai si la date de début est dans le futur (avec marge de sécurité). */
+function isUpcomingIso(iso: string): boolean {
+  const t = new Date(iso).getTime();
+  return !Number.isNaN(t) && t > Date.now() - UPCOMING_MARGIN_MS;
+}
+
 function countOf<T>(request: Observable<ApiResponse<PaginatedResponse<T>>>): Observable<number | null> {
   return request.pipe(
     map((response) => response.data?.count ?? null),
@@ -122,7 +126,12 @@ export class ParticipantDashboardComponent {
   readonly otherEvents = signal<EventCard[]>([]);
   readonly counters = signal<Counter[]>([]);
 
-  /** Prénom affiché dans le bandeau (vide tant que le profil n'est pas chargé). */
+  /**
+   * Vrai si l'utilisateur a des inscriptions en base, mais qu'aucune n'est
+   * à venir (toutes passées). Sert à afficher un message différent.
+   */
+  readonly hasPastOnly = signal(false);
+
   readonly firstName = computed(() => this.authService.currentUser()?.first_name?.trim() ?? '');
 
   constructor() {
@@ -133,7 +142,6 @@ export class ParticipantDashboardComponent {
     this.load();
   }
 
-  /** « 5 » → « 05 », comme sur la maquette. */
   formatCount(value: number | null): string {
     return value === null ? '—' : String(value).padStart(2, '0');
   }
@@ -141,6 +149,7 @@ export class ParticipantDashboardComponent {
   /* --- chargement ------------------------------------------------------ */
   private load(): void {
     this.loadState.set('loading');
+    this.hasPastOnly.set(false);
 
     this.dashboardService
       .getParticipantDashboard()
@@ -149,11 +158,30 @@ export class ParticipantDashboardComponent {
           if (!response.data) {
             throw new Error('Réponse du dashboard sans données');
           }
-          const next = response.data.upcoming_registrations[0] ?? null;
 
-          // Les 3 requêtes secondaires partent en parallèle.
+          // ⚠️ Filtrage défensif : ne garder que les inscriptions dont
+          // l'événement est réellement à venir (marge de sécurité pour
+          // absorber les décalages timezone / cache serveur).
+          const allRegistrations = response.data.upcoming_registrations ?? [];
+          const trulyUpcoming = allRegistrations
+            .filter((r) => r?.event && isUpcomingIso(r.event.start_at))
+            .sort(
+              (a, b) =>
+                new Date(a.event.start_at).getTime() -
+                new Date(b.event.start_at).getTime(),
+            );
+
+          // Si le backend a renvoyé des inscriptions mais qu'on les a toutes
+          // écartées, on mémorise qu'elles sont passées.
+          const dashboardWithFiltered: ParticipantDashboardDto = {
+            ...response.data,
+            upcoming_registrations: trulyUpcoming,
+          };
+
+          const next = trulyUpcoming[0] ?? null;
+
           return forkJoin({
-            dashboard: of(response.data),
+            dashboard: of(dashboardWithFiltered),
             ticketCount: countOf(this.ticketService.listMine({ page: 1, pageSize: 1 })),
             certificateCount: countOf(this.certificateService.listMine(1, 1)),
             nextTicket: next ? this.ticketOf(next.event.id) : of(null),
@@ -163,12 +191,14 @@ export class ParticipantDashboardComponent {
       )
       .subscribe({
         next: (data) => this.applyData(data),
-        // Le détail technique n'est pas montré : l'intercepteur gère 401/403.
-        error: () => this.loadState.set('error'),
+        error: (err) => {
+          console.error('[Dashboard] load failed', err);
+          this.loadState.set('error');
+        },
       });
   }
 
-  /** Ticket du participant pour un événement (type de billet, lien). */
+  /** Ticket du participant pour un événement. */
   private ticketOf(eventId: string): Observable<MyTicketDto | null> {
     return this.ticketService.listMine({ page: 1, pageSize: 1, eventId }).pipe(
       map((response) => response.data?.results[0] ?? null),
@@ -177,7 +207,7 @@ export class ParticipantDashboardComponent {
   }
 
   private applyData(data: DashboardData): void {
-    const { summary, upcoming_registrations: upcoming } = data.dashboard;
+    const { summary, upcoming_registrations: upcoming = [] } = data.dashboard;
     const [first, ...others] = upcoming;
 
     this.nextEvent.set(
@@ -190,12 +220,19 @@ export class ParticipantDashboardComponent {
           }
         : null,
     );
+
     this.otherEvents.set(others.slice(0, OTHER_EVENTS_COUNT).map(toEventCard));
+
+    // « Passés uniquement » : aucune inscription à venir MAIS au moins une
+    // inscription comptée dans le résumé.
+    this.hasPastOnly.set(upcoming.length === 0 && summary.total_registrations > 0);
+
     this.counters.set([
       { label: 'Inscriptions', value: summary.total_registrations, tone: 'success', link: '/participant/inscriptions' },
       { label: 'Tickets', value: data.ticketCount, tone: 'violet', link: '/participant/tickets' },
       { label: 'Mes attestations', value: data.certificateCount, tone: 'neutral', link: '/participant/attestations' },
     ]);
+
     this.loadState.set('ready');
   }
 }

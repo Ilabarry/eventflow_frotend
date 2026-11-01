@@ -170,12 +170,26 @@ export class HommeComponent implements OnInit, OnDestroy {
   /* ------------------------------------------------------------------
      CHARGEMENT
      ------------------------------------------------------------------ */
+
+  /**
+   * Charge un lot d'événements pour l'accueil.
+   *
+   * On demande au backend un ordre aléatoire (ordering=RANDOM si supporté,
+   * sinon on mélange nous-mêmes côté frontend). On demande aussi une
+   * page_size plus grande que le strict nécessaire (24) pour que le
+   * mélange ait de la matière, mais on reste raisonnable pour la
+   * performance.
+   *
+   * L'objectif : l'accueil montre des événements différents à chaque
+   * visite, sans dépendre d'une notion de « à venir » qui rendrait
+   * l'affichage prévisible.
+   */
   loadEvents(): void {
     this.isLoading = true;
     this.errorMessage = '';
 
     this.eventsApi
-      .getEvents()
+      .getEvents({ page_size: 24, ordering: 'RANDOM' })
       .pipe(finalize(() => (this.isLoading = false)))
       .subscribe({
         next: (response) => {
@@ -184,7 +198,7 @@ export class HommeComponent implements OnInit, OnDestroy {
             this.errorMessage = response.message || 'Impossible de charger les événements.';
             return;
           }
-          this.events = response.data.results ?? [];
+          this.events = this.shuffle(response.data.results ?? []);
           this.totalCount = response.data.count ?? this.events.length;
           this.buildFeatured();
         },
@@ -227,21 +241,18 @@ export class HommeComponent implements OnInit, OnDestroy {
     this.activeSlide = 0;
   }
 
-  /** À venir d'abord (du plus proche au plus lointain), puis les événements passés */
-  private rankedEvents(): BackendEvent[] {
-    const now = Date.now();
-    const time = (e: BackendEvent): number => new Date(e.start_at).getTime();
-    const valid = this.events.filter((e) => !Number.isNaN(time(e)));
-    const upcoming = valid.filter((e) => time(e) >= now).sort((a, b) => time(a) - time(b));
-    const past = valid.filter((e) => time(e) < now).sort((a, b) => time(b) - time(a));
-    return [...upcoming, ...past];
-  }
-
+  /**
+   * Construit la grille « à la une » et les slides du carrousel.
+   *
+   * ⚠️ IMPORTANT : plus de tri par date. On garde l'ordre mélangé
+   * (celui de `this.events`, déjà mélangé côté `loadEvents()`).
+   * Les 4 premiers alimentent la grille, les 3 premiers avec image
+   * alimentent le carrousel.
+   */
   private buildFeatured(): void {
-    const ranked = this.rankedEvents();
-    this.featuredEvents = ranked.slice(0, 4);
+    this.featuredEvents = this.events.slice(0, 4);
 
-    const withCover = ranked.filter((e) => !!e.cover_image).slice(0, 3);
+    const withCover = this.events.filter((e) => !!e.cover_image).slice(0, 3);
     this.heroSlides = withCover.length
       ? withCover.map((e) => ({
           key: String(e.id),
@@ -255,6 +266,23 @@ export class HommeComponent implements OnInit, OnDestroy {
 
     this.activeSlide = 0;
     this.restartTimer();
+  }
+
+  /**
+   * Mélange Fisher-Yates (non destructif).
+   *
+   * Utilisé comme filet de sécurité si le backend ignore `ordering=RANDOM`
+   * ou renvoie déjà un ordre trié. Comme `loadEvents()` mélange à chaque
+   * appel, un simple rechargement de la page d'accueil donnera un ordre
+   * différent — comportement souhaité.
+   */
+  private shuffle<T>(items: T[]): T[] {
+    const copy = [...items];
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
   }
 
   /* ------------------------------------------------------------------
