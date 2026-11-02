@@ -8,6 +8,9 @@
    ================================================================ */
 :host {
   display: block;
+  /* Empêche tout débordement horizontal d'un enfant large (nom de
+     catégorie, slug, bouton, etc.) de faire scroller toute la page. */
+  overflow-x: hidden;
 
   --gap: 1rem;
   --c-violet: var(--evf-violet, #6C5CE7);
@@ -35,9 +38,10 @@
   gap: var(--gap);
   max-width: 1280px;
   margin: 0 auto;
-  padding-bottom: 0.5rem;
+  padding: 0 1rem 0.5rem;
   font-family: var(--evf-font-body, 'Inter'), sans-serif;
   color: var(--c-text);
+  /* Padding horizontal pour ne jamais coller aux bords sur mobile. */
 }
 
 .icon {
@@ -95,8 +99,6 @@
     position: absolute;
     inset: 0;
     z-index: -2;
-    /* Même visuel que la bannière du tableau de bord admin : la cohérence
-       passe par la meme source, pas par une nouvelle image. */
     background-image: url('https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=1200&q=80');
     background-size: cover;
     background-position: center;
@@ -130,6 +132,9 @@
     gap: 0.375rem;
     min-width: 0;
     max-width: 62ch;
+    /* `min-width: 0` indispensable pour que les enfants en flex puissent
+       tronquer leur contenu (sinon le titre pousse la largeur). */
+    flex: 1 1 320px;
   }
 
   &__eyebrow {
@@ -152,6 +157,8 @@
     letter-spacing: -0.03em;
     line-height: 1.2;
     color: #fff;
+    /* Autorise le retour à la ligne pour les titres longs. */
+    overflow-wrap: anywhere;
   }
 
   &__actions {
@@ -160,6 +167,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.625rem;
+    flex-shrink: 0;
   }
 
   &__btn {
@@ -213,7 +221,9 @@
    ================================================================ */
 .stats {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  /* 3 colonnes dès qu'il y a la place, sinon auto-fit. `minmax(0, 1fr)`
+     empêche les cellules de dépasser (sinon un label long déborde). */
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 0.75rem;
   margin: 0;
   padding: 0;
@@ -221,22 +231,23 @@
 
   &__item {
     min-width: 0;
+    display: flex;
   }
 }
 
 .stat {
   position: relative;
   display: flex;
+  flex: 1 1 auto;
   height: 100%;
   padding: 1.1rem 1rem 1rem;
   flex-direction: column;
   gap: 0.5rem;
   border: 1px solid transparent;
   border-radius: 16px;
-  /* Fonds pleins de la maquette : vert pastel / indigo pastel, sans ombre
-     ni liseré — la carte EST la couleur. */
   background: var(--tone-bg, var(--c-surface));
   overflow: hidden;
+  min-width: 0;
 
   &[data-tone='green'] { --tone-bg: #d4f4e1; }
   &[data-tone='violet'] { --tone-bg: #dee1ff; }
@@ -263,12 +274,14 @@
 
   &__value {
     font-family: var(--evf-font-heading, 'Sora'), sans-serif;
-    font-size: 1.6rem;
+    font-size: clamp(1.3rem, 2vw, 1.6rem);
     font-weight: 800;
     line-height: 1.1;
     letter-spacing: -0.02em;
     color: #0d1631;
     font-variant-numeric: tabular-nums;
+    min-width: 0;
+    overflow-wrap: anywhere;
 
     &--muted {
       color: var(--c-muted);
@@ -282,6 +295,7 @@
     font-size: 0.88rem;
     font-weight: 700;
     text-align: center;
+    overflow-wrap: anywhere;
   }
 }
 
@@ -294,15 +308,16 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 0.75rem;
+  min-width: 0;
 }
 
-/* Champ gris de la maquette ; le conteneur ne porte plus de bordure :
-   le fond vit sur .search__field, le bouton reste un frere a droite. */
 .search__field {
   display: flex;
   flex: 1 1 auto;
   align-items: center;
   min-width: 0;
+  /* min-width: 0 + flex: 1 1 auto permet au champ de rétrécir sur mobile
+     au lieu de forcer 420px. */
   height: 52px;
   padding: 0 1rem;
   border: 1px solid transparent;
@@ -319,9 +334,10 @@
 .search {
   position: relative;
   display: flex;
-  flex: 1 1 420px;
+  flex: 1 1 auto;
   align-items: center;
   gap: 0.75rem;
+  /* min-width: 280px remplace 420px : tient sur mobile sans déborder. */
   min-width: 0;
   max-width: none;
   height: auto;
@@ -355,8 +371,6 @@
       outline: none;
     }
 
-    /* Chrome/Safari donnent au `type=search` un X natif qui doublerait notre
-       bouton « effacer » (et le notre porte l'aria-label). */
     &::-webkit-search-cancel-button {
       display: none;
     }
@@ -374,6 +388,7 @@
     background: rgba(100, 116, 139, 0.12);
     color: var(--c-muted);
     cursor: pointer;
+    flex-shrink: 0;
 
     &:hover {
       background: rgba(239, 68, 68, 0.12);
@@ -398,6 +413,7 @@
     font: 700 0.9rem var(--evf-font-body, 'Inter'), sans-serif;
     white-space: nowrap;
     cursor: pointer;
+    flex-shrink: 0;
     transition: background 0.2s ease, transform 0.2s ease;
 
     &:hover:not(:disabled) {
@@ -418,6 +434,7 @@
   flex-wrap: wrap;
   gap: 0.5rem;
   margin-left: auto;
+  min-width: 0;
 }
 
 .chip {
@@ -432,6 +449,7 @@
   color: var(--c-violet);
   font: 700 0.75rem var(--evf-font-body, 'Inter'), sans-serif;
   cursor: pointer;
+  white-space: nowrap;
 
   &:hover {
     border-style: solid;
@@ -451,6 +469,14 @@
   border: 1px solid var(--c-border);
   border-radius: 999px;
   background: var(--c-bg);
+  /* max-width: 100% + overflow-x: auto permettent au segmented de
+     défiler horizontalement sur très petit écran sans casser le layout. */
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
+  &::-webkit-scrollbar { display: none; }
 
   &__btn {
     height: 28px;
@@ -462,6 +488,7 @@
     font: 600 0.78rem var(--evf-font-body, 'Inter'), sans-serif;
     white-space: nowrap;
     cursor: pointer;
+    flex-shrink: 0;
     transition: background 0.2s ease, color 0.2s ease;
 
     &:hover:not(.seg__btn--active) {
@@ -517,8 +544,6 @@
     font-variant-numeric: tabular-nums;
   }
 
-  /* Rechargement d'une liste deja affichee : on le signale sans cacher les
-     donnees en place (le contraste du cache n'est jamais suffisant). */
   &--busy {
     .table {
       opacity: 0.62;
@@ -526,11 +551,9 @@
   }
 }
 
-/* La liste deroule VERTICALEMENT a l'interieur du panneau (demande de la
-   maquette) : l'en-tete reste colle en haut, la pagination reste sous le
-   tableau, et le reste de la page ne bouge pas. `hidden auto` ferme
-   l'axe horizontal par principe : avec les largeurs de colonnes en
-   pourcentages, il n'y a jamais rien a y faire defiler. */
+/* Le tableau déroule verticalement à l'intérieur du panneau.
+   ⚠️ Sur mobile, ce conteneur est CACHÉ (display: none à 760px) donc
+   son max-height ne s'applique plus qu'à la vue tableau. */
 .table-wrap {
   display: block;
   max-height: min(58vh, 560px);
@@ -546,10 +569,6 @@
 
 .table {
   width: 100%;
-  /* `table-layout: fixed` : ce sont desormais les <th> qui dictent les
-     largeurs, plus le contenu des cellules. Un nom ou une description
-     interminable ne peut donc plus elargir le tableau au-dela du panneau
-     (c'etait la source du defilement horizontal). */
   table-layout: fixed;
   border-collapse: separate;
   border-spacing: 0;
@@ -583,13 +602,14 @@
 }
 
 .th {
-  /* 42 + 12 + 16 + 16 + 14 = 100 % : les cinq colonnes tiennent toujours,
-     y compris a 760 px (juste avant le basculement en cartes). */
   &--identity {
     width: 42%;
   }
 
   &--sticky {
+    /* ⚠️ position: sticky était manquant : la colonne ne collait jamais
+       au scroll horizontal. */
+    position: sticky;
     left: 0;
     z-index: 3;
     background-image: linear-gradient(var(--c-bg), var(--c-bg));
@@ -686,11 +706,8 @@
 }
 
 /* ================================================================
-   CARTES (mobile) — meme composant de ligne, presentation differente
+   CARTES (mobile) — même composant de ligne, présentation différente
    ================================================================ */
-/* Les deux rendus restent dans le DOM (aucun clignotement au redimensionnement),
-   mais `display: none` les retire de l'arbre d'accessibilité : un lecteur
-   d'écran ne lit jamais deux fois la même ligne. */
 .cats-cards {
   display: none;
   margin: 0;
@@ -704,6 +721,9 @@
   border-radius: 14px;
   background: var(--c-surface);
   box-shadow: 0 1px 2px rgba(10, 10, 18, 0.04);
+  /* min-width: 0 indispensable pour que l'enfant app-category-row
+     puisse tronquer ses contenus longs. */
+  min-width: 0;
 
   & + & {
     margin-top: 0.625rem;
@@ -721,7 +741,7 @@
 }
 
 /* ================================================================
-   ETATS VIDES / ERREUR
+   ÉTATS VIDES / ERREUR
    ================================================================ */
 .empty {
   display: flex;
@@ -879,6 +899,7 @@
     align-items: center;
     gap: 0.5rem;
     flex-wrap: wrap;
+    min-width: 0;
   }
 
   &__list {
@@ -888,6 +909,13 @@
     margin: 0;
     padding: 0;
     list-style: none;
+    /* overflow-x: auto permet à la liste de pages de défiler
+       horizontalement si trop de pages sur petit écran. */
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar { display: none; }
   }
 
   &__btn {
@@ -904,6 +932,7 @@
     font: 700 0.85rem var(--evf-font-body, 'Inter'), sans-serif;
     font-variant-numeric: tabular-nums;
     cursor: pointer;
+    flex-shrink: 0;
     transition: background 0.18s ease, color 0.18s ease;
 
     &:hover:not(:disabled):not(.pager__btn--active) {
@@ -936,6 +965,7 @@
     min-width: 24px;
     color: var(--c-muted);
     font-size: 0.85rem;
+    flex-shrink: 0;
   }
 }
 
@@ -953,6 +983,7 @@
   font: 600 0.78rem var(--evf-font-body, 'Inter'), sans-serif;
   cursor: pointer;
   appearance: none;
+  flex-shrink: 0;
 
   &:hover {
     border-color: #CBD5E1;
@@ -964,7 +995,7 @@
 }
 
 /* ================================================================
-   VAGUE DE BAS DE PAGE (signature de la maquette)
+   VAGUE DE BAS DE PAGE
    ================================================================ */
 .sign {
   position: relative;
@@ -1019,6 +1050,7 @@
     justify-content: space-between;
     gap: 1rem;
     padding: 1.125rem 1.25rem 0.75rem;
+    flex-shrink: 0;
   }
 
   &__title {
@@ -1028,6 +1060,8 @@
     font-weight: 800;
     letter-spacing: -0.02em;
     color: var(--c-dark);
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   &__close {
@@ -1042,6 +1076,7 @@
     background: transparent;
     color: var(--c-muted);
     cursor: pointer;
+    flex-shrink: 0;
 
     &:hover {
       background: rgba(239, 68, 68, 0.1);
@@ -1059,6 +1094,8 @@
     gap: 0.875rem;
     padding: 0.25rem 1.25rem 1rem;
     overflow-y: auto;
+    min-height: 0;
+    flex: 1 1 auto;
   }
 
   &__note {
@@ -1076,6 +1113,7 @@
     margin: 0;
     color: var(--c-text);
     font-size: 0.9rem;
+    overflow-wrap: anywhere;
   }
 
   &__text {
@@ -1103,6 +1141,8 @@
     padding: 0.875rem 1.25rem;
     border-top: 1px solid var(--c-border);
     background: var(--c-bg);
+    flex-shrink: 0;
+    flex-wrap: wrap;
   }
 }
 
@@ -1127,6 +1167,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.375rem;
+  min-width: 0;
 
   &__label {
     color: var(--c-dark);
@@ -1148,6 +1189,12 @@
     display: flex;
     gap: 0.5rem;
     align-items: center;
+    min-width: 0;
+
+    > .field__input {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
   }
 
   &__input {
@@ -1196,6 +1243,7 @@
     align-items: flex-start;
     justify-content: space-between;
     gap: 0.75rem;
+    flex-wrap: wrap;
   }
 
   &__hint {
@@ -1203,6 +1251,7 @@
     color: var(--c-muted);
     font-size: 0.75rem;
     line-height: 1.45;
+    min-width: 0;
 
     code {
       padding: 0.0625rem 0.25rem;
@@ -1210,6 +1259,7 @@
       background: rgba(108, 92, 231, 0.08);
       color: var(--c-violet);
       font: 600 0.72rem ui-monospace, 'SFMono-Regular', Menlo, monospace;
+      overflow-wrap: anywhere;
     }
 
     em {
@@ -1225,6 +1275,7 @@
     font-size: 0.75rem;
     font-weight: 700;
     line-height: 1.45;
+    min-width: 0;
   }
 
   &__count {
@@ -1264,6 +1315,7 @@
   color: #B91C1C;
   font-size: 0.8rem;
   font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
 .field-status {
@@ -1277,9 +1329,11 @@
   color: var(--c-muted);
   font-size: 0.75rem;
   line-height: 1.45;
+  flex-wrap: wrap;
 
   > span:last-child {
     min-width: 0;
+    flex: 1 1 auto;
   }
 }
 
@@ -1298,6 +1352,7 @@
   font-size: 0.72rem;
   font-weight: 800;
   white-space: nowrap;
+  flex-shrink: 0;
 
   &[data-tone='success'] {
     --b: #059669;
@@ -1313,7 +1368,7 @@
 }
 
 /* ================================================================
-   DENSE (page embarquee dans un autre ecran)
+   DENSE
    ================================================================ */
 .cats--dense {
   .hero {
@@ -1323,15 +1378,8 @@
 
 /* ================================================================
    RESPONSIVE
-   ----------------------------------------------------------------
-   Les seuils reprennent ceux du layout admin (sidebar repliee <= 1240 px,
-   menu mobile <= 900 px) pour qu'aucun etat intermediaire ne casse.
    ================================================================ */
 @media (max-width: 1100px) {
-  .stats {
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  }
-
   .hero__content {
     max-width: 52ch;
   }
@@ -1342,7 +1390,6 @@
     min-height: 0;
     padding: 1.25rem;
   }
-
 }
 
 @media (max-width: 760px) {
@@ -1358,15 +1405,19 @@
     &__actions {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
+      width: 100%;
     }
 
     &__btn {
       justify-content: center;
+      width: 100%;
+      white-space: normal;
+      text-align: center;
     }
   }
 
-  /* On bascule du tableau vers les cartes : le <table> garde sa sémantique
-     là où il est lisible, et disparaît entièrement sinon. */
+  /* Bascule table → cartes. La table garde sa sémantique là où elle est
+     lisible, et disparaît entièrement sinon. */
   .table-wrap {
     display: none;
   }
@@ -1388,6 +1439,7 @@
 
   .search {
     max-width: none;
+    flex-wrap: wrap;
   }
 
   .search__field,
@@ -1395,9 +1447,20 @@
     height: 46px;
   }
 
+  .search__go {
+    /* Le bouton de recherche passe à la ligne sous le champ
+       quand il n'y a plus la place. */
+    width: 100%;
+  }
+
   .toolbar__side {
     justify-content: space-between;
     margin-left: 0;
+    width: 100%;
+  }
+
+  .seg {
+    flex: 1 1 auto;
   }
 
   .pager {
@@ -1415,20 +1478,21 @@
 }
 
 @media (max-width: 520px) {
-  .stats {
-    grid-template-columns: minmax(0, 1fr);
+  .cats {
+    padding: 0 0.75rem 0.5rem;
   }
 
   .hero {
-    padding: 1.125rem;
+    padding: 1rem;
     border-radius: 16px;
 
     &__actions {
       grid-template-columns: minmax(0, 1fr);
     }
 
-    &__text {
+    &__btn {
       font-size: 0.8rem;
+      padding: 0 1rem;
     }
   }
 
@@ -1446,8 +1510,8 @@
 
   .cats-cards,
   .panel__head {
-    padding-left: 0.875rem;
-    padding-right: 0.875rem;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
   }
 
   .dialog {
@@ -1472,16 +1536,30 @@
   .pager__list {
     gap: 0.125rem;
   }
+
+  .pager__btn {
+    min-width: 28px;
+    height: 28px;
+    font-size: 0.78rem;
+  }
 }
 
 @media (max-width: 380px) {
+  .cats {
+    padding: 0 0.5rem 0.5rem;
+  }
+
   .seg__btn {
     padding: 0 0.5rem;
     font-size: 0.72rem;
   }
+
+  .hero__title {
+    font-size: 1rem;
+  }
 }
 
-/* Impression du catalogue (l'admin le joint parfois a un compte rendu). */
+/* Impression */
 @media print {
   .hero__actions,
   .toolbar,
