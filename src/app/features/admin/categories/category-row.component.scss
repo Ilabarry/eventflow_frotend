@@ -139,7 +139,7 @@
     line-height: 1.4;
     text-overflow: ellipsis;
     /* Deux lignes max : une description de 2000 caractères ne doit pas
-     transformer une ligne de tableau en paragraphe. */
+       transformer une ligne de tableau en paragraphe. */
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
@@ -201,7 +201,13 @@
 /* ================================================================
    MENU PAR LIGNE
    ================================================================ */
-.kebab {
+.menu {
+  position: relative;
+  display: inline-flex;
+  justify-content: flex-end;
+}
+
+.menu__trigger {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -238,57 +244,55 @@
   }
 }
 
-.menu {
+.menu__panel {
   position: absolute;
   top: calc(100% + 4px);
-  right: 0.875rem;
+  right: 0;
   z-index: 30;
   display: flex;
   min-width: 178px;
+  margin: 0;
   padding: 0.3125rem;
   flex-direction: column;
+  list-style: none;
   border: 1px solid var(--c-border, #e2e8f0);
   border-radius: 12px;
   background: var(--c-surface, #fff);
   box-shadow: var(--evf-shadow-lg, 0 10px 15px -3px rgba(0, 0, 0, 0.1));
   animation: cats-menu-in 0.16s ease-out;
+}
 
-  &__item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 0.625rem;
-    border: 0;
-    border-radius: 8px;
-    background: transparent;
-    color: var(--c-text, #1f2937);
-    font: 600 0.82rem var(--evf-font-body, 'Inter'), sans-serif;
-    text-align: left;
-    cursor: pointer;
+.menu__item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.5rem 0.625rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--c-text, #1f2937);
+  font: 600 0.82rem var(--evf-font-body, 'Inter'), sans-serif;
+  text-align: left;
+  cursor: pointer;
 
-    &:hover {
-      background: rgba(108, 92, 231, 0.08);
-      color: var(--c-violet, #6c5ce7);
-    }
-
-    &:focus-visible {
-      outline: 3px solid rgba(108, 92, 231, 0.45);
-      outline-offset: -2px;
-    }
-
-    &--danger {
-      color: var(--c-error, #ef4444);
-
-      &:hover {
-        background: rgba(239, 68, 68, 0.1);
-        color: #b91c1c;
-      }
-    }
+  &:hover {
+    background: rgba(108, 92, 231, 0.08);
+    color: var(--c-violet, #6c5ce7);
   }
 
-  &__sep {
-    margin: 0.25rem 0.375rem;
-    border-top: 1px solid var(--c-border, #e2e8f0);
+  &:focus-visible {
+    outline: 3px solid rgba(108, 92, 231, 0.45);
+    outline-offset: -2px;
+  }
+
+  &--danger {
+    color: var(--c-error, #ef4444);
+
+    &:hover {
+      background: rgba(239, 68, 68, 0.1);
+      color: #b91c1c;
+    }
   }
 }
 
@@ -389,7 +393,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .menu {
+    .menu__panel {
     animation: none;
   }
 

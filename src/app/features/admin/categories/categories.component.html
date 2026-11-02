@@ -429,9 +429,14 @@
               [ngModel]="model.icon"
               (ngModelChange)="updateModal({ icon: $event })"
             />
-            <span class="preview" data-tone="violet">
-              {{ model.icon.trim() ? iconPreview(model.icon) : 'A' }}
-            </span>
+            @let iconRaw = model.icon.trim();
+@if (iconRaw && (iconRaw.startsWith('http://') || iconRaw.startsWith('https://') || iconRaw.startsWith('/') || iconRaw.startsWith('data:image'))) {
+  <img class="preview preview--img" [src]="iconRaw" alt="" />
+} @else {
+  <span class="preview" [attr.data-tone]="'violet'">
+    {{ iconRaw ? iconPreview(iconRaw) : 'A' }}
+  </span>
+}
           </div>
           <div class="field__foot">
             @if (hasError('icon')) {
