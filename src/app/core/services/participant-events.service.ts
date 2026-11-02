@@ -10,11 +10,12 @@ export interface ParticipantEventsQuery {
   page?: number;
   pageSize?: number;
   search?: string;
-  category?: string;
+  category?: string;              // UUID
   format?: 'IN_PERSON' | 'ONLINE' | 'HYBRID' | null;
   price?: 'FREE' | 'PAID' | null;
   date?: 'today' | 'week' | 'month' | null;
-  ordering?: 'start_at' | '-start_at' | 'created_at' | '-created_at';
+  ordering?: 'start_at' | '-start_at' | 'created_at' | '-created_at' | 'RANDOM';
+  upcomingOnly?: boolean;         // défaut true
 }
 
 @Injectable({ providedIn: 'root' })
@@ -24,19 +25,39 @@ export class ParticipantEventsService {
 
   /**
    * GET /api/events/
-   * Ne renvoie que les événements PUBLISHED (le backend filtre).
+   * Ne renvoie que les événements PUBLISHED et à venir (par défaut).
    */
-  list(query: ParticipantEventsQuery = {}): Observable<ApiResponse<PaginatedResponse<BackendEvent>>> {
+  list(
+    query: ParticipantEventsQuery = {},
+  ): Observable<ApiResponse<PaginatedResponse<BackendEvent>>> {
     let params = new HttpParams()
       .set('page', (query.page ?? 1).toString())
       .set('page_size', (query.pageSize ?? 12).toString());
 
-    if (query.search?.trim()) params = params.set('search', query.search.trim());
-    if (query.category) params = params.set('category', query.category);
-    if (query.format) params = params.set('format', query.format);
-    if (query.price) params = params.set('participation_type', query.price);
-    if (query.date) params = params.set('date', query.date);
-    if (query.ordering) params = params.set('ordering', query.ordering);
+    // upcoming=true par défaut (sauf si explicitement désactivé)
+    if (query.upcomingOnly !== false) {
+      params = params.set('upcoming', 'true');
+    }
+
+    if (query.search?.trim()) {
+      params = params.set('search', query.search.trim());
+    }
+    if (query.category) {
+      params = params.set('category', query.category);
+    }
+    if (query.format) {
+      params = params.set('format', query.format);
+    }
+    if (query.price) {
+      params = params.set('participation_type', query.price);
+    }
+    // `date` → on laisse le backend mapper (filtre `date` ajouté).
+    if (query.date) {
+      params = params.set('date', query.date);
+    }
+    if (query.ordering) {
+      params = params.set('ordering', query.ordering);
+    }
 
     return this.http.get<ApiResponse<PaginatedResponse<BackendEvent>>>(
       `${this.BASE}/events/`,

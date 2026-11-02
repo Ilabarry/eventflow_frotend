@@ -1,5 +1,7 @@
-import { Component, input, output } from '@angular/core';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Component, inject, input, output } from '@angular/core';
+import { NavigationEnd, Router, RouterLink } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { filter, map, startWith } from 'rxjs';
 
 interface NavItem {
   label: string;
@@ -10,14 +12,33 @@ interface NavItem {
 @Component({
   selector: 'app-admin-sidebar',
   standalone: true,
-  imports: [RouterLink, RouterLinkActive],
+  imports: [RouterLink],
   templateUrl: './sidebar.component.html',
   styleUrl: './sidebar.component.scss',
 })
 export class AdminSidebarComponent {
+  private readonly router = inject(Router);
+
   readonly open = input(false);
   readonly closed = output<void>();
   readonly logout = output<void>();
+
+  /** URL courante (sans query params), mise à jour à chaque navigation. */
+  private readonly currentPath = toSignal(
+    this.router.events.pipe(
+      filter((event) => event instanceof NavigationEnd),
+      map(() => this.router.url.split('?')[0].split('#')[0]),
+      startWith(this.router.url.split('?')[0].split('#')[0]),
+    ),
+    { initialValue: this.router.url.split('?')[0].split('#')[0] },
+  );
+
+  /** Actif si l'URL est /admin/<path> ou une sous-route de celui-ci. */
+  isActive(path: string): boolean {
+    const base = `/admin/${path}`;
+    const url = this.currentPath();
+    return url === base || url.startsWith(`${base}/`);
+  }
 
   readonly items: NavItem[] = [
     {

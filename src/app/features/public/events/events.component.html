@@ -189,8 +189,8 @@
                 <input
                   class="check-input"
                   type="checkbox"
-                  [checked]="selectedCategories.includes(category.name)"
-                  (change)="toggleFilter('categories', category.name, $event)"
+                  [checked]="selectedCategories.includes(category.id)"
+                  (change)="toggleFilter('categories', category.id, $event)"
                 />
                 <span class="custom-checkbox" aria-hidden="true"></span>
                 <span class="check-label">{{ category.name }}</span>
@@ -259,8 +259,8 @@
             <span class="section-kicker">À ne pas manquer</span>
             <h2 id="events-title">Les événements à découvrir</h2>
             <p>
-              <strong>{{ filteredEvents.length }}</strong>
-              événement(s) affiché(s)
+              <strong>{{ totalCount }}</strong>
+              événement(s) trouvé(s)
             </p>
           </div>
 
@@ -305,9 +305,9 @@
               Réessayer
             </button>
           </div>
-        } @else if (paginatedEvents.length > 0) {
+        } @else if (events.length > 0) {
           <div class="event-grid">
-            @for (event of paginatedEvents; track event.id) {
+            @for (event of events; track event.id) {
               <article class="event-card">
                 <button
                   class="event-image-button"

@@ -1,4 +1,3 @@
-
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, inject } from '@angular/core';
@@ -6,7 +5,11 @@ import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { ActivatedRoute, Router } from '@angular/router';
 
-import { BackendEvent, EventCategory } from '../../../core/models/event.model';
+import {
+  BackendEvent,
+  EventCategory,
+  EventQueryParams,
+} from '../../../core/models/event.model';
 import { EventsApiService } from '../../../core/services/events-api.service';
 import { AppLoggerService } from '../../../core/services/app-logger.service';
 
@@ -29,35 +32,10 @@ export class EventsComponent implements OnInit {
   private readonly eventsApi = inject(EventsApiService);
   private readonly logger = inject(AppLoggerService);
 
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
-
-private readonly route = inject(ActivatedRoute);
-private readonly router = inject(Router);
-
-/** Lit les filtres envoyés par l'accueil : /events?q=...&category=...&format=...&price=...&date=... */
-private applyQueryParams(): void {
-  const params = this.route.snapshot.queryParamMap;
-
-  this.searchQuery = params.get('q') ?? '';
-
-  const category = params.get('category');
-  if (category) this.selectedCategories = [category];
-
-  const format = params.get('format');
-  if (format === 'ONLINE' || format === 'IN_PERSON') this.selectedTopFormat = format;
-
-  const price = params.get('price');
-  if (price === 'FREE' || price === 'PAID') this.selectedTopPrice = price;
-
-  const date = params.get('date');
-  if (date && this.dateOptions.some((option) => option.value === date)) this.selectedTopDate = date;
-}
-
-openEvent(event: BackendEvent): void {
-  void this.router.navigate(['/events', event.id]);
-}
-
-  // Données reçues du backend.
+  // Données reçues du backend (page courante uniquement).
   events: BackendEvent[] = [];
   categories: EventCategory[] = [];
 
@@ -75,6 +53,7 @@ openEvent(event: BackendEvent): void {
   selectedTopPrice: EventPriceFilter = 'all';
 
   // Filtres latéraux.
+  // NOTE : on stocke désormais des IDs (UUID) de catégories, pas des noms.
   selectedCategories: string[] = [];
   selectedFormats: string[] = [];
   selectedPrices: string[] = [];
@@ -107,20 +86,52 @@ openEvent(event: BackendEvent): void {
   ];
 
   ngOnInit(): void {
-    this.loadCategories();
-    this.loadEvents();
+    this.applyQueryParams();
+    this.loadCategoriesAndEvents();
   }
 
   /**
-   * Charge les événements publiquement accessibles.
-   * Le service API sera responsable de la communication HTTP.
+   * Lit les filtres envoyés par l'accueil :
+   * /events?q=...&category=...&format=...&price=...&date=...
+   */
+  private applyQueryParams(): void {
+    const params = this.route.snapshot.queryParamMap;
+
+    this.searchQuery = params.get('q') ?? '';
+
+    const category = params.get('category');
+    if (category) this.selectedTopCategory = category;
+
+    const format = params.get('format');
+    if (format === 'ONLINE' || format === 'IN_PERSON') {
+      this.selectedTopFormat = format;
+    }
+
+    const price = params.get('price');
+    if (price === 'FREE' || price === 'PAID') {
+      this.selectedTopPrice = price;
+    }
+
+    const date = params.get('date');
+    if (date && this.dateOptions.some((option) => option.value === date)) {
+      this.selectedTopDate = date;
+    }
+  }
+
+  openEvent(event: BackendEvent): void {
+    void this.router.navigate(['/events', event.id]);
+  }
+
+  /**
+   * Charge la page courante d'événements en déléguant filtrage,
+   * tri et pagination au backend (EventFilter + EventPagination).
    */
   loadEvents(): void {
     this.isLoading = true;
     this.errorMessage = '';
 
     this.eventsApi
-      .getEvents()
+      .getEvents(this.buildQueryParams())
       .pipe(finalize(() => (this.isLoading = false)))
       .subscribe({
         next: (response) => {
@@ -135,15 +146,13 @@ openEvent(event: BackendEvent): void {
 
           this.events = response.data.results ?? [];
           this.totalCount = response.data.count ?? this.events.length;
-          this.totalPages = Math.max(
-            1,
-            response.data.total_pages || 1,
-          );
+          this.totalPages = Math.max(1, response.data.total_pages || 1);
           this.currentPage = response.data.current_page || 1;
 
           this.logger.info('Événements chargés.', {
             count: this.totalCount,
             page: this.currentPage,
+            totalPages: this.totalPages,
           });
         },
         error: (error: unknown) => {
@@ -161,8 +170,12 @@ openEvent(event: BackendEvent): void {
       });
   }
 
-  /** Charge les catégories actives depuis le backend. */
-  private loadCategories(): void {
+  /**
+   * Charge les catégories puis, une fois disponibles, résout les query
+   * params (qui peuvent contenir un nom au lieu d'un UUID) et charge
+   * la première page.
+   */
+  private loadCategoriesAndEvents(): void {
     this.isLoadingCategories = true;
 
     this.eventsApi
@@ -170,114 +183,157 @@ openEvent(event: BackendEvent): void {
       .pipe(finalize(() => (this.isLoadingCategories = false)))
       .subscribe({
         next: (response) => {
-          if (response.success && response.data) {
-            this.categories = response.data.filter(
-              (category) => category.is_active,
-            );
-          } else {
-            this.categories = [];
-          }
+          this.categories =
+            response.success && response.data
+              ? response.data.filter((c) => c.is_active)
+              : [];
+
+          // Résout la catégorie passée en query param (nom OU uuid → uuid)
+          this.resolveCategoryFromQuery();
+
+          this.loadEvents();
         },
         error: () => {
           this.categories = [];
           this.logger.warn('Échec du chargement des catégories.');
+          this.loadEvents();
         },
       });
   }
 
+/**
+ * Si `selectedTopCategory` contient un nom (venant de /events?category=Culture),
+ * on le remplace par l'UUID correspondant trouvé dans `this.categories`.
+ * Si c'est déjà un UUID, on ne touche à rien.
+ */
+private resolveCategoryFromQuery(): void {
+  const raw = this.selectedTopCategory;
+  if (!raw || raw === 'all') return;
+
+  // Détection simple d'un UUID (36 chars, tirets aux positions 8, 13, 18, 23)
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(raw);
+  if (isUuid) return;
+
+  const match = this.categories.find(
+    (c) => c.name.toLowerCase() === raw.toLowerCase() ||
+           c.slug.toLowerCase() === raw.toLowerCase(),
+  );
+
+  if (match) {
+    this.selectedTopCategory = match.id;
+  } else {
+    // Nom inconnu → on ignore le filtre plutôt que de renvoyer 400
+    this.selectedTopCategory = 'all';
+    this.logger.warn(`Catégorie inconnue reçue en query param : "${raw}"`);
+  }
+}
+
   /**
-   * Liste affichée par le template.
-   * Les filtres locaux seront raccordés aux paramètres réellement
-   * acceptés par EventFilter lors de l'intégration du service API.
+   * Construit les paramètres de requête à envoyer au backend
+   * en fonction de l'état courant des filtres, du tri et de la page.
    */
-  get filteredEvents(): BackendEvent[] {
-    const query = this.searchQuery.trim().toLocaleLowerCase();
+  private buildQueryParams(): EventQueryParams {
+    const params: EventQueryParams = {
+      page: this.currentPage,
+      page_size: this.pageSize,
+    };
 
-    return this.events.filter((event) => {
-      const categoryName = event.category?.name ?? '';
-      const searchableText = [
-        event.title,
-        event.short_description,
-        event.city,
-        categoryName,
-      ]
-        .join(' ')
-        .toLocaleLowerCase();
+    // Recherche
+    const search = this.searchQuery.trim();
+    if (search) params.search = search;
 
-      const matchesSearch =
-        query.length === 0 || searchableText.includes(query);
+    // Catégorie : le backend attend un UUID, jamais un nom.
+    const category =
+      this.selectedTopCategory !== 'all'
+        ? this.selectedTopCategory
+        : this.selectedCategories[0];
+    if (category) params.category = category;
 
-      const selectedCategory =
-        this.selectedTopCategory === 'all' ||
-        categoryName === this.selectedTopCategory ||
-        event.category?.id === this.selectedTopCategory;
+    // Format
+    const format =
+      this.selectedTopFormat !== 'all'
+        ? this.selectedTopFormat
+        : (this.selectedFormats[0] as EventFormatFilter | undefined);
+    if (format && format !== 'all') params.format = format;
 
-      const matchesCategory =
-        selectedCategory &&
-        (this.selectedCategories.length === 0 ||
-          this.selectedCategories.includes(categoryName));
+    // Prix
+    const price =
+      this.selectedTopPrice !== 'all'
+        ? this.selectedTopPrice
+        : (this.selectedPrices[0] as EventPriceFilter | undefined);
+    if (price && price !== 'all') params.participation_type = price;
 
-      const matchesFormat =
-        (this.selectedTopFormat === 'all' ||
-          event.format === this.selectedTopFormat) &&
-        (this.selectedFormats.length === 0 ||
-          this.selectedFormats.includes(event.format));
+    // Date → start_date / end_date / upcoming
+    const date =
+      this.selectedTopDate !== 'all'
+        ? this.selectedTopDate
+        : this.selectedDates[0];
+    if (date && date !== 'all') {
+      const range = this.dateRange(date);
+      if (range.start) params.start_date = range.start;
+      if (range.end) params.end_date = range.end;
+      if (date === 'today' || date === 'week') params.upcoming = true;
+    }
 
-      const matchesPrice =
-        (this.selectedTopPrice === 'all' ||
-          event.participation_type === this.selectedTopPrice) &&
-        (this.selectedPrices.length === 0 ||
-          this.selectedPrices.includes(event.participation_type));
+    // Tri
+    params.ordering = this.orderingForSort();
 
-      const matchesDate =
-        this.matchesDateFilter(event.start_at, this.selectedTopDate) &&
-        (this.selectedDates.length === 0 ||
-          this.selectedDates.some((date) =>
-            this.matchesDateFilter(event.start_at, date),
-          ));
-
-      return (
-        matchesSearch &&
-        matchesCategory &&
-        matchesFormat &&
-        matchesPrice &&
-        matchesDate
-      );
-    });
+    return params;
   }
 
-  /** Le backend fournit déjà une page de résultats. */
-  get paginatedEvents(): BackendEvent[] {
-    return [...this.filteredEvents].sort((a, b) => {
-      if (this.sortBy === 'date') {
-        return (
-          new Date(a.start_at).getTime() -
-          new Date(b.start_at).getTime()
-        );
-      }
+  /**
+   * Convertit un filtre de date UI en plage [start, end] au format
+   * YYYY-MM-DD, interprétée par Django via start_at__date__gte/lte.
+   */
+  private dateRange(filter: string): { start?: string; end?: string } {
+    const now = new Date();
+    const iso = (d: Date) => d.toISOString().slice(0, 10);
 
-      if (this.sortBy === 'price') {
-        const priceRank = (event: BackendEvent): number =>
-          event.participation_type === 'FREE' ? 0 : 1;
+    if (filter === 'today') {
+      return { start: iso(now), end: iso(now) };
+    }
 
-        return priceRank(a) - priceRank(b);
-      }
+    if (filter === 'week') {
+      const end = new Date(now);
+      end.setDate(now.getDate() + 7);
+      return { start: iso(now), end: iso(end) };
+    }
 
-      return 0;
-    });
+    if (filter === 'month') {
+      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      return { start: iso(now), end: iso(end) };
+    }
+
+    return {};
+  }
+
+  /**
+   * Traduit le tri UI en paramètre `ordering` accepté par le backend.
+   * Les valeurs doivent exister dans ALLOWED_ORDERING_FIELDS.
+   */
+  private orderingForSort(): string {
+    switch (this.sortBy) {
+      case 'date':
+        return 'start_at';
+      case 'price':
+        return 'participation_type';
+      case 'relevance':
+      default:
+        return 'RANDOM';
+    }
   }
 
   get pageNumbers(): number[] {
-    return Array.from(
-      { length: this.totalPages },
-      (_, index) => index + 1,
-    );
+    return Array.from({ length: this.totalPages }, (_, index) => index + 1);
   }
 
+  /**
+   * Appelé à chaque modification de filtre / recherche / tri.
+   * Réinitialise la page et recharge depuis le serveur.
+   */
   onFiltersChanged(): void {
-    // Les paramètres précis de filtrage seront ajoutés au service
-    // une fois alignés sur EventFilter du backend.
     this.currentPage = 1;
+    this.loadEvents();
   }
 
   toggleFilter(
@@ -303,7 +359,6 @@ openEvent(event: BackendEvent): void {
       selected.push(value);
     } else if (!checked) {
       const index = selected.indexOf(value);
-
       if (index !== -1) {
         selected.splice(index, 1);
       }
@@ -326,6 +381,8 @@ openEvent(event: BackendEvent): void {
 
     this.sortBy = 'relevance';
     this.currentPage = 1;
+
+    this.loadEvents();
   }
 
   goToPage(page: number): void {
@@ -334,8 +391,7 @@ openEvent(event: BackendEvent): void {
     }
 
     this.currentPage = page;
-    // Le chargement d'une page précise sera raccordé à l'API paginée
-    // dans le service, sans charger toute la base côté navigateur.
+    this.loadEvents();
   }
 
   closeEvent(): void {
@@ -376,38 +432,5 @@ openEvent(event: BackendEvent): void {
 
   getEventImage(event: BackendEvent): string {
     return event.cover_image || 'img/FFFFFF.svg';
-  }
-
-  private matchesDateFilter(startAt: string, filter: string): boolean {
-    if (filter === 'all') {
-      return true;
-    }
-
-    const eventDate = new Date(startAt);
-    const now = new Date();
-
-    if (Number.isNaN(eventDate.getTime())) {
-      return false;
-    }
-
-    if (filter === 'today') {
-      return eventDate.toDateString() === now.toDateString();
-    }
-
-    if (filter === 'week') {
-      const endOfWeek = new Date(now);
-      endOfWeek.setDate(now.getDate() + 7);
-
-      return eventDate >= now && eventDate <= endOfWeek;
-    }
-
-    if (filter === 'month') {
-      return (
-        eventDate.getMonth() === now.getMonth() &&
-        eventDate.getFullYear() === now.getFullYear()
-      );
-    }
-
-    return true;
   }
 }

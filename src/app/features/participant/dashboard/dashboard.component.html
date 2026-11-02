@@ -102,11 +102,24 @@
               </div>
             </article>
           } @else {
-            <div class="state">
+          <div class="state">
+            @if (hasPastOnly()) {
+              <p class="state__title">Vous n'avez pas d'événement à venir.</p>
+              <p class="state__text">
+                Vos inscriptions passées sont dans « Mes inscriptions ». Découvrez
+                les prochains événements à venir.
+              </p>
+              <a class="btn btn--primary" routerLink="/participant/evenements">
+                Découvrir les événements
+              </a>
+            } @else {
               <p class="state__title">Aucun événement à venir pour le moment.</p>
-              <a class="btn btn--primary" routerLink="/participant/evenements">Découvrir les événements</a>
-            </div>
-          }
+              <a class="btn btn--primary" routerLink="/participant/evenements">
+                Découvrir les événements
+              </a>
+            }
+          </div>
+        }
         </section>
 
         <!-- ============================================================

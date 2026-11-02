@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://api.eventflow.sn/api',
+  apiUrl: 'https://eventflow-4j56.onrender.com/api',
 };

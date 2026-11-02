@@ -5,8 +5,9 @@
         <li>
           <a
             [routerLink]="['/admin', item.path]"
-            routerLinkActive="adm-sidebar__link--active"
             class="adm-sidebar__link"
+            [class.adm-sidebar__link--active]="isActive(item.path)"
+            [attr.aria-current]="isActive(item.path) ? 'page' : null"
             (click)="closed.emit()"
           >
             <svg class="adm-sidebar__icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -22,7 +23,6 @@
   </nav>
 
   <div class="adm-sidebar__footer">
-    <!-- Déconnexion -->
     <button type="button" class="adm-sidebar__logout" (click)="logout.emit()">
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>

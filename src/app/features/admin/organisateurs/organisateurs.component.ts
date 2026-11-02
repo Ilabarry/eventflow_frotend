@@ -706,20 +706,29 @@ export class AdminOrganizersComponent {
   /* URL                                                                */
   /* ------------------------------------------------------------------ */
   private syncUrl(): void {
+    const next: Record<string, string | number | null> = {
+      q: this.searchTerm().trim() || null,
+      statut: this.status() || null,
+      activite: this.activity() || null,
+      inscription: this.joined() || null,
+      tri: this.sortKey() !== 'joined' ? this.sortKey() : null,
+      sens:
+        this.sortKey() !== 'joined' || this.sortDir() !== 'desc' ? this.sortDir() : null,
+      page: this.currentPage() > 1 ? this.currentPage() : null,
+      taille: this.pageSize() !== DEFAULT_PAGE_SIZE ? this.pageSize() : null,
+    };
+
+    // Évite une navigation inutile quand l'URL est déjà à jour
+    const current = this.route.snapshot.queryParamMap;
+    const unchanged = Object.entries(next).every(([key, value]) =>
+      value === null ? !current.has(key) : current.get(key) === String(value),
+    );
+    if (unchanged) return;
+
     void this.router.navigate([], {
       relativeTo: this.route,
       replaceUrl: true,
-      queryParams: {
-        q: this.searchTerm().trim() || null,
-        statut: this.status() || null,
-        activite: this.activity() || null,
-        inscription: this.joined() || null,
-        tri: this.sortKey() !== 'joined' ? this.sortKey() : null,
-        sens:
-          this.sortKey() !== 'joined' || this.sortDir() !== 'desc' ? this.sortDir() : null,
-        page: this.currentPage() > 1 ? this.currentPage() : null,
-        taille: this.pageSize() !== DEFAULT_PAGE_SIZE ? this.pageSize() : null,
-      },
+      queryParams: next,
     });
   }
 

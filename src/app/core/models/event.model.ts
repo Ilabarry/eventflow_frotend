@@ -150,3 +150,40 @@ export interface EventDetail extends Omit<BackendEvent, 'end_at' | 'organizer'> 
   registered_count?: number | null;
   ticket_types?: EventTicketType[];
 }
+
+
+/**
+ * Paramètres de requête acceptés par EventFilter côté Django.
+ * Tous optionnels — les valeurs vides/undefined sont ignorées côté service.
+ */
+export interface EventQueryParams {
+  search?: string;
+  category?: string;              // UUID
+  format?: EventFormat;
+  participation_type?: ParticipationType;
+  capacity_type?: CapacityType;
+  status?: EventStatus;
+  city?: string;
+  organizer?: string;             // UUID
+  start_date?: string;            // YYYY-MM-DD
+  end_date?: string;              // YYYY-MM-DD
+  upcoming?: boolean;
+  past?: boolean;
+  ordering?: string;
+  page?: number;
+  page_size?: number;
+}
+
+/**
+ * Tri autorisés par ALLOWED_ORDERING_FIELDS (backend).
+ * On expose un sous-ensemble utile au frontend.
+ */
+export type EventOrdering =
+  | 'start_at'
+  | '-start_at'
+  | 'created_at'
+  | '-created_at'
+  | 'title'
+  | '-title'
+  | 'participation_type'
+  | '-participation_type';
