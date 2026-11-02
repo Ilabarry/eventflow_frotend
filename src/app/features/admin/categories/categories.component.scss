@@ -1305,6 +1305,13 @@
   font-size: 1.05rem;
   line-height: 1;
 }
+/* Aperçu « URL d'image » : la pastille 42×42 devient l'image elle-même. */
+.preview--img {
+  padding: 0;
+  overflow: hidden;
+  border-style: solid;
+  object-fit: cover;
+}
 
 .form-error {
   margin: 0;
