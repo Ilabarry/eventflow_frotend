@@ -14,6 +14,7 @@ import {
 } from '../models/auth.model';
 import { ApiResponse } from '../models/api-response.model';
 import { NotificationService } from '../services/notification.service';
+import { AppLoggerService } from '../services/app-logger.service';
 
 /**
  * Service d'authentification.
@@ -37,6 +38,7 @@ export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
   private readonly notification = inject(NotificationService);
+  private readonly logger = inject(AppLoggerService);
 
   private readonly API_URL = environment.apiUrl;
 
@@ -93,19 +95,19 @@ export class AuthService {
   // INSCRIPTION
   // ------------------------------------------------------------------
   register(payload: RegisterPayload): Observable<ApiResponse<User>> {
-    console.log('[AuthService] Register attempt', { email: payload.email });
+    this.logger.info('[AuthService] Register attempt', { email: payload.email });
 
     return this.http
       .post<ApiResponse<User>>(`${this.API_URL}/auth/register/`, payload)
       .pipe(
         tap((response) => {
-          console.log('[AuthService] Register success', { email: payload.email });
+          this.logger.info('[AuthService] Register success', { email: payload.email });
           this.notification.success(
             'Inscription réussie. Vous pouvez maintenant vérifier votre mail'
           );
         }),
         catchError((error) => {
-          console.error('[AuthService] Register error', error.status);
+          this.logger.error('[AuthService] Register error', error.status);
           // Les erreurs de validation sont gérées par le composant (mapping par champ)
           // Les erreurs HTTP génériques sont gérées par l'intercepteur
           return throwError(() => error);
@@ -117,7 +119,7 @@ export class AuthService {
   // CONNEXION
   // ------------------------------------------------------------------
   login(payload: LoginPayload): Observable<ApiResponse<LoginResponse>> {
-    console.log('[AuthService] Login attempt', { email: payload.email });
+    this.logger.info('[AuthService] Login attempt', { email: payload.email });
 
     return this.http
       .post<ApiResponse<LoginResponse>>(`${this.API_URL}/auth/login/`, payload)
@@ -139,9 +141,9 @@ export class AuthService {
         tap((response) => {
           if (response.success && response.data) {
             this.handleAuthSuccess(response.data);
-            console.log('[AuthService] Login success', {
+            this.logger.info('[AuthService] Login success', {
               email: response.data.user.email,
-              roles: response.data.user.roles,
+              roles: response.data.user.roles.join(', '),
             });
             this.notification.success(
               `Bienvenue ${response.data.user.first_name} !`,
@@ -163,7 +165,7 @@ export class AuthService {
     this.http
       .post(`${this.API_URL}/auth/logout/`, { refresh })
       .subscribe({
-        error: (err) => console.warn('[AuthService] Logout backend failed', err.status),
+        error: (err) => this.logger.warn('[AuthService] Logout backend failed', err.status),
       });
   }
 

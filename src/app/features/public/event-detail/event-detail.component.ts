@@ -4,6 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Meta, Title } from '@angular/platform-browser';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
+import { DomSanitizer } from '@angular/platform-browser';
 
 import { BackendEvent, EventDetail, EventTicketType } from '../../../core/models/event.model';
 import { AppLoggerService } from '../../../core/services/app-logger.service';
@@ -98,11 +99,15 @@ export class EventDetailComponent implements OnInit, OnDestroy {
   private readonly notification = inject(NotificationService);
   private readonly registrationService = inject(RegistrationService);
   private readonly router = inject(Router);
+  private readonly sanitizer = inject(DomSanitizer);
 
   /** État de l'inscription en cours */
   readonly registering = signal(false);
   readonly registered = signal(false);
   readonly registrationError = signal<string | null>(null);
+
+  /** HTML sécurisé pour la description */
+  readonly richHtml = computed(() => DomSanitizer.bypassSecurityTrustHtml(this.detail()?.description) ?? null);
 
   /** L'utilisateur connecté a-t-il le rôle participant ? */
   readonly canRegister = computed(() => {
@@ -367,9 +372,27 @@ export class EventDetailComponent implements OnInit, OnDestroy {
         return active;
       })
       .map((t) => {
-        const quantity = t.quantity ?? null;
-        const remaining = quantity === null ? null : Math.max(quantity - (t.sold_count ?? 0), 0);
-        console.log(`[EventDetail] ticket ${t.name}: quantity=${quantity}, sold=${t.sold_count}, remaining=${remaining}`);
+        // Le backend renvoie soit quantity/sold_count, soit available_quantity/is_sold_out.
+        // Privilégier available_quantity si présent.
+        let remaining: number | null = null;
+        let isSoldOut = false;
+
+        if ('available_quantity' in t) {
+          const av = t.available_quantity;
+          if (av === null || typeof av === 'number') {
+            remaining = av;
+          }
+          if ('is_sold_out' in t && t.is_sold_out === true) {
+            isSoldOut = true;
+          }
+        } else {
+          const quantity = t.quantity ?? null;
+          const sold = t.sold_count ?? 0;
+          remaining = quantity === null ? null : Math.max(quantity - sold, 0);
+          isSoldOut = quantity !== null && sold >= quantity;
+        }
+
+        console.log(`[EventDetail] ticket ${t.name}: remaining=${remaining}, isSoldOut=${isSoldOut}`);
         return {
           id: String(t.id),
           name: t.name,

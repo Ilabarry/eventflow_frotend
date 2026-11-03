@@ -125,7 +125,7 @@ export class AttestationsComponent implements OnInit {
       .subscribe({
         next: (blob) => {
           const url = URL.createObjectURL(blob);
-          const win = window.open(url, '_blank');
+          const win = window.open(url, '_blank', 'noopener,noreferrer');
           if (!win) {
             this.notification.warning(
               'Le navigateur a bloqué le PDF. Autorisez les pop-ups.',

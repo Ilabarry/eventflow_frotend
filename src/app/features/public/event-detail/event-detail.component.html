@@ -102,7 +102,7 @@
               <h2 id="about-title" class="panel-title">À propos de l’événement</h2>
 
               @if (e.description) {
-                <div class="rich" [innerHTML]="e.description"></div>
+                <div class="rich" [innerHTML]="richHtml()"></div>
               } @else {
                 <p class="panel-text">{{ e.short_description }}</p>
               }

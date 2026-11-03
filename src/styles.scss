@@ -47,6 +47,22 @@
 
   /* Gradient FLOW */
   --evf-gradient-flow: linear-gradient(135deg, var(--evf-violet) 0%, var(--evf-cyan) 100%);
+
+  /* Breakpoints responsives */
+  --evf-bp-sm: 576px;   /* xs */
+  --evf-bp-md: 768px;   /* sm */
+  --evf-bp-lg: 992px;   /* md */
+  --evf-bp-xl: 1200px;  /* lg */
+
+  /* Container max-widths */
+  --evf-container-max: 1140px;
+
+  /* Application padding */
+  --evf-gutter: 1rem;
+
+  /* Layout - affichage de grille */
+  --evf-grid-columns: repeat(12, 1fr);
+  --evf-grid-gap: 1rem;
 }
 
 /* ================================================================

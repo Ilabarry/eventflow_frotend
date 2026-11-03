@@ -61,7 +61,7 @@ export class AttendanceService {
   listByEvent(
     eventId: string,
     page = 1,
-    pageSize = 100,
+    pageSize = 50,
   ): Observable<ApiResponse<PaginatedResponse<EventAttendanceRowDto>>> {
     const params = new HttpParams()
       .set('page', page.toString())

@@ -51,9 +51,27 @@ export class ParticipantEventsService {
     if (query.price) {
       params = params.set('participation_type', query.price);
     }
-    // `date` → on laisse le backend mapper (filtre `date` ajouté).
+    // `date` → mapper vers start_date / end_date (même logique que events.component).
     if (query.date) {
-      params = params.set('date', query.date);
+      const today = new Date();
+      let startDate: Date | null = null;
+      let endDate: Date | null = null;
+      if (query.date === 'today') {
+        startDate = endDate = today;
+      } else if (query.date === 'week') {
+        startDate = today;
+        endDate = new Date(today);
+        endDate.setDate(today.getDate() + 7);
+      } else if (query.date === 'month') {
+        startDate = today;
+        endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      }
+      if (startDate) {
+        const isoStart = startDate.toISOString().slice(0, 10);
+        const isoEnd = endDate ? endDate.toISOString().slice(0, 10) : null;
+        if (isoStart) params = params.set('start_date', isoStart);
+        if (isoEnd) params = params.set('end_date', isoEnd);
+      }
     }
     if (query.ordering) {
       params = params.set('ordering', query.ordering);

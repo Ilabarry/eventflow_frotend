@@ -62,7 +62,7 @@ export class RegistrationService {
   listByEvent(
     eventId: string,
     page = 1,
-    pageSize = 100,
+    pageSize = 50,
   ): Observable<ApiResponse<PaginatedResponse<RegistrationOrganizerDto>>> {
     const params = new HttpParams()
       .set('page', page.toString())
