@@ -1,7 +1,7 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Observable, tap, catchError, throwError, of, map } from 'rxjs';
+import { Observable, tap, catchError, throwError, of, map, shareReplay, finalize } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { User } from '../models/user.model';
@@ -41,6 +41,16 @@ export class AuthService {
   private readonly logger = inject(AppLoggerService);
 
   private readonly API_URL = environment.apiUrl;
+
+  /**
+   * Refresh en vol : mutualise tous les appels simultanés.
+   * Sans ça, N requêtes sortant avec un token expiré lançaient N appels
+   * /auth/refresh/ avec le même refresh token ; le backend (rotation +
+   * blacklist) n'en validait qu'un → N-1 échecs 401 → déconnexion brutale.
+   */
+  private refreshInFlight$: Observable<
+    ApiResponse<{ tokens: { access: string; refresh: string } }>
+  > | null = null;
 
   // ------------------------------------------------------------------
   // Clés localStorage (centralisées)
@@ -212,12 +222,18 @@ export class AuthService {
   // REFRESH
   // ------------------------------------------------------------------
   refreshAccessToken(): Observable<ApiResponse<{ tokens: { access: string; refresh: string } }>> {
+    // Un refresh est déjà en cours : tous les appelants attendent le même
+    // résultat au lieu d'en lancer chacun un (le backend rotate + blacklist).
+    if (this.refreshInFlight$) {
+      return this.refreshInFlight$;
+    }
+
     const refresh = this.getRefreshToken();
     if (!refresh) {
       return throwError(() => new Error('No refresh token'));
     }
 
-    return this.http
+    this.refreshInFlight$ = this.http
       .post<ApiResponse<{ tokens: { access: string; refresh: string } }>>(
         `${this.API_URL}/auth/refresh/`,
         { refresh }
@@ -230,8 +246,14 @@ export class AuthService {
             localStorage.setItem(this.ACCESS_TOKEN_KEY, response.data.tokens.access);
             localStorage.setItem(this.REFRESH_TOKEN_KEY, response.data.tokens.refresh);
           }
-        })
+        }),
+        shareReplay({ bufferSize: 1, refCount: true }),
+        finalize(() => {
+          this.refreshInFlight$ = null;
+        }),
       );
+
+    return this.refreshInFlight$;
   }
 
   // ------------------------------------------------------------------
@@ -247,6 +269,12 @@ export class AuthService {
   }
 
   private clearSession(): void {
+    const hadSession = !!(
+      this._accessToken() ||
+      this._refreshToken() ||
+      this._currentUser()
+    );
+
     this._currentUser.set(null);
     this._accessToken.set(null);
     this._refreshToken.set(null);
@@ -254,8 +282,12 @@ export class AuthService {
     localStorage.removeItem(this.ACCESS_TOKEN_KEY);
     localStorage.removeItem(this.REFRESH_TOKEN_KEY);
 
-    this.notification.info('Vous êtes déconnecté.', 'À bientôt');
-    this.router.navigate(['/login']);
+    // Idempotent : plusieurs requêtes qui échouent puis se déconnectent
+    // ne doivent pas afficher N toasts ni repasser N fois par /login.
+    if (hadSession) {
+      this.notification.info('Vous êtes déconnecté.', 'À bientôt');
+      this.router.navigate(['/login']);
+    }
   }
 
   private getStoredAccessToken(): string | null {
