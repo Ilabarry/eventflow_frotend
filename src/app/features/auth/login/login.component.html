@@ -77,56 +77,23 @@
       <p class="login__subtitle">Connectez-vous à votre compte.</p>
     </div>
 
-    <!-- ✅ Alerte contextuelle (dans la page) -->
-    @if (loginError(); as err) {
-      <div class="login__alert" [class]="'login__alert--' + err.type">
-        <span class="login__alert-icon">
-          @switch (err.type) {
-            @case ('email_not_verified') {
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-                <polyline points="22,6 12,13 2,6"></polyline>
-              </svg>
-            }
-            @case ('account_disabled') {
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"></circle>
-                <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
-              </svg>
-            }
-            @default {
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"></circle>
-                <line x1="12" y1="8" x2="12" y2="12"></line>
-                <line x1="12" y1="16" x2="12.01" y2="16"></line>
-              </svg>
-            }
+    <!-- Action serveur uniquement (les messages passent par les toasts).
+         Ce bloc n'apparaît que si l'échec « email non vérifié » survient. -->
+    @if (unverifiedEmail()) {
+      <div class="login__resend">
+        <button
+          type="button"
+          class="login__resend-btn"
+          (click)="resendVerificationEmail()"
+          [disabled]="resending()"
+        >
+          @if (resending()) {
+            <span class="login__spinner"></span>
+            Envoi en cours…
+          } @else {
+            Renvoyer l'email de vérification
           }
-        </span>
-
-        <div class="login__alert-content">
-          <p class="login__alert-message">{{ err.message }}</p>
-
-          @if (err.type === 'email_not_verified') {
-            @if (resendSuccess()) {
-              <p class="login__alert-success">✅ Email envoyé ! Vérifiez votre boîte de réception.</p>
-            } @else {
-              <button
-                type="button"
-                class="login__alert-action"
-                (click)="resendVerificationEmail()"
-                [disabled]="resending()"
-              >
-                @if (resending()) {
-                  <span class="login__spinner"></span>
-                  Envoi en cours…
-                } @else {
-                  Renvoyer l'email de vérification
-                }
-              </button>
-            }
-          }
-        </div>
+        </button>
       </div>
     }
 

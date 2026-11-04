@@ -11,17 +11,16 @@ import { AuthService } from '../../../core/auth/auth.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { LoginPayload } from '../../../core/models/auth.model';
 
+/**
+ * Classification minimale d'un échec de connexion, utilisée pour
+ * choisir le toast adapté. Les messages utilisateur vivent uniquement
+ * dans les toasts : l'affichage en page a été supprimé (duplication).
+ */
 type LoginErrorType =
   | 'invalid_credentials'
   | 'account_disabled'
   | 'email_not_verified'
   | 'unknown';
-
-interface LoginError {
-  type: LoginErrorType;
-  message: string;
-  email?: string;
-}
 
 @Component({
   selector: 'app-login',
@@ -43,10 +42,10 @@ export class LoginComponent {
   /** État de visibilité du mot de passe */
   readonly showPassword = signal(false);
 
-  /** Gestion des erreurs */
-  readonly loginError = signal<LoginError | null>(null);
+  /** Gestion des erreurs : toasts uniquement. Seul l'échec « email non
+   * vérifié » affiche un bouton d'action dans la page (renvoi d'email). */
   readonly resending = signal(false);
-  readonly resendSuccess = signal(false);
+  readonly unverifiedEmail = signal<string | null>(null);
 
   /** Formulaire réactif */
   readonly loginForm: FormGroup = this.fb.group({
@@ -67,8 +66,7 @@ export class LoginComponent {
     }
 
     this.isSubmitting.set(true);
-    this.loginError.set(null);
-    this.resendSuccess.set(false);
+    this.unverifiedEmail.set(null);
 
     const payload: LoginPayload = {
       email: this.loginForm.value.email.trim().toLowerCase(),
@@ -84,74 +82,78 @@ export class LoginComponent {
       },
       error: (error) => {
         this.isSubmitting.set(false);
-        const loginError = this.parseLoginError(error, payload.email);
-        this.loginError.set(loginError);
+        const { type, backendMessage } = this.classifyLoginError(error);
 
-        // Toast selon le type
-        switch (loginError.type) {
+        // Seul l'échec « email non vérifié » ouvre l'action
+        // « Renvoyer l'email » ; tout le reste passe par les toasts.
+        this.unverifiedEmail.set(
+          type === 'email_not_verified' ? payload.email : null,
+        );
+
+        switch (type) {
           case 'email_not_verified':
-            this.notification.warning(loginError.message, 'Email non vérifié');
+            this.notification.warning(
+              "Votre adresse email n'est pas encore vérifiée. Consultez votre boîte de réception et cliquez sur le lien d'activation.",
+              'Email non vérifié',
+            );
             break;
           case 'account_disabled':
-            this.notification.error(loginError.message, 'Compte désactivé');
+            this.notification.error(
+              "Votre compte est désactivé. Contactez l'administrateur pour plus d'informations.",
+              'Compte désactivé',
+            );
             break;
           case 'invalid_credentials':
-            this.notification.error(loginError.message, 'Connexion échouée');
+            this.notification.error(
+              'Email ou mot de passe incorrect.',
+              'Connexion échouée',
+            );
             break;
           default:
-            this.notification.error(loginError.message, 'Erreur');
+            this.notification.error(
+              backendMessage ||
+                'Une erreur est survenue lors de la connexion. Réessayez.',
+              'Erreur',
+            );
         }
       },
     });
   }
 
-  private parseLoginError(error: any, email: string): LoginError {
+  /**
+   * Détermine le type d'échec à partir de la réponse backend.
+   * Ne construit aucun message destiné à l'utilisateur (les toasts en
+   * portent) ; retourne seulement le type et le message brut backend
+   * (utilisé tel quel pour le cas « inconnu »).
+   */
+  private classifyLoginError(error: any): {
+    type: LoginErrorType;
+    backendMessage: string;
+  } {
     const backendMessage: string =
       error?.error?.errors?.non_field_errors?.[0] ||
       error?.error?.message ||
       '';
 
-    if (
-      backendMessage.toLowerCase().includes('pas encore vérifiée') ||
-      backendMessage.toLowerCase().includes('not verified')
-    ) {
-      return {
-        type: 'email_not_verified',
-        message:
-          "Votre adresse email n'est pas encore vérifiée. Consultez votre boîte de réception et cliquez sur le lien d'activation.",
-        email,
-      };
+    const msg = backendMessage.toLowerCase();
+
+    if (msg.includes('pas encore vérifiée') || msg.includes('not verified')) {
+      return { type: 'email_not_verified', backendMessage };
     }
 
-    if (
-      backendMessage.toLowerCase().includes('désactivé') ||
-      backendMessage.toLowerCase().includes('disabled')
-    ) {
-      return {
-        type: 'account_disabled',
-        message:
-          "Votre compte est désactivé. Contactez l'administrateur pour plus d'informations.",
-        email,
-      };
+    if (msg.includes('désactivé') || msg.includes('disabled')) {
+      return { type: 'account_disabled', backendMessage };
     }
 
     if (
       error?.status === 401 ||
-      backendMessage.toLowerCase().includes('incorrect') ||
-      backendMessage.toLowerCase().includes('identifiants invalides')
+      msg.includes('incorrect') ||
+      msg.includes('identifiants invalides')
     ) {
-      return {
-        type: 'invalid_credentials',
-        message: 'Email ou mot de passe incorrect.',
-      };
+      return { type: 'invalid_credentials', backendMessage };
     }
 
-    return {
-      type: 'unknown',
-      message:
-        backendMessage ||
-        'Une erreur est survenue lors de la connexion. Réessayez.',
-    };
+    return { type: 'unknown', backendMessage };
   }
 
   /** Redirige l'utilisateur selon son rôle principal */
@@ -206,15 +208,14 @@ export class LoginComponent {
   }
 
   resendVerificationEmail(): void {
-    const err = this.loginError();
-    if (!err?.email || this.resending()) return;
+    const email = this.unverifiedEmail();
+    if (!email || this.resending()) return;
 
     this.resending.set(true);
 
-    this.authService.resendVerificationEmail(err.email).subscribe({
+    this.authService.resendVerificationEmail(email).subscribe({
       next: () => {
         this.resending.set(false);
-        this.resendSuccess.set(true);
         this.notification.success(
           'Un nouvel email de vérification a été envoyé.',
           'Email envoyé',
