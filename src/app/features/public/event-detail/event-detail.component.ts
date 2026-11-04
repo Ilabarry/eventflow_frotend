@@ -1,10 +1,9 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, OnDestroy, OnInit, inject, signal, computed } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Meta, SafeHtml, Title } from '@angular/platform-browser';
+import { Meta, Title } from '@angular/platform-browser';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
-import { DomSanitizer } from '@angular/platform-browser';
 
 import { BackendEvent, EventDetail, EventTicketType } from '../../../core/models/event.model';
 import { AppLoggerService } from '../../../core/services/app-logger.service';
@@ -99,15 +98,19 @@ export class EventDetailComponent implements OnInit, OnDestroy {
   private readonly notification = inject(NotificationService);
   private readonly registrationService = inject(RegistrationService);
   private readonly router = inject(Router);
-  private readonly sanitizer = inject(DomSanitizer);
 
   /** État de l'inscription en cours */
   readonly registering = signal(false);
   readonly registered = signal(false);
   readonly registrationError = signal<string | null>(null);
 
-  /** HTML sécurisé pour la description */
-  readonly richHtml = signal<SafeHtml | null>(null);
+  /**
+   * HTML de la description.
+   *
+   * ⚠️ On ne bypasse JAMAIS le sanitizer Angular : la valeur est une simple
+   * chaîne, et `[innerHTML]` la nettoie automatiquement avant insertion.
+   */
+  readonly richHtml = signal<string | null>(null);
 
   /** L'utilisateur connecté a-t-il le rôle participant ? */
   readonly canRegister = computed(() => {
@@ -274,9 +277,7 @@ export class EventDetailComponent implements OnInit, OnDestroy {
         }
         const data = response.data;
         this.detail = data;
-        this.richHtml.set(
-          data.description ? this.sanitizer.bypassSecurityTrustHtml(data.description) : null,
-        );
+        this.richHtml.set(data.description ?? null);
         this.info = this.buildInfo(data);
         this.ticketOptions = this.buildTickets(data);
         this.selectedTicketId = this.ticketOptions.find((t) => t.remaining !== 0)?.id ?? null;

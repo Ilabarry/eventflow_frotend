@@ -116,15 +116,10 @@ export interface BackendEvent {
 
 export interface EventOrganizer {
   id: string;
-  email: string;
   first_name: string;
   last_name: string;
   full_name: string;
-  phone: string;
   profile_picture: string | null;
-  roles: string[];
-  is_active?: boolean;
-  created_at?: string;
 }
 
 export interface EventTicketType {

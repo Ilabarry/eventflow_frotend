@@ -156,7 +156,9 @@ export class LoginComponent {
 
   /** Redirige l'utilisateur selon son rôle principal */
   private redirectByRole(): void {
-    const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
+    const returnUrl = this.safeReturnUrl(
+      this.route.snapshot.queryParamMap.get('returnUrl'),
+    );
     if (returnUrl) {
       this.router.navigateByUrl(returnUrl);
       return;
@@ -172,6 +174,17 @@ export class LoginComponent {
     }
 
     this.router.navigateByUrl(target);
+  }
+
+  /**
+   * N'accepte qu'un chemin interne commençant par un seul `/`.
+   * Bloque `//evil.com`, `/\evil.com` et les URL absolues.
+   */
+  private safeReturnUrl(value: string | null): string | null {
+    if (!value) return null;
+    if (!value.startsWith('/')) return null;
+    if (value.startsWith('//') || value.startsWith('/\\')) return null;
+    return value;
   }
 
   // ------------------------------------------------------------------

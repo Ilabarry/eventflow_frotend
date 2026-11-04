@@ -273,16 +273,18 @@ export class AuthService {
   loadCurrentUser(): void {
     if (!this._accessToken()) return;
 
-    console.log('[AuthService] Loading current user...');
+    this.logger.info('[AuthService] Loading current user...');
     this.getMe().subscribe({
       next: (response) => {
         if (response.success && response.data) {
           this._currentUser.set(response.data);
-          console.log('[AuthService] Current user loaded', { email: response.data.email });
+          this.logger.info('[AuthService] Current user loaded');
         }
       },
       error: (error) => {
-        console.error('[AuthService] Failed to load current user', error.status);
+        this.logger.warn('[AuthService] Failed to load current user', {
+          status: error.status,
+        });
         this.clearSession();
       },
     });
@@ -297,16 +299,16 @@ export class AuthService {
       map((response) => {
         if (response.success && response.data) {
           this._currentUser.set(response.data);
-          console.info('[AuthService] Current user loaded (async)', {
-            email: response.data.email,
-          });
+          this.logger.info('[AuthService] Current user loaded (async)');
           return response.data;
         }
         this.clearSession();
         return null;
       }),
       catchError((error) => {
-        console.error('[AuthService] Load current user failed', error.status);
+        this.logger.warn('[AuthService] Load current user failed', {
+          status: error.status,
+        });
         this.clearSession();
         return of(null);
       }),
