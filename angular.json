@@ -47,6 +47,7 @@
             ],
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",
+            "allowedCommonJsDependencies": ["qrcode", "dijkstrajs"],
             "assets": [
               {
                 "glob": "**/*",
@@ -109,9 +110,9 @@
           "builder": "@angular-devkit/build-angular:karma",
           "options": {
             "styles": [
-                "src/styles.scss"
-              ],
-              "scripts": [],
+              "src/styles.scss"
+            ],
+            "scripts": [],
             "polyfills": [
               "zone.js",
               "zone.js/testing"
@@ -123,11 +124,7 @@
                 "glob": "**/*",
                 "input": "public"
               }
-            ],
-            "styles": [
-              "src/styles.scss"
-            ],
-            "scripts": []
+            ]
           }
         }
       }
