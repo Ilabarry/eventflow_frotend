@@ -112,17 +112,17 @@ export class AboutComponent {
      ------------------------------------------------------------------ */
   readonly milestones: { date: string; title: string; description: string }[] = [
     {
-      date: '2024',
+      date: 'Septembre - 2026',
       title: 'Genèse du projet',
       description: 'Le constat d’un besoin : centraliser la gestion des événements au Sénégal et au-delà.',
     },
     {
-      date: '2025',
+      date: 'Octobre - 2026',
       title: 'Conception & prototypage',
       description: 'Définition du cahier des charges, maquettes UX/UI, choix technologiques.',
     },
     {
-      date: '2026',
+      date: 'Novembre - 2026',
       title: 'Développement Full Stack',
       description: 'Implémentation du backend Django/DRF et du frontend Angular dans le cadre du programme FORCE-N.',
     },
