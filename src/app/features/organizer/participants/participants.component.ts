@@ -161,13 +161,9 @@ export class OrganizerParticipantsComponent {
     const ev = this.currentEvent();
     if (!ev) return false;
     const end = (ev as any).endAt as string | undefined;
-    const now = Date.now();
-    const endTs = end ? new Date(end).getTime() : NaN;
-    console.log('[Certificats] end:', end, '| now:', new Date(now).toISOString(),
-                '| endTs:', isNaN(endTs) ? 'INVALIDE' : new Date(endTs).toISOString(),
-                '| résultat:', !isNaN(endTs) && endTs < now);
     if (!end) return false;
-    return !isNaN(endTs) && endTs < now;
+    const endTs = new Date(end).getTime();
+    return !isNaN(endTs) && endTs < Date.now();
   });
 
   constructor() {
@@ -661,6 +657,7 @@ export class OrganizerParticipantsComponent {
       const res = await firstValueFrom(
         this.http.post<ApiResponse<{
           generated_count: number;
+          already_count?: number;
           error_count: number;
           generated: { reference: string; participant: string }[];
           errors: { registration: string; error: string }[];
@@ -676,19 +673,36 @@ export class OrganizerParticipantsComponent {
         return;
       }
 
+      console.info('[Certificats] réponse API:', data);
+
       if (data.generated_count === 0 && data.error_count === 0) {
         this.notification.info(
-          'Aucun participant éligible. Les certificats ne sont générés que pour les participants marqués présents.',
+          (data.already_count ?? 0) > 0
+            ? `Tous les certificats sont déjà générés (${data.already_count}). ` +
+              `Aucun nouveau participant éligible.`
+            : "Aucun participant éligible : l'inscription doit être confirmée et la " +
+              'présence marquée « Présent » (action « Marquer présent » sur chaque ligne).',
+          'Certificats',
+        );
+        return;
+      }
+
+      if (data.error_count > 0) {
+        console.error('[Certificats] erreurs de génération:', data.errors);
+        this.notification.error(
+          `${data.generated_count} généré(s), ${data.error_count} erreur(s). ` +
+            `Détail : ${data.errors[0]?.error ?? 'erreur inconnue'}`,
           'Certificats',
         );
         return;
       }
 
       this.notification.success(
-        `${data.generated_count} certificat(s) généré(s).${data.error_count > 0 ? ' ' + data.error_count + ' erreur(s).' : ''}`,
+        `${data.generated_count} certificat(s) généré(s).`,
         'Certificats',
       );
     } catch (err: any) {
+      console.error('[Certificats] échec de la requête:', err);
       // Cas particulier : événement non terminé (400 côté backend)
       if (err?.status === 400 && err?.error?.message?.includes('terminé')) {
         this.notification.warning(
